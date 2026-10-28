@@ -73,7 +73,17 @@ public class DormManageController {
     }
 
     @PostMapping("/building")
-    public Result<DormBuilding> saveBuilding(@RequestBody DormBuilding building) {
+    public Result<DormBuilding> saveBuilding(@RequestBody DormBuilding building, HttpServletRequest request) {
+        // 楼栋↔宿管绑定仅管理员；宿管入口已被拦截器挡住，此处再兜底
+        if (!"ADMIN".equals(request.getAttribute("currentUserRole"))) {
+            return Result.error(403, "仅管理员可维护楼栋与宿管绑定");
+        }
+        if (building.getManagerId() != null) {
+            SysUser mgr = userMapper.selectById(building.getManagerId());
+            if (mgr == null || !"DORM_MANAGER".equals(mgr.getRole())) {
+                return Result.error("managerId 必须指向角色为宿管员(DORM_MANAGER)的账号");
+            }
+        }
         if (building.getId() == null) {
             buildingMapper.insert(building);
         } else {
@@ -228,7 +238,37 @@ public class DormManageController {
                 }
             }
         } else {
-            // 办理入住
+            // 办理入住：校验学生性别与楼栋性别限制一致
+            SysUser student = userMapper.selectById(studentId);
+            if (student == null) {
+                return Result.error("学生不存在");
+            }
+            DormBuilding building = room != null ? buildingMapper.selectById(room.getBuildingId()) : null;
+            if (building != null && building.getGenderType() != null && student.getGender() != null
+                    && !Objects.equals(building.getGenderType(), student.getGender())) {
+                String need = building.getGenderType() == 1 ? "男生" : "女生";
+                String got = student.getGender() == 1 ? "男" : "女";
+                return Result.error("性别不符：【" + building.getBuildingName() + "】仅允许" + need
+                        + "入住，当前学生性别为" + got + "，已拒绝混寝分配");
+            }
+            // 同一学生不可占用多床：先释放其旧床位
+            List<DormBed> oldBeds = bedMapper.selectList(
+                    new LambdaQueryWrapper<DormBed>()
+                            .eq(DormBed::getStudentId, studentId)
+                            .eq(DormBed::getStatus, 1)
+            );
+            for (DormBed ob : oldBeds) {
+                if (!Objects.equals(ob.getId(), bedId)) {
+                    ob.setStudentId(null);
+                    ob.setCheckInDate(null);
+                    ob.setStatus(0);
+                    bedMapper.updateById(ob);
+                    DormRoom oldRoom = roomMapper.selectById(ob.getRoomId());
+                    if (oldRoom != null) {
+                        smartAllocationService.recalculateRoomHarmony(oldRoom.getId());
+                    }
+                }
+            }
             bed.setStudentId(studentId);
             bed.setCheckInDate(LocalDate.now());
             bed.setStatus(1);

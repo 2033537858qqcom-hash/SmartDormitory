@@ -20,3 +20,12 @@ UPDATE sys_user SET password = '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULT
 ## 后续（未做）
 
 完整 Flyway/Liquibase、外键与 schema/seed 拆分未引入，以免大改演示导入流程。
+
+## P0 增量（已有库可执行）
+
+```sql
+ALTER TABLE discipline_record
+  ADD COLUMN appeal_proof_type VARCHAR(50) DEFAULT NULL COMMENT '申诉证明类型' AFTER recorder_id,
+  ADD COLUMN appeal_witness VARCHAR(50) DEFAULT NULL COMMENT '证明人' AFTER appeal_proof_type,
+  ADD COLUMN appeal_attachments TEXT DEFAULT NULL COMMENT '申诉附件占位(JSON数组)' AFTER appeal_witness;
+```

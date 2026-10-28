@@ -175,4 +175,58 @@ public class RepairOrderController {
         repairOrderMapper.updateById(order);
         return Result.success("感谢您的评价！", order);
     }
+
+    @PostMapping("/reassign")
+    public Result<RepairOrder> reassignOrder(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        if ("REPAIRMAN".equals(request.getAttribute("currentUserRole"))
+                || "STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            return Result.error(403, "仅管理员或宿管可改派工单");
+        }
+        Long id = Long.valueOf(body.get("id").toString());
+        Long workerId = Long.valueOf(body.get("workerId").toString());
+        String remark = body.get("remark") != null ? body.get("remark").toString() : null;
+        RepairOrder existing = repairOrderMapper.selectById(id);
+        if (existing == null) {
+            return Result.error("工单不存在");
+        }
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), existing.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<RepairOrder> typed = (Result<RepairOrder>) denied;
+            return typed;
+        }
+        try {
+            RepairOrder updated = smartRepairService.reassignWorker(id, workerId, remark);
+            return Result.success("工单已改派", updated);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return Result.error(ex.getMessage());
+        }
+    }
+
+    @PostMapping("/cancel")
+    public Result<RepairOrder> cancelOrder(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        if ("REPAIRMAN".equals(request.getAttribute("currentUserRole"))
+                || "STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            return Result.error(403, "仅管理员或宿管可取消工单");
+        }
+        Long id = Long.valueOf(body.get("id").toString());
+        String remark = body.get("remark") != null ? body.get("remark").toString() : null;
+        RepairOrder existing = repairOrderMapper.selectById(id);
+        if (existing == null) {
+            return Result.error("工单不存在");
+        }
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), existing.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<RepairOrder> typed = (Result<RepairOrder>) denied;
+            return typed;
+        }
+        try {
+            RepairOrder updated = smartRepairService.cancelOrder(id, remark);
+            return Result.success("工单已取消关闭", updated);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return Result.error(ex.getMessage());
+        }
+    }
+
 }

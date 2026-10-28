@@ -162,6 +162,9 @@ public class DormAffairController {
             m.put("occurTime", d.getOccurTime());
             m.put("description", d.getDescription());
             m.put("status", d.getStatus());
+            m.put("appealProofType", d.getAppealProofType());
+            m.put("appealWitness", d.getAppealWitness());
+            m.put("appealAttachments", d.getAppealAttachments());
             res.add(m);
         }
         return Result.success(res);
@@ -206,6 +209,9 @@ public class DormAffairController {
     public Result<DisciplineRecord> appealDiscipline(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long id = Long.valueOf(body.get("id").toString());
         String appealReason = body.get("appealReason") != null ? body.get("appealReason").toString().trim() : "因科研/急事晚归，申请核销扣分";
+        String proofType = body.get("appealProofType") != null ? body.get("appealProofType").toString().trim() : null;
+        String witness = body.get("appealWitness") != null ? body.get("appealWitness").toString().trim() : null;
+        String attachments = body.get("appealAttachments") != null ? body.get("appealAttachments").toString().trim() : null;
         DisciplineRecord d = disciplineMapper.selectById(id);
         if (d == null) {
             return Result.error("未找到该条记录");
@@ -216,6 +222,15 @@ public class DormAffairController {
         }
         String baseDesc = d.getDescription() != null ? d.getDescription().split(" \\| \\[")[0] : "";
         d.setDescription(baseDesc + " | [学生申诉] " + appealReason);
+        if (proofType != null && !proofType.isEmpty()) {
+            d.setAppealProofType(proofType);
+        }
+        if (witness != null && !witness.isEmpty()) {
+            d.setAppealWitness(witness);
+        }
+        if (attachments != null && !attachments.isEmpty()) {
+            d.setAppealAttachments(attachments);
+        }
         d.setStatus(3);
         disciplineMapper.updateById(d);
         return Result.success("申诉已提交宿管中心审核", d);
@@ -260,17 +275,72 @@ public class DormAffairController {
     }
 
     /**
-     * 23:00 门禁考勤实时统计与模拟智能稽核
+     * 23:00 门禁考勤实时统计（可按楼栋；宿管自动限制管辖范围）
      */
     @GetMapping("/curfew-stats")
-    public Result<Map<String, Object>> getCurfewStats() {
-        long totalCheckedIn = bedMapper.selectCount(new LambdaQueryWrapper<DormBed>().eq(DormBed::getStatus, 1));
+    public Result<Map<String, Object>> getCurfewStats(@RequestParam(required = false) Long buildingId,
+                                                      HttpServletRequest request) {
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null && buildingId != null && !scope.contains(buildingId)) {
+            return Result.error(403, "只能查看管辖楼栋的门禁统计");
+        }
+        Set<Long> buildingFilter = null;
+        if (buildingId != null) {
+            buildingFilter = Set.of(buildingId);
+        } else if (scope != null) {
+            buildingFilter = scope;
+        }
+
+        Set<Long> roomIds = null;
+        if (buildingFilter != null) {
+            if (buildingFilter.isEmpty()) {
+                Map<String, Object> empty = new LinkedHashMap<>();
+                empty.put("totalCheckedIn", 0);
+                empty.put("normalInDormCount", 0);
+                empty.put("reportedLateCount", 0);
+                empty.put("unreportedLateCount", 0);
+                empty.put("appealPendingCount", 0);
+                empty.put("buildingId", buildingId);
+                return Result.success(empty);
+            }
+            roomIds = roomMapper.selectList(
+                    new LambdaQueryWrapper<DormRoom>().in(DormRoom::getBuildingId, buildingFilter)
+            ).stream().map(DormRoom::getId).collect(Collectors.toSet());
+        }
+
+        LambdaQueryWrapper<DormBed> bedQ = new LambdaQueryWrapper<DormBed>().eq(DormBed::getStatus, 1);
+        if (roomIds != null) {
+            if (roomIds.isEmpty()) {
+                Map<String, Object> empty = new LinkedHashMap<>();
+                empty.put("totalCheckedIn", 0);
+                empty.put("normalInDormCount", 0);
+                empty.put("reportedLateCount", 0);
+                empty.put("unreportedLateCount", 0);
+                empty.put("appealPendingCount", 0);
+                empty.put("buildingId", buildingId);
+                return Result.success(empty);
+            }
+            bedQ.in(DormBed::getRoomId, roomIds);
+        }
+        long totalCheckedIn = bedMapper.selectCount(bedQ);
+
         List<DisciplineRecord> allRecords = disciplineMapper.selectList(null);
+        if (roomIds != null) {
+            Set<Long> finalRoomIds = roomIds;
+            allRecords = allRecords.stream()
+                    .filter(r -> r.getRoomId() != null && finalRoomIds.contains(r.getRoomId()))
+                    .collect(Collectors.toList());
+        }
+        LocalDate today = LocalDate.now();
         long reportedLateCount = allRecords.stream()
-                .filter(r -> r.getDescription() != null && r.getDescription().contains("[学生报备]"))
+                .filter(r -> r.getDescription() != null && r.getDescription().contains("[学生报备]")
+                        && r.getOccurTime() != null && r.getOccurTime().toLocalDate().equals(today))
                 .count();
         long unreportedLateCount = allRecords.stream()
-                .filter(r -> "LATE_RETURN".equals(r.getRecordType()) && (r.getDescription() == null || !r.getDescription().contains("[学生报备]")) && r.getStatus() != 2)
+                .filter(r -> "LATE_RETURN".equals(r.getRecordType())
+                        && (r.getDescription() == null || !r.getDescription().contains("[学生报备]"))
+                        && r.getStatus() != null && r.getStatus() != 2
+                        && r.getOccurTime() != null && r.getOccurTime().toLocalDate().equals(today))
                 .count();
         long appealPendingCount = allRecords.stream()
                 .filter(r -> r.getStatus() != null && r.getStatus() == 3)
@@ -282,69 +352,158 @@ public class DormAffairController {
         data.put("reportedLateCount", reportedLateCount);
         data.put("unreportedLateCount", unreportedLateCount);
         data.put("appealPendingCount", appealPendingCount);
+        data.put("buildingId", buildingId);
         return Result.success(data);
     }
 
+    /**
+     * 按楼栋批量门禁稽核：对比在住床位与当晚晚归报备，产出合规/豁免/预警三类结果。
+     * body.buildingId 可选；宿管仅可稽核管辖楼栋。不再默认硬编码 roomId=2。
+     */
     @PostMapping("/curfew-check")
     @Transactional(rollbackFor = Exception.class)
-    public Result<Map<String, Object>> runCurfewAudit(@RequestBody(required = false) Map<String, Object> body) {
-        List<DormBed> occupiedBeds = bedMapper.selectList(new LambdaQueryWrapper<DormBed>().eq(DormBed::getStatus, 1));
-        List<DisciplineRecord> allRecords = disciplineMapper.selectList(null);
-
+    public Result<Map<String, Object>> runCurfewAudit(@RequestBody(required = false) Map<String, Object> body,
+                                                      HttpServletRequest request) {
+        Long buildingId = (body != null && body.get("buildingId") != null)
+                ? Long.valueOf(body.get("buildingId").toString()) : null;
         Long targetStudentId = (body != null && body.get("studentId") != null)
                 ? Long.valueOf(body.get("studentId").toString()) : null;
 
-        DormBed targetBed = null;
-        if (targetStudentId != null) {
-            targetBed = occupiedBeds.stream().filter(b -> Objects.equals(b.getStudentId(), targetStudentId)).findFirst().orElse(null);
+        Set<Long> scope = buildingScope.resolve(request);
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(scope, buildingId);
+        // buildingId 为空时：宿管扫全部管辖楼栋；管理员扫全校（或指定楼栋）
+        if (buildingId != null && denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
+            return typed;
+        }
+
+        Set<Long> buildingFilter;
+        if (buildingId != null) {
+            buildingFilter = Set.of(buildingId);
+        } else if (scope != null) {
+            buildingFilter = scope;
         } else {
-            // 默认优先巡检302室或尚未登记门禁抓拍的晚睡型学生
-            for (DormBed bed : occupiedBeds) {
-                if (Objects.equals(bed.getRoomId(), 2L)) {
-                    targetBed = bed;
-                    break;
-                }
-            }
-            if (targetBed == null && !occupiedBeds.isEmpty()) {
-                targetBed = occupiedBeds.get(0);
+            buildingFilter = null; // 全校
+        }
+
+        if (buildingFilter != null && buildingFilter.isEmpty()) {
+            return Result.error("当前账号无管辖楼栋，无法执行门禁稽核");
+        }
+
+        Set<Long> roomIds = null;
+        if (buildingFilter != null) {
+            roomIds = roomMapper.selectList(
+                    new LambdaQueryWrapper<DormRoom>().in(DormRoom::getBuildingId, buildingFilter)
+            ).stream().map(DormRoom::getId).collect(Collectors.toSet());
+            if (roomIds.isEmpty()) {
+                return Result.error("所选楼栋暂无房间");
             }
         }
 
-        if (targetBed == null || targetBed.getStudentId() == null) {
-            return Result.error("当前无在住学生可供门禁考勤稽核");
+        LambdaQueryWrapper<DormBed> bedQ = new LambdaQueryWrapper<DormBed>().eq(DormBed::getStatus, 1);
+        if (roomIds != null) {
+            bedQ.in(DormBed::getRoomId, roomIds);
+        }
+        List<DormBed> occupiedBeds = bedMapper.selectList(bedQ);
+        if (targetStudentId != null) {
+            occupiedBeds = occupiedBeds.stream()
+                    .filter(b -> Objects.equals(b.getStudentId(), targetStudentId))
+                    .collect(Collectors.toList());
+        }
+        if (occupiedBeds.isEmpty()) {
+            return Result.error("当前范围内无在住学生可供门禁考勤稽核");
         }
 
-        SysUser stu = userMapper.selectById(targetBed.getStudentId());
-        DormRoom room = roomMapper.selectById(targetBed.getRoomId());
-        boolean hasPreReport = allRecords.stream().anyMatch(r ->
-                Objects.equals(r.getStudentId(), stu.getId())
-                        && r.getDescription() != null
-                        && r.getDescription().contains("[学生报备]")
-        );
+        List<DisciplineRecord> allRecords = disciplineMapper.selectList(null);
+        LocalDate today = LocalDate.now();
+        Map<Long, DormRoom> roomMap = roomMapper.selectList(null).stream()
+                .collect(Collectors.toMap(DormRoom::getId, r -> r));
+        Map<Long, DormBuilding> buildingMap = buildingMapper.selectList(null).stream()
+                .collect(Collectors.toMap(DormBuilding::getId, b -> b));
+
+        List<Map<String, Object>> exempted = new ArrayList<>();
+        List<Map<String, Object>> warned = new ArrayList<>();
+        List<Map<String, Object>> normal = new ArrayList<>();
+        int createdWarnings = 0;
+
+        for (DormBed bed : occupiedBeds) {
+            if (bed.getStudentId() == null) continue;
+            SysUser stu = userMapper.selectById(bed.getStudentId());
+            if (stu == null) continue;
+            DormRoom room = roomMap.get(bed.getRoomId());
+            DormBuilding building = room != null ? buildingMap.get(room.getBuildingId()) : null;
+
+            boolean hasPreReport = allRecords.stream().anyMatch(r ->
+                    Objects.equals(r.getStudentId(), stu.getId())
+                            && r.getDescription() != null
+                            && r.getDescription().contains("[学生报备]")
+                            && r.getOccurTime() != null
+                            && r.getOccurTime().toLocalDate().equals(today)
+            );
+            boolean alreadyWarnedToday = allRecords.stream().anyMatch(r ->
+                    Objects.equals(r.getStudentId(), stu.getId())
+                            && "LATE_RETURN".equals(r.getRecordType())
+                            && r.getDescription() != null
+                            && r.getDescription().contains("[23:00人脸门禁考勤稽核]")
+                            && r.getOccurTime() != null
+                            && r.getOccurTime().toLocalDate().equals(today)
+                            && r.getStatus() != null && r.getStatus() != 2
+            );
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentId", stu.getId());
+            row.put("studentName", stu.getRealName());
+            row.put("roomId", bed.getRoomId());
+            row.put("roomNo", room != null ? room.getRoomNo() : "");
+            row.put("buildingId", room != null ? room.getBuildingId() : null);
+            row.put("buildingName", building != null ? building.getBuildingName() : "");
+            row.put("hasPreReport", hasPreReport);
+
+            if (hasPreReport) {
+                row.put("auditResult", "EXEMPTED");
+                exempted.add(row);
+            } else if (alreadyWarnedToday) {
+                row.put("auditResult", "WARNED");
+                row.put("duplicate", true);
+                warned.add(row);
+            } else {
+                // 演示批量稽核：未报备视为预警并生成记录（模拟门禁未刷脸归寝）
+                DisciplineRecord record = new DisciplineRecord();
+                record.setStudentId(stu.getId());
+                record.setRoomId(bed.getRoomId());
+                record.setRecordType("LATE_RETURN");
+                record.setDeductScore(5);
+                record.setOccurTime(LocalDateTime.now());
+                record.setDescription("[23:00人脸门禁考勤稽核] 超过门禁时间未归且无请假报备记录，系统自动抓拍预警");
+                record.setStatus(1);
+                disciplineMapper.insert(record);
+                allRecords.add(record);
+                createdWarnings++;
+                row.put("auditResult", "WARNED");
+                row.put("recordId", record.getId());
+                warned.add(row);
+            }
+        }
+
+        if (createdWarnings > 0) {
+            smartEvaluationService.evaluateAllRooms();
+        }
 
         Map<String, Object> res = new LinkedHashMap<>();
-        res.put("studentName", stu.getRealName());
-        res.put("roomNo", room != null ? room.getRoomNo() : "");
-        res.put("hasPreReport", hasPreReport);
-
-        if (hasPreReport) {
-            res.put("auditResult", "EXEMPTED");
-            return Result.success("门禁核验完成：检测到【" + stu.getRealName() + "】已提交晚归报备，自动标记为合规通行（免除恶意晚归扣分）", res);
-        } else {
-            DisciplineRecord record = new DisciplineRecord();
-            record.setStudentId(stu.getId());
-            record.setRoomId(targetBed.getRoomId());
-            record.setRecordType("LATE_RETURN");
-            record.setDeductScore(5);
-            record.setOccurTime(LocalDateTime.now());
-            record.setDescription("[23:00人脸门禁考勤稽核] 超过门禁时间未归且无请假报备记录，系统自动抓拍预警");
-            record.setStatus(1);
-            disciplineMapper.insert(record);
-            smartEvaluationService.evaluateAllRooms();
-            res.put("auditResult", "WARNED");
-            res.put("record", record);
-            return Result.success("门禁智能稽核完成：发现【" + stu.getRealName() + "】未报备超时晚归，已自动生成预警记录并联动更新文明分！", res);
-        }
+        res.put("buildingId", buildingId);
+        res.put("scannedCount", exempted.size() + warned.size() + normal.size());
+        res.put("exemptedCount", exempted.size());
+        res.put("warnedCount", warned.size());
+        res.put("normalCount", normal.size());
+        res.put("createdWarnings", createdWarnings);
+        res.put("exempted", exempted);
+        res.put("warned", warned);
+        res.put("normal", normal);
+        String msg = String.format(
+                "楼栋批量门禁稽核完成：扫描 %d 人，豁免 %d、预警 %d（新建预警 %d 条）",
+                (Integer) res.get("scannedCount"), exempted.size(), warned.size(), createdWarnings);
+        return Result.success(msg, res);
     }
 
     @GetMapping("/adjust-list")

@@ -109,6 +109,15 @@
             :dash="dash"
             :initial-action="utilityInitialAction"
             @clear-action="utilityInitialAction = ''"
+            @go-tab="handleNavigate"
+            @refresh="loadDashboard"
+            @toast="showToast"
+          />
+          <TabAffair
+            v-else-if="currentTab === 'affair'"
+            :dash="dash"
+            :initial-action="utilityInitialAction"
+            @clear-action="utilityInitialAction = ''"
             @refresh="loadDashboard"
             @toast="showToast"
           />
@@ -144,6 +153,7 @@ import TabHome from './components/TabHome.vue'
 import TabHabitRadar from './components/TabHabitRadar.vue'
 import TabRepair from './components/TabRepair.vue'
 import TabUtility from './components/TabUtility.vue'
+import TabAffair from './components/TabAffair.vue'
 
 const tabs = [
   {
@@ -153,7 +163,7 @@ const tabs = [
   },
   {
     key: 'habit',
-    label: '习惯问卷',
+    label: '习惯',
     paths: [
       'M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z',
       'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'
@@ -161,15 +171,22 @@ const tabs = [
   },
   {
     key: 'repair',
-    label: '报修服务',
+    label: '报修',
     paths: [
       'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z'
     ]
   },
   {
     key: 'utility',
-    label: '水电宿务',
+    label: '水电',
     paths: ['M13 2L3 14h9l-1 8 10-12h-9l1-8z']
+  },
+  {
+    key: 'affair',
+    label: '宿务',
+    paths: [
+      'M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4'
+    ]
   }
 ]
 

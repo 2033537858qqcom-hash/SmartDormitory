@@ -133,8 +133,45 @@
             更新维修进度 / 完工结单
           </el-button>
         </div>
+        <div
+          v-if="canManageDispatch && ['PENDING','ASSIGNED','PROCESSING'].includes(currentOrder.status)"
+          class="drawer-footer-actions"
+          style="margin-top: 8px; display: flex; gap: 8px;"
+        >
+          <el-button class="full-width" @click="openReassign(currentOrder)">改派师傅</el-button>
+          <el-button type="danger" plain class="full-width" @click="openCancel(currentOrder)">取消工单</el-button>
+        </div>
       </div>
     </el-drawer>
+
+    <el-dialog v-model="reassignVisible" title="改派维修工单" width="440px">
+      <el-form label-width="88px">
+        <el-form-item label="目标师傅">
+          <el-select v-model="reassignForm.workerId" class="full-width" filterable placeholder="选择同工种或在岗维修工">
+            <el-option v-for="w in repairWorkers" :key="w.id" :label="`${w.realName}（${w.repairSpecialty || '综合'}）`" :value="w.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="改派备注">
+          <el-input v-model="reassignForm.remark" type="textarea" :rows="2" placeholder="如：原师傅负载过高 / 工种更匹配" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="reassignVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitReassign">确认改派</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="cancelVisible" title="取消/关闭工单" width="440px">
+      <el-form label-width="88px">
+        <el-form-item label="关闭原因">
+          <el-input v-model="cancelForm.remark" type="textarea" :rows="3" placeholder="请填写取消原因，将同步给学生端" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="cancelVisible = false">返回</el-button>
+        <el-button type="danger" :loading="submitting" @click="submitCancel">确认关闭</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 维修处理弹窗 -->
     <el-dialog v-model="processVisible" title="更新工单进度" width="440px">
@@ -211,6 +248,12 @@ const processForm = reactive({
   repairResult: '已现场检修并更换损坏部件，恢复正常使用'
 })
 
+const canManageDispatch = computed(() => ['ADMIN', 'DORM_MANAGER'].includes(currentUser.value.role))
+const repairWorkers = ref([])
+const reassignVisible = ref(false)
+const reassignForm = reactive({ id: null, workerId: null, remark: '管理端改派' })
+const cancelVisible = ref(false)
+const cancelForm = reactive({ id: null, remark: '重复报修 / 学生自行恢复，关闭工单' })
 const mockSubmitVisible = ref(false)
 const mockForm = reactive({
   studentId: 10,
@@ -271,7 +314,7 @@ const typeName = (t) => {
 }
 
 const statusLabel = (s) => {
-  const m = { PENDING: '待派单', ASSIGNED: '待维修', PROCESSING: '维修中', COMPLETED: '待评价', RATED: '已完结' }
+  const m = { PENDING: '待派单', ASSIGNED: '待维修', PROCESSING: '维修中', COMPLETED: '待评价', RATED: '已完结', CANCELLED: '已取消' }
   return m[s] || s
 }
 
@@ -339,6 +382,68 @@ const submitMockRepair = async () => {
     const res = await request.post('/repair/submit', mockForm)
     ElMessage.success(res.message || '报修已提交并完成派单')
     mockSubmitVisible.value = false
+    await loadOrders()
+  } finally {
+    submitting.value = false
+  }
+}
+
+
+const loadRepairWorkers = async () => {
+  if (!canManageDispatch.value) return
+  try {
+    const res = await request.get('/auth/users', { params: { role: 'REPAIRMAN' } })
+    repairWorkers.value = res.data || []
+  } catch (_) {
+    repairWorkers.value = []
+  }
+}
+
+const openReassign = async (row) => {
+  await loadRepairWorkers()
+  reassignForm.id = row.id
+  reassignForm.workerId = row.assignedWorkerId || null
+  reassignForm.remark = '管理端改派'
+  reassignVisible.value = true
+}
+
+const submitReassign = async () => {
+  if (!reassignForm.workerId) {
+    ElMessage.warning('请选择目标维修师傅')
+    return
+  }
+  submitting.value = true
+  try {
+    await request.post('/repair/reassign', {
+      id: reassignForm.id,
+      workerId: reassignForm.workerId,
+      remark: reassignForm.remark
+    })
+    ElMessage.success('工单已改派')
+    reassignVisible.value = false
+    drawerVisible.value = false
+    await loadOrders()
+  } finally {
+    submitting.value = false
+  }
+}
+
+const openCancel = (row) => {
+  cancelForm.id = row.id
+  cancelForm.remark = '重复报修 / 学生自行恢复，关闭工单'
+  cancelVisible.value = true
+}
+
+const submitCancel = async () => {
+  submitting.value = true
+  try {
+    await request.post('/repair/cancel', {
+      id: cancelForm.id,
+      remark: cancelForm.remark
+    })
+    ElMessage.success('工单已取消关闭')
+    cancelVisible.value = false
+    drawerVisible.value = false
     await loadOrders()
   } finally {
     submitting.value = false

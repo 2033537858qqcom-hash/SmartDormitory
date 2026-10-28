@@ -28,6 +28,23 @@
         <button v-for="alert in overview.abnormalAlerts || []" :key="`${alert.roomName}-${alert.billMonth}`" type="button" class="energy-alert" @click="goTo('/utility-manage', { abnormal: '1' })"><span class="alert-title"><i class="urgent-dot"></i>{{ alert.roomName }}<el-icon><ArrowRight /></el-icon></span><span class="alert-description">{{ alert.reason }}</span><span class="alert-meta tabular-nums">{{ alert.billMonth }} · {{ formatMoney(alert.totalCost) }}</span></button>
       </aside>
     </div>
+    <el-card v-if="isAdmin" shadow="never" class="surface-card demo-script" style="margin-bottom: 16px;">
+      <template #header>
+        <div class="section-header">
+          <span class="section-title">5 分钟答辩演示剧本</span>
+          <el-button type="warning" plain size="small" :loading="resettingDemo" @click="resetDemo">重置 2026 级演示新生</el-button>
+        </div>
+      </template>
+      <ol class="demo-steps">
+        <li><b>admin</b>：智能分寝页对比 HABIT_FIRST / CLASS_MIX，预览后确认分寝。</li>
+        <li><b>学生 H5</b>：习惯问卷 → 报修（标题含「跳闸」高危词）→ 水电余额。</li>
+        <li><b>worker01</b>：报修派单页接单结单；切回学生评价。</li>
+        <li><b>dm01</b>：文明宿务卫生打分 / 申诉审核 / 五星补贴。</li>
+        <li><b>学生</b>：宿务 Tab 预约访客绿码；<b>dm01</b> 门禁栏按楼栋批量稽核。</li>
+        <li>可选：房态页「楼栋宿管绑定」演示 manager_id；手动分床试性别不符拦截。</li>
+      </ol>
+    </el-card>
+
     <!-- 第三层：图表区（横向楼栋条形图 + 报修分类数量展示 + 水电分单位独立趋势图） -->
     <el-row :gutter="16">
       <el-col :xs="24" :sm="24" :md="12" :lg="8" class="col-gap">
@@ -122,9 +139,13 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
+import { ElMessage } from 'element-plus'
 import request from '@/api/request'
 
 const router = useRouter()
+const currentUser = ref(JSON.parse(localStorage.getItem('dorm_admin_user') || '{}'))
+const isAdmin = computed(() => currentUser.value.role === 'ADMIN')
+const resettingDemo = ref(false)
 const loading = ref(false)
 const loadError = ref(false)
 const overview = ref({})
@@ -144,6 +165,19 @@ let chart1 = null
 let chart2 = null
 let chart3 = null
 let resizeObserver = null
+
+const resetDemo = async () => {
+  resettingDemo.value = true
+  try {
+    const res = await request.post('/smart-alloc/reset-demo')
+    ElMessage.success(res.message || '演示新生已重置')
+  } catch (e) {
+    /* request interceptor already toasts */
+  } finally {
+    resettingDemo.value = false
+    await loadOverview()
+  }
+}
 
 const formatMoney = (val) => {
   return `¥${Number(val || 0).toFixed(2)}`
@@ -408,4 +442,7 @@ onBeforeUnmount(() => {
 @media (max-width: 1180px) { .work-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .overview-metrics { grid-template-columns: 1fr 1fr; gap: 22px 0; } .overview-metric:nth-child(3) { border: 0; padding-left: 0; } .metric-number { font-size: 34px; } .overview-metric { padding: 0 16px; } .residence-overview { display: block; } .energy-heading { border-top: 1px solid var(--border-subtle); padding-top: 20px; margin-top: 23px; } .work-panel { padding: 22px; } }
 @media (max-width: 420px) { .work-panel { padding: 20px 17px; } .todo-row { gap: 9px; } .todo-symbol { display: none; } .metric-note { font-size: 11px; } }
+
+.demo-steps { margin: 0; padding-left: 1.25rem; color: var(--el-text-color-regular); line-height: 1.85; font-size: 13px; }
+.demo-steps b { color: var(--el-text-color-primary); }
 </style>
