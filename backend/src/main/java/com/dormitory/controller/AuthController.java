@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import cn.hutool.crypto.digest.DigestUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
@@ -40,13 +41,18 @@ public class AuthController {
         if (user == null) {
             return Result.error("账号或密码错误");
         }
-        String md5Pwd = DigestUtil.md5Hex(password != null ? password : "");
-        boolean matched = Objects.equals(user.getPassword(), password) || Objects.equals(user.getPassword(), md5Pwd);
-        if (!matched) {
+        if (!passwordMatches(password, user.getPassword())) {
             return Result.error("账号或密码错误");
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
             return Result.error("该账号已被禁用");
+        }
+
+        if (!isBcrypt(user.getPassword())) {
+            SysUser upgrade = new SysUser();
+            upgrade.setId(user.getId());
+            upgrade.setPassword(BCrypt.hashpw(password));
+            sysUserMapper.updateById(upgrade);
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
@@ -213,11 +219,17 @@ public class AuthController {
             if (user.getPassword() == null || user.getPassword().isEmpty()) {
                 user.setPassword("123456");
             }
+            user.setPassword(BCrypt.hashpw(user.getPassword()));
             if (user.getStatus() == null) {
                 user.setStatus(1);
             }
             sysUserMapper.insert(user);
         } else {
+            if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+                user.setPassword(BCrypt.hashpw(user.getPassword()));
+            } else {
+                user.setPassword(null);
+            }
             sysUserMapper.updateById(user);
         }
         user.setPassword(null);
@@ -234,11 +246,10 @@ public class AuthController {
         if (user == null) {
             return Result.error("用户不存在");
         }
-        String oldMd5 = DigestUtil.md5Hex(oldPwd);
-        if (!Objects.equals(user.getPassword(), oldPwd) && !Objects.equals(user.getPassword(), oldMd5)) {
+        if (!passwordMatches(oldPwd, user.getPassword())) {
             return Result.error("原密码校验不通过");
         }
-        user.setPassword(newPwd);
+        user.setPassword(BCrypt.hashpw(newPwd));
         sysUserMapper.updateById(user);
         return Result.success("密码修改成功", "OK");
     }
@@ -247,7 +258,7 @@ public class AuthController {
     public Result<String> resetPassword(@PathVariable Long id) {
         SysUser user = sysUserMapper.selectById(id);
         if (user == null) return Result.error("用户不存在");
-        user.setPassword("123456");
+        user.setPassword(BCrypt.hashpw("123456"));
         sysUserMapper.updateById(user);
         return Result.success("密码已重置为默认密码 123456", "OK");
     }
@@ -259,5 +270,21 @@ public class AuthController {
         }
         sysUserMapper.deleteById(id);
         return Result.success("账号已删除", "OK");
+    }
+
+    private static boolean isBcrypt(String password) {
+        return password != null && (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$"));
+    }
+
+    private static boolean passwordMatches(String raw, String stored) {
+        if (raw == null || stored == null) return false;
+        if (isBcrypt(stored)) {
+            try {
+                return BCrypt.checkpw(raw, stored);
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        }
+        return Objects.equals(stored, raw) || Objects.equals(stored, DigestUtil.md5Hex(raw));
     }
 }
