@@ -1,10 +1,18 @@
 <view wx:if="{{!checkingSession}}" class="login-page">
-  <view class="login-header">
-    <view class="logo-circle">
-      <image class="logo-image" src="/images/ui/suli-icon-v2.png" mode="aspectFill" />
+  <view class="login-cover-banner">
+    <image class="cover-photo" src="/images/login-cover.jpg" mode="aspectFill" />
+    <view class="cover-gradient-mask">
+      <view class="cover-badge">
+        <view class="logo-circle">
+          <image class="logo-image" src="/images/ui/suli-icon-v2.png" mode="aspectFill" />
+        </view>
+        <view class="cover-badge-texts">
+          <view class="brand-title">宿里</view>
+          <view class="brand-tag">数字校园 · 智慧宿舍</view>
+        </view>
+      </view>
+      <view class="brand-sub">让宿舍生活更简单、更有温度。学生与宿管使用各自账号登录。</view>
     </view>
-    <view class="brand-title">宿里</view>
-    <view class="brand-sub">让宿舍生活更简单。学生与宿管使用各自账号登录。</view>
   </view>
 
   <view class="login-card card">
