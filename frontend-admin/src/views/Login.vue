@@ -14,46 +14,12 @@
             </div>
           </div>
 
-          <!-- 主体标语与特性 -->
+          <!-- 主体标语 -->
           <div class="cover-center-content">
-            <div class="apple-capsule-badge">
-              智慧高校数字化后勤平台 · 宿里 2.0
-            </div>
             <h1 class="cover-headline">让宿舍生活更简单<br />更有温度</h1>
             <p class="cover-subtext">
               深度贯通房态全景图谱、多维生活习惯协同分配、绿色水电能耗管控、文明寝室量化评分与一站式调宿审批协同。
             </p>
-
-            <!-- 磨砂玻璃特性卡片（纯矢量图标，无表情符号） -->
-            <div class="cover-feature-row">
-              <div class="glass-feature-card">
-                <div class="feature-icon-circle">
-                  <el-icon :size="16"><DataAnalysis /></el-icon>
-                </div>
-                <div class="feature-info">
-                  <strong>智能分配</strong>
-                  <span>多维习惯协同匹配</span>
-                </div>
-              </div>
-              <div class="glass-feature-card">
-                <div class="feature-icon-circle">
-                  <el-icon :size="16"><Odometer /></el-icon>
-                </div>
-                <div class="feature-info">
-                  <strong>绿色能耗</strong>
-                  <span>水电账单自动核算</span>
-                </div>
-              </div>
-              <div class="glass-feature-card">
-                <div class="feature-icon-circle">
-                  <el-icon :size="16"><Lock /></el-icon>
-                </div>
-                <div class="feature-info">
-                  <strong>安全门禁</strong>
-                  <span>访客通行动态核验</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- 底部版权/摄影标注 -->
@@ -304,95 +270,21 @@ const handleLogin = async () => {
   padding: 20px 0;
 }
 
-.apple-capsule-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 13px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.95);
-  margin-bottom: 20px;
-  letter-spacing: 0.2px;
-}
-
 .cover-headline {
-  font-size: 36px;
+  font-size: 38px;
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.8px;
   color: #ffffff;
-  margin-bottom: 14px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  margin-bottom: 16px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 .cover-subtext {
-  font-size: 13.5px;
-  line-height: 1.65;
-  color: rgba(255, 255, 255, 0.8);
-  max-width: 440px;
-  margin-bottom: 28px;
-}
-
-/* 磨砂玻璃特性卡片 */
-.cover-feature-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.glass-feature-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.glass-feature-card:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
-}
-
-.feature-icon-circle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  color: #ffffff;
-}
-
-.feature-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.feature-info strong {
-  font-size: 12px;
-  color: #ffffff;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.feature-info span {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.65);
-  margin-top: 1px;
-  line-height: 1.2;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 460px;
 }
 
 .cover-bottom-bar {
@@ -644,7 +536,6 @@ const handleLogin = async () => {
   }
 
   .cover-subtext,
-  .cover-feature-row,
   .cover-bottom-bar {
     display: none;
   }

@@ -1,14 +1,86 @@
 <template>
   <div v-if="!currentStudentId" class="login-stage">
-    <form class="student-login" @submit.prevent="login">
-      <img class="student-brand-icon" src="/suli-icon-v2.png" alt="" />
-      <h1>宿里</h1>
-      <p>请使用学生账号登录</p>
-      <label>学号 <input v-model.trim="loginForm.username" autocomplete="username" required /></label>
-      <label>密码 <input v-model="loginForm.password" type="password" autocomplete="current-password" required /></label>
-      <p v-if="loginError" class="login-error" role="alert">{{ loginError }}</p>
-      <button type="submit" :disabled="loginLoading">{{ loginLoading ? '登录中…' : '登录' }}</button>
-    </form>
+    <div class="student-login-card">
+      <!-- 顶部实景封面横幅 -->
+      <div class="student-login-cover">
+        <div class="cover-image-layer" />
+        <div class="cover-content-mask">
+          <div class="cover-brand-row">
+            <img class="student-brand-icon" src="/suli-icon-v2.png" alt="宿里 Logo" />
+            <div class="brand-titles">
+              <span class="brand-app-name">宿里 · 学生空间</span>
+              <span class="brand-app-tag">智慧宿舍服务门户</span>
+            </div>
+          </div>
+          <div class="cover-slogan">让宿舍生活更简单、更有温度</div>
+        </div>
+      </div>
+
+      <!-- 下半部 Apple 表单区 -->
+      <form class="student-login-body" @submit.prevent="login">
+        <div class="login-header-group">
+          <h2>学号登录</h2>
+          <p>请使用您的学号与统一身份认证密码登录</p>
+        </div>
+
+        <!-- 演示账号快捷填充 -->
+        <div class="student-demo-box">
+          <div class="demo-box-label">快速体验账号：</div>
+          <div class="demo-chip-grid">
+            <button
+              v-for="acc in studentDemoAccounts"
+              :key="acc.username"
+              type="button"
+              class="demo-student-chip"
+              :class="{ active: loginForm.username === acc.username }"
+              @click="selectStudentDemo(acc)"
+            >
+              <span class="chip-name">{{ acc.name }}</span>
+              <span class="chip-meta">{{ acc.desc }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-item">
+          <label for="student-id-input">学号 / Student ID</label>
+          <input
+            id="student-id-input"
+            v-model.trim="loginForm.username"
+            class="apple-input"
+            autocomplete="username"
+            placeholder="请输入学号（如 20230101）"
+            required
+          />
+        </div>
+
+        <div class="field-item">
+          <label for="student-pwd-input">登录密码 / Password</label>
+          <input
+            id="student-pwd-input"
+            v-model="loginForm.password"
+            class="apple-input"
+            type="password"
+            autocomplete="current-password"
+            placeholder="请输入密码（演示密码 123456）"
+            required
+          />
+        </div>
+
+        <div v-if="loginError" class="apple-login-error" role="alert">
+          {{ loginError }}
+        </div>
+
+        <button type="submit" class="apple-student-btn" :disabled="loginLoading">
+          {{ loginLoading ? '正在验证登录…' : '登录学生空间' }}
+        </button>
+
+        <div class="login-card-footer">
+          <a class="switch-admin-link" href="http://localhost:5173" target="_blank" rel="noopener">
+            切换至宿管与管理后台 ↗
+          </a>
+        </div>
+      </form>
+    </div>
   </div>
   <div v-else class="mp-stage">
     <button class="student-logout" type="button" @click="logout">退出登录</button>
@@ -207,9 +279,22 @@ const allTabs = [
 
 const currentDate = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'Asia/Shanghai' }).format(new Date())
 const currentStudentId = ref(localStorage.getItem('dorm_student_token') ? Number(localStorage.getItem('dorm_student_id')) || null : null)
-const loginForm = reactive({ username: '', password: '' })
+const loginForm = reactive({ username: '20230101', password: '123456' })
 const loginError = ref('')
 const loginLoading = ref(false)
+
+const studentDemoAccounts = [
+  { username: '20230101', password: '123456', name: '陈嘉豪', desc: '已入住' },
+  { username: '20230105', password: '123456', name: '刘子墨', desc: '已入住' },
+  { username: '20260101', password: '123456', name: '陆景行', desc: '待分寝新生' },
+  { username: '20230201', password: '123456', name: '苏婉清', desc: '已入住' }
+]
+
+const selectStudentDemo = (acc) => {
+  loginForm.username = acc.username
+  loginForm.password = acc.password
+  loginError.value = ''
+}
 const currentTab = ref('home')
 const utilityInitialAction = ref('')
 const messageKey = ref('')
@@ -388,12 +473,257 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-.login-stage { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg-canvas); }
-.student-login { width: min(100%, 360px); padding: 32px; border-radius: 24px; background: white; box-shadow: 0 12px 40px rgb(29 29 31 / 8%); }
-.student-brand-icon { display: block; width: 48px; height: 48px; border-radius: 12px; object-fit: cover; margin-bottom: 16px; }
-.student-login h1 { font-size: 25px; margin: 0 0 8px; }.student-login p { color: #6e6e73; margin-bottom: 22px; }
-.student-login label { display: grid; gap: 7px; margin: 16px 0; font-size: 14px; }.student-login input { padding: 12px; border: 1px solid #c9c9ce; border-radius: 9px; font: inherit; }
-.student-login button { width: 100%; border: 0; border-radius: 10px; padding: 12px; color: white; background: #176bd6; font: inherit; cursor: pointer; }.student-login .login-error { color: #b42318; margin: 10px 0; }
+.login-stage {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.student-login-card {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.student-login-cover {
+  position: relative;
+  height: 142px;
+  background: #0b1120;
+  overflow: hidden;
+}
+
+.cover-image-layer {
+  position: absolute;
+  inset: 0;
+  background-image: url('/login-cover.jpg');
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.02);
+}
+
+.cover-content-mask {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(155deg, rgba(11, 17, 32, 0.45) 0%, rgba(11, 17, 32, 0.82) 100%);
+  color: #ffffff;
+}
+
+.cover-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.brand-titles {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-app-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+.brand-app-tag {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.3px;
+}
+
+.cover-slogan {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.student-login-body {
+  padding: 24px 28px 28px;
+}
+
+.login-header-group h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+}
+
+.login-header-group p {
+  font-size: 13px;
+  color: #86868b;
+  margin: 0 0 18px;
+}
+
+.student-demo-box {
+  background: #f8f8fa;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+
+.demo-box-label {
+  font-size: 11.5px;
+  color: #86868b;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.demo-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.demo-student-chip {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  text-decoration: none !important;
+}
+
+.demo-student-chip:hover {
+  background: #f0f0f3;
+}
+
+.demo-student-chip.active {
+  background: rgba(0, 113, 227, 0.08);
+  border-color: #0071e3;
+}
+
+.chip-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.demo-student-chip.active .chip-name {
+  color: #0071e3;
+  font-weight: 600;
+}
+
+.chip-meta {
+  font-size: 10.5px;
+  color: #86868b;
+}
+
+.field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.field-item label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.apple-input {
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #d2d2d7;
+  background: #fbfbfd;
+  padding: 0 13px;
+  font-size: 14px;
+  color: #1d1d1f;
+  transition: all 0.18s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.apple-input:focus {
+  border-color: #0071e3;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.apple-student-btn {
+  width: 100%;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: #0071e3;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 6px;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.24);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.apple-student-btn:hover {
+  background: #0077ed;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.34);
+  transform: translateY(-1px);
+}
+
+.apple-student-btn:active {
+  transform: scale(0.985);
+}
+
+.apple-login-error {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
+.login-card-footer {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.switch-admin-link {
+  font-size: 12px;
+  color: #0071e3;
+  text-decoration: none !important;
+  font-weight: 500;
+  transition: opacity 0.16s ease;
+}
+
+.switch-admin-link:hover {
+  opacity: 0.8;
+  text-decoration: none !important;
+}
 .student-logout { align-self: flex-end; margin: 0 0 8px; border: 0; background: transparent; color: #555; cursor: pointer; }
 .mp-stage { height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 20px 18px; overflow: hidden; }
 .demo-switcher { display: flex; align-items: center; gap: 5px; margin-bottom: 12px; max-width: 100%; flex-shrink: 0; padding: 4px; background: #e4e4e9; border-radius: 12px; overflow-x: auto; scrollbar-width: none; }
