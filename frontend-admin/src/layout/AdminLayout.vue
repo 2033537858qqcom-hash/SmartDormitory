@@ -168,8 +168,12 @@ const openMessage = async (m) => {
   }
   if (m.msgType === 'REPAIR' && /^\d+$/.test(String(m.bizId || ''))) {
     await router.push({ path: '/repair-dispatch', query: { orderId: m.bizId } })
-  } else if (['APPEAL', 'ADJUST', 'VISITOR'].includes(m.msgType)) {
-    await router.push('/civilized-affair/todo')
+  } else if (m.msgType === 'ADJUST') {
+    await router.push('/civilized-affair/adjust')
+  } else if (m.msgType === 'APPEAL' || m.msgType === 'VISITOR') {
+    await router.push('/civilized-affair/visitor')
+  } else if (m.msgType === 'RESIDENCE') {
+    await router.push('/civilized-affair/residence')
   } else if (m.msgType === 'UTILITY') {
     await router.push('/utility-manage')
   }

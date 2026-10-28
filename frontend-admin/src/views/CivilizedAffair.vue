@@ -13,6 +13,7 @@
           <p>优先处理待审调宿、待审申诉与超时访客，再进入各专项台账。</p>
         </div>
         <div class="todo-grid">
+          <button v-if="canWrite" type="button" class="todo-card" @click="activeTab = 'residence'"><strong>{{ pendingResidenceCount }}</strong><span>待审入住/留宿</span></button>
           <button type="button" class="todo-card" @click="activeTab = 'adjust'">
             <strong>{{ pendingAdjustCount }}</strong>
             <span>待审调宿/退宿</span>
@@ -142,6 +143,7 @@
               <p class="room-route">{{ row.oldRoomName || '-' }} <span aria-label="调入">→</span> {{ row.targetRoomName || '-' }}</p>
               <p class="row-note">申请原因：{{ row.reason || '未填写' }}</p>
               <p v-if="row.status !== 'PENDING'" class="row-note">审批意见：{{ row.reviewComment || '已归档' }}</p>
+              <p v-if="row.checkoutChecklist" class="row-note">交接：{{ formatHandover(row.checkoutChecklist) }}</p>
             </div>
             <div v-if="row.status === 'PENDING'" class="review-actions">
               <template v-if="canWrite">
@@ -316,8 +318,29 @@
           </el-col>
         </el-row>
       </el-tab-pane>
+      <el-tab-pane v-if="canWrite" :label="`入住与留宿 (${pendingResidenceCount})`" name="residence">
+        <p class="section-subtitle">审核学生入住登记与假期留宿申请。</p>
+        <el-table :data="residenceList" empty-text="暂无申请">
+          <el-table-column label="学生" min-width="130"><template #default="{ row }">{{ studentName(row.studentId) }}</template></el-table-column>
+          <el-table-column label="寝室" min-width="140"><template #default="{ row }">{{ roomName(row.roomId) }}</template></el-table-column>
+          <el-table-column label="类型" width="105"><template #default="{ row }">{{ row.requestType === 'CHECKIN' ? '入住登记' : '假期留宿' }}</template></el-table-column>
+          <el-table-column label="时间" min-width="150"><template #default="{ row }">{{ row.fromDate ? `${row.fromDate} 至 ${row.toDate}` : '—' }}</template></el-table-column>
+          <el-table-column prop="reason" label="说明" min-width="150" />
+          <el-table-column label="状态" width="100"><template #default="{ row }">{{ ({ PENDING: '待审核', APPROVED: '已通过', REJECTED: '已驳回' })[row.status] }}</template></el-table-column>
+          <el-table-column prop="reviewComment" label="审核意见" min-width="120" />
+          <el-table-column label="操作" width="150"><template #default="{ row }"><template v-if="row.status === 'PENDING'"><el-button link type="primary" @click="reviewResidence(row, 'APPROVED')">通过</el-button><el-button link type="danger" @click="reviewResidence(row, 'REJECTED')">驳回</el-button></template></template></el-table-column>
+        </el-table>
+      </el-tab-pane>
     </el-tabs>
 
+    <el-dialog v-model="checkoutVisible" title="退宿验收与床位交接" width="460px">
+      <p>请完成以下检查后确认退宿，系统将释放床位。</p>
+      <div><el-checkbox v-model="handover.keyReturned">钥匙或门禁卡已交还</el-checkbox></div>
+      <div><el-checkbox v-model="handover.facilitiesChecked">床位及设施已检查</el-checkbox></div>
+      <div><el-checkbox v-model="handover.roomCleared">个人物品和卫生已清理</el-checkbox></div>
+      <el-input v-model="handover.note" type="textarea" maxlength="300" :rows="3" placeholder="设施损坏或其他交接备注（选填）" />
+      <template #footer><el-button @click="checkoutVisible = false">取消</el-button><el-button type="primary" :loading="submitting" @click="confirmCheckout">确认交接并批准</el-button></template>
+    </el-dialog>
     <!-- 卫生检查录入弹窗 -->
     <el-dialog v-model="hygieneVisible" title="录入宿舍卫生检查" width="440px">
       <el-form :model="hygieneForm" label-width="105px">
@@ -486,10 +509,17 @@ const router = useRouter()
 const loading = ref(false)
 const loadError = ref(false)
 const submitting = ref(false)
+const checkoutVisible = ref(false)
+const checkoutRow = ref(null)
+const handover = reactive({ keyReturned: false, facilitiesChecked: false, roomCleared: false, note: '' })
+const formatHandover = value => {
+  try { const record = JSON.parse(value); return `钥匙已交还、设施已检查、卫生已清理${record.note ? `；${record.note}` : ''}` }
+  catch (_) { return '已记录' }
+}
 const rewarding = ref(false)
 const auditingCurfew = ref(false)
 
-const sectionMap = { todo: 'todo', eval: 'eval', hygiene: 'hygiene', adjust: 'adjust', visitor: 'visitor', gate: 'visitor' }
+const sectionMap = { todo: 'todo', eval: 'eval', hygiene: 'hygiene', adjust: 'adjust', visitor: 'visitor', gate: 'visitor', residence: 'residence' }
 const activeTab = ref(sectionMap[route.params.section] || route.query.tab || 'todo')
 watch(activeTab, (tab) => {
   const sec = tab === 'visitor' ? 'visitor' : tab
@@ -504,6 +534,7 @@ watch(() => route.params.section, (sec) => {
 const evalList = ref([])
 const hygieneList = ref([])
 const adjustList = ref([])
+const residenceList = ref([])
 const disciplineList = ref([])
 const visitorList = ref([])
 const gateCode = ref('')
@@ -527,6 +558,17 @@ const activeVisitorQr = ref(null)
 const pendingAdjustCount = computed(() =>
   adjustList.value.filter(a => a.status === 'PENDING').length
 )
+const pendingResidenceCount = computed(() => residenceList.value.filter(a => a.status === 'PENDING').length)
+const overstayVisitorCount = computed(() => visitorList.value.filter(visitor => visitor.overstayFlag === 1).length)
+const todoCount = computed(() => pendingResidenceCount.value + pendingAdjustCount.value + pendingAppealCount.value + overstayVisitorCount.value)
+const studentName = id => allocatedStudents.value.find(s => s.studentId === id)?.realName || `学生 #${id}`
+const roomName = id => { const room = rooms.value.find(r => r.id === id); return room ? `${room.buildingName} · ${room.roomNo}` : `寝室 #${id}` }
+const reviewResidence = async (row, status) => {
+  const { value } = await ElMessageBox.prompt('填写审核意见（可留空）', status === 'APPROVED' ? '通过申请' : '驳回申请', { inputType: 'textarea' })
+  await request.post('/residence/review', { id: row.id, status, comment: value || '' })
+  ElMessage.success('审核完成')
+  await loadAll()
+}
 
 const pendingAppealCount = computed(() =>
   disciplineList.value.filter(d => d.status === 3).length
@@ -646,7 +688,7 @@ const loadAll = async () => {
   loading.value = true
   loadError.value = false
   try {
-    const [eRes, hRes, aRes, dRes, vRes, rRes, cRes, bRes, stuRes] = await Promise.all([
+    const [eRes, hRes, aRes, dRes, vRes, rRes, cRes, bRes, stuRes, residenceRes] = await Promise.all([
       request.get('/affair/evaluation'),
       request.get('/affair/hygiene'),
       request.get('/affair/adjust-list'),
@@ -655,7 +697,8 @@ const loadAll = async () => {
       request.get('/dorm/rooms'),
       request.get('/affair/curfew-stats', { params: curfewBuildingId.value ? { buildingId: curfewBuildingId.value } : {} }),
       request.get('/dorm/buildings'),
-      request.get('/smart-alloc/candidates')
+      request.get('/smart-alloc/candidates'),
+      canWrite ? request.get('/residence/requests') : Promise.resolve({ data: [] })
     ])
     evalList.value = eRes.data || []
     hygieneList.value = hRes.data || []
@@ -666,6 +709,7 @@ const loadAll = async () => {
     curfewStats.value = cRes.data || {}
     buildings.value = bRes.data || []
     allocatedStudents.value = (stuRes.data || []).filter(s => s.allocated)
+    residenceList.value = residenceRes.data || []
   } catch (e) {
     loadError.value = true
   } finally {
@@ -863,9 +907,27 @@ const confirmRejectAdjust = async (row) => {
 }
 
 const reviewAdjust = async (row, status) => {
+  if (status === 'APPROVED' && row.applyType === 'CHECKOUT') {
+    checkoutRow.value = row
+    Object.assign(handover, { keyReturned: false, facilitiesChecked: false, roomCleared: false, note: '' })
+    checkoutVisible.value = true
+    return
+  }
+  await sendAdjustReview(row, status)
+}
+const confirmCheckout = async () => {
+  if (!handover.keyReturned || !handover.facilitiesChecked || !handover.roomCleared) return ElMessage.warning('请先完成全部交接检查')
+  submitting.value = true
+  try {
+    await sendAdjustReview(checkoutRow.value, 'APPROVED', { ...handover })
+    checkoutVisible.value = false
+  } finally { submitting.value = false }
+}
+const sendAdjustReview = async (row, status, checklist = null) => {
   await request.post('/affair/adjust-review', {
     id: row.id,
     status,
+    handover: checklist,
     reviewComment: status === 'APPROVED' ? '同意申请，系统已自动划转床位并重算寝室契合度' : '目标床位暂不可用，予以驳回'
   })
   ElMessage.success('审批完成，床位与寝室契合度已同步更新')

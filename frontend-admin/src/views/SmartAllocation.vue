@@ -153,6 +153,7 @@
             </el-tag>
           </div>
           <div class="toolbar-actions">
+            <el-button size="small" plain icon="Download" @click="exportAllocationReport">导出方案报告</el-button>
             <el-button
               v-if="!allocResult.committed"
               type="primary"
@@ -202,6 +203,9 @@
         </el-col>
       </el-row>
 
+      <el-alert :title="allocResult.scoreNote" type="info" :closable="false" show-icon />
+      <p v-if="allocResult.unallocatedStudents?.length" class="field-tip">未分配 {{ allocResult.unallocatedStudents.length }} 人：{{ allocResult.unallocatedStudents.map(s => `${s.realName}（${s.reason}）`).join('、') }}</p>
+
       <el-divider content-position="left">各寝室分配名单</el-divider>
 
       <el-row :gutter="16">
@@ -222,6 +226,7 @@
               </div>
               <el-tag type="success" size="small" class="tabular-nums">契合度 {{ room.harmonyScore }}%</el-tag>
             </div>
+            <p class="field-tip">{{ room.explanation }}</p>
             <el-table :data="room.students" size="small" border class="cluster-table">
               <el-table-column prop="bedNo" label="床号" width="60" />
               <el-table-column prop="realName" label="姓名" width="90" />
@@ -335,6 +340,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
 import request, { downloadExport } from '@/api/request'
+import { allocationReportCsv } from '@/allocationReport'
 
 const route = useRoute()
 const loading = ref(false)
@@ -354,6 +360,15 @@ const importCsv = ref('学号,姓名,性别,学院,专业,班级,年级\n2026100
 const filterStatus = ref(route.query.filter || 'ALL')
 const running = ref(false)
 const allocResult = ref(null)
+const exportAllocationReport = () => {
+  if (!allocResult.value) return
+  const url = URL.createObjectURL(new Blob([allocationReportCsv(allocResult.value)], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '分寝方案对比报告.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 const showSandbox = ref(false)
 const strategyMode = ref('HABIT_FIRST')

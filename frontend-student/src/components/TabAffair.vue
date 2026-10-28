@@ -22,6 +22,7 @@
       </div>
     </div>
 
+    <ResidenceRequests :target-key="targetKey" @toast="$emit('toast', $event)" />
     <!-- 宿务面板：访客电子通行码、调宿进度、晚归报备与在线申诉 -->
     <div id="affair-panel" class="affair-section">
       <div class="sec-bar">
@@ -308,11 +309,13 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import QRCode from 'qrcode'
 import api from '../api'
+import ResidenceRequests from './ResidenceRequests.vue'
 import BottomSheet from './BottomSheet.vue'
 
 const props = defineProps({
   dash: { type: Object, default: () => ({}) },
-  initialAction: { type: String, default: '' }
+  initialAction: { type: String, default: '' },
+  targetKey: { type: String, default: '' }
 })
 const emit = defineEmits(['refresh', 'toast', 'clear-action'])
 

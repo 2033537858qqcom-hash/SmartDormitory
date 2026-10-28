@@ -117,6 +117,7 @@
             v-else-if="currentTab === 'affair'"
             :dash="dash"
             :initial-action="utilityInitialAction"
+            :target-key="messageKey"
             @clear-action="utilityInitialAction = ''"
             @refresh="loadDashboard"
             @toast="showToast"
@@ -197,6 +198,7 @@ const loginError = ref('')
 const loginLoading = ref(false)
 const currentTab = ref('home')
 const utilityInitialAction = ref('')
+const messageKey = ref('')
 const loading = ref(true)
 const loadError = ref(false)
 const dash = ref({})
@@ -232,6 +234,7 @@ const showToast = (payload) => {
 
 const selectTab = (key) => {
   utilityInitialAction.value = ''
+  messageKey.value = ''
   currentTab.value = key
   if (scrollBodyRef.value) {
     scrollBodyRef.value.scrollTop = 0
@@ -239,6 +242,7 @@ const selectTab = (key) => {
 }
 
 const handleNavigate = async (target) => {
+  messageKey.value = target && typeof target === 'object' ? target.key || '' : ''
   if (typeof target === 'object' && target !== null) {
     utilityInitialAction.value = target.action || ''
     currentTab.value = target.tab || 'home'
@@ -249,7 +253,7 @@ const handleNavigate = async (target) => {
   if (scrollBodyRef.value) {
     scrollBodyRef.value.scrollTop = 0
   }
-  if (target && typeof target === 'object' && target.key) {
+  if (target && typeof target === 'object' && target.key && !target.key.startsWith('RESIDENCE:')) {
     await nextTick()
     const record = Array.from(scrollBodyRef.value?.querySelectorAll('[data-message-key]') || [])
       .find(item => item.dataset.messageKey === target.key)

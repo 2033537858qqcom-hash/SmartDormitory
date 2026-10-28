@@ -6,6 +6,7 @@ function cell(value) {
 
 export function allocationReportCsv(result) {
   const rows = [['状态', '楼栋', '寝室', '床号', '学号', '姓名', '组内契合度', '说明']]
+  rows.push(['对比', result.buildingName, '', '', '', '', result.smartAvgHarmonyScore, `智能平均分；传统平均分 ${result.traditionalAvgHarmonyScore ?? ''}；差值 ${result.scoreImprovement ?? ''}`])
   for (const room of result.roomAllocations || []) {
     for (const student of room.students || []) {
       rows.push(['已分配', result.buildingName, room.roomNo, student.bedNo, student.studentNo, student.realName, room.harmonyScore, room.explanation])
