@@ -103,12 +103,15 @@ public class UtilityBillController {
 
     @PostMapping("/meter-entry")
     public Result<UtilityBill> saveMeterReading(@RequestBody UtilityBill bill, HttpServletRequest request) {
-        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), bill.getBuildingId());
+        DormRoom room = bill.getRoomId() == null ? null : roomMapper.selectById(bill.getRoomId());
+        if (room == null) return Result.error("寝室不存在");
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
         if (denied != null) {
             @SuppressWarnings("unchecked")
             Result<UtilityBill> typed = (Result<UtilityBill>) denied;
             return typed;
         }
+        bill.setBuildingId(room.getBuildingId());
         UtilityBill saved = smartUtilityService.createOrUpdateMeterBill(bill);
         String msg = saved.getAbnormalFlag() != null && saved.getAbnormalFlag() == 1
                 ? "抄表核算完成！⚠️触发智能能耗突增异常预警：" + saved.getAbnormalReason()
