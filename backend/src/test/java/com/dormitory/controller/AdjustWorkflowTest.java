@@ -87,4 +87,14 @@ class AdjustWorkflowTest {
         assertEquals(3L, apply.getOldRoomId());
         assertEquals(4, apply.getOldBedNo());
     }
+
+    @Test
+    void checkoutCannotBeApprovedWithoutInspectionChecklist() {
+        DormAdjustApply apply = application("PENDING"); apply.setApplyType("CHECKOUT");
+        when(applies.selectOne(any(Wrapper.class))).thenReturn(apply);
+        var result = controller.reviewAdjustApply(Map.of("id", 1, "status", "APPROVED"), admin());
+        assertNotEquals(200, result.getCode());
+        assertTrue(result.getMessage().contains("交接"));
+        verifyNoInteractions(beds);
+    }
 }
