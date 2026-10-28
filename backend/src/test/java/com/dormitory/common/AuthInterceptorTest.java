@@ -35,7 +35,7 @@ class AuthInterceptorTest {
         assertFalse(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
 
         String token = sessions.create(7L);
-        request = new MockHttpServletRequest("GET", "/api/auth/users");
+        request = new MockHttpServletRequest("GET", "/api/auth/student-dashboard/7");
         request.addHeader("Authorization", token);
         when(users.selectById(7L)).thenReturn(user);
         assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
