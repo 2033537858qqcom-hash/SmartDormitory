@@ -135,6 +135,13 @@ class StudentIdorAuthorizationTest {
     }
 
     @Test
+    void paymentHistoryRequiresOwnRoom() {
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(null);
+        assertEquals(403, utilityController.paymentHistory(2L, student(10L)).getCode());
+        verify(paymentLogMapper, never()).selectList(any(Wrapper.class));
+    }
+
+    @Test
     void habitProfileIgnoresForgedStudentId() {
         when(habitProfileMapper.selectOne(any(Wrapper.class))).thenReturn(null);
         StudentHabitProfile profile = new StudentHabitProfile();
