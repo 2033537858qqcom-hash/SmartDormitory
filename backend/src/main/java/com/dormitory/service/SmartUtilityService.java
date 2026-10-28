@@ -3,8 +3,11 @@ package com.dormitory.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dormitory.entity.DormRoom;
 import com.dormitory.entity.UtilityBill;
+import com.dormitory.entity.UtilityPaymentLog;
 import com.dormitory.mapper.DormRoomMapper;
 import com.dormitory.mapper.UtilityBillMapper;
+import com.dormitory.mapper.UtilityPaymentLogMapper;
+import cn.hutool.crypto.digest.DigestUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,7 @@ public class SmartUtilityService {
 
     private final UtilityBillMapper utilityBillMapper;
     private final DormRoomMapper roomMapper;
+    private final UtilityPaymentLogMapper paymentLogMapper;
 
     /**
      * 阶梯电价核算规则：
@@ -164,6 +168,66 @@ public class SmartUtilityService {
         }
         roomMapper.updateById(room);
         return room;
+    }
+
+    /** 演示支付：同一请求号可安全重试，余额、账单和流水在同一事务内提交。 */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> processPayment(Long roomId, Long billId, BigDecimal electricRecharge,
+                                               BigDecimal waterRecharge, Long operatorId, String requestId) {
+        BigDecimal electric = electricRecharge == null ? BigDecimal.ZERO : electricRecharge;
+        BigDecimal water = waterRecharge == null ? BigDecimal.ZERO : waterRecharge;
+        if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{16,30}")) throw new IllegalArgumentException("请提供有效的请求编号");
+        if (electric.signum() < 0 || water.signum() < 0 || electric.scale() > 2 || water.scale() > 2)
+            throw new IllegalArgumentException("充值金额必须为非负数且最多两位小数");
+        if (billId == null && electric.signum() == 0 && water.signum() == 0) throw new IllegalArgumentException("请输入充值金额");
+        if (billId != null && (electric.signum() != 0 || water.signum() != 0)) throw new IllegalArgumentException("缴费与充值请分开提交");
+        String txnNo = "DEMO-" + requestId;
+        String fingerprint = DigestUtil.sha256Hex(roomId + ":" + billId + ":" + operatorId + ":"
+                + electric.stripTrailingZeros().toPlainString() + ":" + water.stripTrailingZeros().toPlainString());
+        DormRoom room = roomMapper.selectOne(new LambdaQueryWrapper<DormRoom>()
+                .eq(DormRoom::getId, roomId).last("FOR UPDATE"));
+        if (room == null) throw new IllegalArgumentException("未找到对应寝室");
+        UtilityPaymentLog previous = paymentLogMapper.selectOne(new LambdaQueryWrapper<UtilityPaymentLog>()
+                .eq(UtilityPaymentLog::getTxnNo, txnNo));
+        if (previous != null) {
+            if (!Objects.equals(previous.getRemark(), fingerprint)) throw new IllegalArgumentException("请求编号已用于其他操作");
+            return paymentResult(room, previous);
+        }
+        BigDecimal eBefore = room.getElectricBalance() == null ? BigDecimal.ZERO : room.getElectricBalance();
+        BigDecimal wBefore = room.getWaterBalance() == null ? BigDecimal.ZERO : room.getWaterBalance();
+        BigDecimal eAfter = eBefore.add(electric);
+        BigDecimal wAfter = wBefore.add(water);
+        if (billId != null) {
+            UtilityBill bill = utilityBillMapper.selectById(billId);
+            if (bill == null || !Objects.equals(roomId, bill.getRoomId())) throw new IllegalArgumentException("账单不属于当前寝室");
+            if (!Integer.valueOf(0).equals(bill.getPayStatus())) throw new IllegalArgumentException("账单已缴纳或状态无效");
+            eAfter = eAfter.subtract(bill.getElectricCost() == null ? BigDecimal.ZERO : bill.getElectricCost()).max(BigDecimal.ZERO);
+            wAfter = wAfter.subtract(bill.getWaterCost() == null ? BigDecimal.ZERO : bill.getWaterCost()).max(BigDecimal.ZERO);
+            bill.setPayStatus(1);
+            bill.setPayTime(LocalDateTime.now());
+            if (utilityBillMapper.updateById(bill) != 1) throw new IllegalStateException("账单更新失败");
+        }
+        room.setElectricBalance(eAfter);
+        room.setWaterBalance(wAfter);
+        if (roomMapper.updateById(room) != 1) throw new IllegalStateException("账户更新失败");
+        UtilityPaymentLog log = new UtilityPaymentLog();
+        log.setTxnNo(txnNo); log.setRoomId(roomId); log.setBillId(billId); log.setOperatorId(operatorId);
+        log.setActionType(billId == null ? "RECHARGE" : "PAY_BILL");
+        log.setElectricBefore(eBefore); log.setWaterBefore(wBefore); log.setElectricAfter(eAfter); log.setWaterAfter(wAfter);
+        log.setElectricDelta(eAfter.subtract(eBefore)); log.setWaterDelta(wAfter.subtract(wBefore));
+        log.setChannel("DEMO"); log.setRemark(fingerprint); log.setCreateTime(LocalDateTime.now());
+        paymentLogMapper.insert(log);
+        return paymentResult(room, log);
+    }
+
+    private Map<String, Object> paymentResult(DormRoom room, UtilityPaymentLog log) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("room", room); result.put("txnNo", log.getTxnNo()); result.put("demoSimulated", true);
+        result.put("channel", "DEMO"); result.put("actionType", log.getActionType());
+        result.put("electricBefore", log.getElectricBefore()); result.put("waterBefore", log.getWaterBefore());
+        result.put("electricAfter", log.getElectricAfter()); result.put("waterAfter", log.getWaterAfter());
+        result.put("notice", "演示模拟：本流水仅本地核销，未对接微信支付或校园卡网关");
+        return result;
     }
 
     /** 前端展示用的真实阈值规则（替代演示作弊提示） */
