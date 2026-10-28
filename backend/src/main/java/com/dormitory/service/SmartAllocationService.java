@@ -79,6 +79,20 @@ public class SmartAllocationService {
         return BigDecimal.valueOf(total / pairs).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
 
+    public String explainGroup(List<StudentHabitProfile> group) {
+        if (group == null || group.size() < 2) return "单人分组暂无可比较的室友习惯";
+        String[] names = {"作息", "睡眠", "空调", "卫生", "氛围", "异味敏感度"};
+        int maxIndex = 0;
+        double maxRange = -1;
+        for (int dimension = 0; dimension < names.length; dimension++) {
+            final int index = dimension;
+            double min = group.stream().mapToDouble(p -> toVector(p)[index]).min().orElse(0);
+            double max = group.stream().mapToDouble(p -> toVector(p)[index]).max().orElse(0);
+            if (max - min > maxRange) { maxRange = max - min; maxIndex = dimension; }
+        }
+        return maxRange == 0 ? "六维习惯均一致" : "组内差异最大：" + names[maxIndex] + "，相差 " + (int) maxRange + " 档";
+    }
+
     private double[] toVector(StudentHabitProfile p) {
         if (p == null) {
             return new double[]{3, 3, 3, 3, 3, 5};
@@ -301,6 +315,7 @@ public class SmartAllocationService {
             roomDetail.put("roomNo", room.getRoomNo());
             roomDetail.put("harmonyScore", harmonyScore);
             roomDetail.put("groupStyleTag", inferGroupStyleTag(chosenProfiles));
+            roomDetail.put("explanation", explainGroup(chosenProfiles));
             roomDetail.put("students", studentItems);
             allocatedRoomDetails.add(roomDetail);
         }
@@ -336,6 +351,13 @@ public class SmartAllocationService {
         result.put("traditionalAvgHarmonyScore", traditionalFormatted);
         result.put("scoreImprovement", improvement);
         result.put("roomAllocations", allocatedRoomDetails);
+        result.put("scoreNote", "契合度仅比较本次新分配学生，未计入原住室友；未填写问卷按默认画像计算。单人组为 100 分，不代表已有室友匹配度。");
+        result.put("unallocatedStudents", remaining.stream().map(student -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("studentId", student.getId()); item.put("studentNo", student.getUsername());
+            item.put("realName", student.getRealName()); item.put("reason", "可用空床不足或床位数据不一致");
+            return item;
+        }).collect(Collectors.toList()));
         return result;
     }
 
