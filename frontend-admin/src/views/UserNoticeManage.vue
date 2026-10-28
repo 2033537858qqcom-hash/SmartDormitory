@@ -30,6 +30,17 @@
             <el-button size="small" type="primary" plain icon="Search" @click="loadUsers">查询</el-button>
           </div>
           <div class="toolbar-actions">
+            <el-tooltip :content="isMasked ? '已开启隐私脱敏保护（手机与邮箱隐蔽），点击可查看完整明文' : '当前显示明文数据，点击开启脱敏保护'" placement="top">
+              <el-button
+                size="small"
+                :type="isMasked ? 'info' : 'warning'"
+                plain
+                :icon="isMasked ? 'Lock' : 'Unlock'"
+                @click="isMasked = !isMasked"
+              >
+                {{ isMasked ? '隐私脱敏: 开启' : '隐私脱敏: 关闭' }}
+              </el-button>
+            </el-tooltip>
             <el-button size="small" type="success" plain icon="Download" @click="exportStudents">导出名单</el-button>
             <el-button size="small" type="primary" icon="Plus" @click="openUserModal()">新增账号</el-button>
           </div>
@@ -47,13 +58,13 @@
           <li v-for="row in users" :key="row.id" class="person-row">
             <div class="person-identity">
               <span class="person-avatar" aria-hidden="true">{{ (row.realName || '?').slice(0, 1) }}</span>
-              <div><strong>{{ row.realName || '-' }}</strong><small>{{ row.username }} · {{ row.gender === 2 ? '女' : '男' }} · {{ row.phone || '-' }}</small></div>
+              <div><strong>{{ row.realName || '-' }}</strong><small class="tabular-nums">{{ row.username }} · {{ row.gender === 2 ? '女' : '男' }} · {{ isMasked ? maskPhone(row.phone) : (row.phone || '-') }}</small></div>
             </div>
             <div class="person-details">
               <strong>{{ roleName(row.role) }}</strong>
               <small v-if="row.role === 'STUDENT'">{{ row.college }} · {{ row.className }} ({{ row.grade }})</small>
               <small v-else-if="row.role === 'REPAIRMAN'">工种：{{ row.repairSpecialty || '-' }}</small>
-              <small v-else>{{ row.email || '后勤保障部' }}</small>
+              <small v-else>{{ isMasked ? maskEmail(row.email) : (row.email || '后勤保障部') }}</small>
             </div>
             <div class="person-details"><strong :class="{ 'status-disabled': row.status !== 1 }">{{ row.status === 1 ? '正常' : '禁用' }}</strong></div>
             <div class="person-actions">
@@ -228,6 +239,33 @@ const roleTag = (r) => {
   if (r === 'REPAIRMAN') return 'warning'
   if (r === 'COUNSELOR') return 'info'
   return 'primary'
+}
+
+const isMasked = ref(true)
+
+const maskPhone = (phone) => {
+  if (!phone) return '-'
+  const str = String(phone).trim()
+  if (str.length === 11) {
+    return str.replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2')
+  }
+  if (str.length > 7) {
+    return str.slice(0, 3) + '****' + str.slice(-4)
+  }
+  return str
+}
+
+const maskEmail = (email) => {
+  if (!email) return '后勤保障部'
+  const str = String(email).trim()
+  const atIdx = str.indexOf('@')
+  if (atIdx <= 1) return str
+  const name = str.slice(0, atIdx)
+  const domain = str.slice(atIdx)
+  if (name.length <= 2) {
+    return name[0] + '***' + domain
+  }
+  return name.slice(0, 2) + '***' + name.slice(-1) + domain
 }
 
 const loadUsers = async () => {
