@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,8 +28,12 @@ public class RepairOrderController {
     public Result<List<Map<String, Object>>> listOrders(@RequestParam(required = false) Long studentId,
                                                         @RequestParam(required = false) Long workerId,
                                                         @RequestParam(required = false) String status,
-                                                        @RequestParam(required = false) String priority) {
+                                                        @RequestParam(required = false) String priority,
+                                                        HttpServletRequest request) {
         LambdaQueryWrapper<RepairOrder> wrapper = new LambdaQueryWrapper<>();
+        if ("REPAIRMAN".equals(request.getAttribute("currentUserRole"))) {
+            workerId = (Long) request.getAttribute("currentUserId");
+        }
         if (studentId != null) wrapper.eq(RepairOrder::getStudentId, studentId);
         if (workerId != null) wrapper.eq(RepairOrder::getAssignedWorkerId, workerId);
         if (status != null && !status.isEmpty()) wrapper.eq(RepairOrder::getStatus, status);
@@ -83,7 +88,7 @@ public class RepairOrderController {
     }
 
     @PostMapping("/process")
-    public Result<RepairOrder> processOrder(@RequestBody Map<String, Object> body) {
+    public Result<RepairOrder> processOrder(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long id = Long.valueOf(body.get("id").toString());
         String status = body.get("status").toString();
         String repairResult = body.get("repairResult") != null ? body.get("repairResult").toString() : null;
@@ -91,6 +96,15 @@ public class RepairOrderController {
         RepairOrder order = repairOrderMapper.selectById(id);
         if (order == null) {
             return Result.error("工单不存在");
+        }
+        if ("REPAIRMAN".equals(request.getAttribute("currentUserRole"))) {
+            if (!Objects.equals(order.getAssignedWorkerId(), request.getAttribute("currentUserId"))) {
+                return Result.error(403, "只能处理分配给自己的工单");
+            }
+            if (!Set.of("ASSIGNED", "PROCESSING").contains(order.getStatus())
+                    || !Set.of("PROCESSING", "COMPLETED").contains(status)) {
+                return Result.error("工单状态不允许此操作");
+            }
         }
         order.setStatus(status);
         if (repairResult != null) {

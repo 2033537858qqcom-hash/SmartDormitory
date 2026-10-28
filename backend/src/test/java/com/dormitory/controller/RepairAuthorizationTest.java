@@ -2,6 +2,9 @@ package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.dormitory.entity.RepairOrder;
 import com.dormitory.mapper.RepairOrderMapper;
 import com.dormitory.mapper.SysUserMapper;
@@ -47,6 +50,7 @@ class RepairAuthorizationTest {
 
     @Test
     void workerListAlwaysUsesAuthenticatedWorkerId() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), RepairOrder.class);
         doAnswer(invocation -> {
             LambdaQueryWrapper<RepairOrder> wrapper = invocation.getArgument(0);
             assertTrue(wrapper.getSqlSegment().contains("assigned_worker_id"));
