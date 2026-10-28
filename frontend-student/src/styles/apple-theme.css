@@ -1,0 +1,45 @@
+:root {
+  color-scheme: light;
+  --bg-canvas: #f5f5f7;
+  --bg-surface: #ffffff;
+  --bg-muted: #eeeef1;
+  --border-subtle: #e8e8ed;
+  --border-strong: #d2d2d7;
+  --text-primary: #1d1d1f;
+  --text-secondary: #515154;
+  --text-muted: #76767d;
+  --accent-primary: #006edb;
+  --accent-subtle: #edf4ff;
+  --status-success: #287d4b;
+  --status-success-bg: #edf7f0;
+  --status-warning: #9d650a;
+  --status-warning-bg: #fbf5e9;
+  --status-danger: #c43832;
+  --status-danger-bg: #fff0ee;
+  --radius-card: 24px;
+  --radius-control: 12px;
+  --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body, #app { height: 100%; }
+body { font-family: var(--font-system); font-size: 14px; line-height: 1.55; color: var(--text-primary); background: #ededf0; -webkit-font-smoothing: antialiased; overflow: hidden; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+b, strong { font-weight: 600; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid #95bff0; outline-offset: 3px; }
+button:disabled { cursor: default; opacity: .5; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.spring-btn { transition: transform 180ms cubic-bezier(.2,.7,.2,1), background-color 180ms ease, opacity 180ms ease; user-select: none; }
+.spring-btn:active { transform: scale(.975); }
+.form-row { margin-bottom: 18px; }
+.form-row label { line-height: 1.6; }
+.inp, .area, .text-inp { color: var(--text-primary); font-family: var(--font-system); }
+.inp:focus, .area:focus, .text-inp:focus { box-shadow: 0 0 0 2px var(--accent-primary); }
+.sheet-submit { position: sticky; bottom: 0; z-index: 1; min-height: 46px; box-shadow: 0 -8px 15px var(--bg-surface); }
+textarea { resize: vertical; min-height: 78px; }
+@media (max-width: 480px) { body { background: var(--bg-canvas); } input, select, textarea { font-size: 16px !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+.mobile-page-heading { padding: 7px 0 23px; }.mobile-page-heading h1 { font-size: 28px; line-height: 1.3; font-weight: 600; letter-spacing: -.8px; }.mobile-page-heading p { color: var(--text-muted); font-size: 13px; margin-top: 8px; }
