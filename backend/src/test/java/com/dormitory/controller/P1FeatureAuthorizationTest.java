@@ -45,6 +45,7 @@ class P1FeatureAuthorizationTest {
     @Mock VisitorRecordMapper visitorMapper;
     @Mock SysNoticeMapper noticeMapper;
     @Mock UtilityBillMapper utilityBillMapper;
+    @Mock UtilityPaymentLogMapper paymentLogMapper;
     @Mock SmartUtilityService smartUtilityService;
     @Mock DormAllocationLogMapper allocationLogMapper;
     @Mock UserMessageService messageService;
@@ -61,7 +62,7 @@ class P1FeatureAuthorizationTest {
                 userMapper, habitProfileMapper, buildingScope, messageService);
         utilityController = new UtilityBillController(
                 utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper,
-                bedMapper, buildingScope, messageService);
+                bedMapper, buildingScope, messageService, paymentLogMapper);
         allocController = new SmartAllocationController(
                 smartAllocationService, userMapper, habitProfileMapper, bedMapper, roomMapper,
                 buildingMapper, allocationLogMapper);

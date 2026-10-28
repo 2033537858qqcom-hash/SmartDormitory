@@ -3,6 +3,7 @@
     <header class="mobile-page-heading">
       <h1>水电缴费</h1>
       <p>余额、账单与充值，都在这里。</p>
+      <div class="demo-banner" role="note">演示模拟：充值/缴费仅本地余额核销，<b>非微信支付</b>、非校园卡实扣。</div>
     </header>
 
     <div class="balance-card">
@@ -75,7 +76,8 @@
       </div>
     </div>
 
-    <BottomSheet v-model="rechargeSheet" title="寝室水电费充值">
+    <BottomSheet v-model="rechargeSheet" title="寝室水电费充值（演示模拟）">
+      <p class="demo-sheet-note">本操作为演示环境模拟扣款，将生成 DEMO 流水号；不会调用微信支付或任何真实支付网关。</p>
       <div class="form-row">
         <label>充值账户</label>
         <div class="type-grid">
@@ -144,13 +146,14 @@ const submitRecharge = async () => {
   submitting.value = true
   try {
     const isElec = rechargeTarget.value === 'ELECTRIC'
-    await api.post('/utility/pay-or-recharge', {
+    const res = await api.post('/utility/pay-or-recharge', {
       roomId: props.dash.room?.id || 1,
       electricRecharge: isElec ? rechargeAmount.value : 0,
       waterRecharge: isElec ? 0 : rechargeAmount.value
     })
     rechargeSheet.value = false
-    emit('toast', { msg: `已成功充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00（演示模拟）`, type: 'success' })
+    const txn = res.data?.txnNo || res.data?.data?.txnNo
+    emit('toast', { msg: `【演示模拟】已充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
     emit('refresh')
   } catch (e) {
     emit('toast', { msg: e.response?.data?.message || '充值失败', type: 'error' })
@@ -162,11 +165,12 @@ const submitRecharge = async () => {
 const payBill = async (b) => {
   submitting.value = true
   try {
-    await api.post('/utility/pay-or-recharge', {
+    const res = await api.post('/utility/pay-or-recharge', {
       roomId: props.dash.room?.id || 1,
       billId: b.id
     })
-    emit('toast', { msg: `${b.billMonth} 账单已抵扣余额缴清`, type: 'success' })
+    const txn = res.data?.txnNo || res.data?.data?.txnNo
+    emit('toast', { msg: `【演示模拟】${b.billMonth} 账单已核销${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
     emit('refresh')
   } catch (e) {
     emit('toast', { msg: e.response?.data?.message || '缴费失败', type: 'error' })
@@ -719,4 +723,7 @@ const payBill = async (b) => {
   opacity: 0.6;
 }
 @media (max-width: 360px) { .balance-card { padding: 20px 17px; }.btn-group { gap: 3px; }.act-btn { font-size: 11px; }.b-val { font-size: 25px; } }
+
+.demo-banner { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #fff6e5; color: #9a5b00; font-size: 12px; line-height: 1.5; }
+.demo-sheet-note { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: #fff6e5; color: #9a5b00; font-size: 12px; line-height: 1.55; }
 </style>

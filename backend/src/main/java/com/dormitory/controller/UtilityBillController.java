@@ -30,6 +30,7 @@ public class UtilityBillController {
     private final DormBedMapper bedMapper;
     private final BuildingScopeService buildingScope;
     private final UserMessageService messageService;
+    private final UtilityPaymentLogMapper paymentLogMapper;
 
     @GetMapping("/bills")
     public Result<List<Map<String, Object>>> listBills(@RequestParam(required = false) Long buildingId,
@@ -111,7 +112,7 @@ public class UtilityBillController {
     }
 
     @PostMapping("/pay-or-recharge")
-    public Result<DormRoom> payOrRecharge(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+    public Result<Map<String, Object>> payOrRecharge(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long roomId = Long.valueOf(body.get("roomId").toString());
         Long billId = body.get("billId") != null ? Long.valueOf(body.get("billId").toString()) : null;
         BigDecimal electricRecharge = body.get("electricRecharge") != null
@@ -139,13 +140,48 @@ public class UtilityBillController {
             Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
             if (denied != null) {
                 @SuppressWarnings("unchecked")
-                Result<DormRoom> typed = (Result<DormRoom>) denied;
+                Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
                 return typed;
             }
         }
 
+        BigDecimal eBefore = room.getElectricBalance() != null ? room.getElectricBalance() : BigDecimal.ZERO;
+        BigDecimal wBefore = room.getWaterBalance() != null ? room.getWaterBalance() : BigDecimal.ZERO;
         DormRoom updatedRoom = smartUtilityService.payBillOrRecharge(roomId, billId, electricRecharge, waterRecharge);
-        return Result.success("缴费/充值成功，寝室水电账户已实时更新！", updatedRoom);
+        BigDecimal eAfter = updatedRoom.getElectricBalance() != null ? updatedRoom.getElectricBalance() : BigDecimal.ZERO;
+        BigDecimal wAfter = updatedRoom.getWaterBalance() != null ? updatedRoom.getWaterBalance() : BigDecimal.ZERO;
+
+        String action = billId != null ? "PAY_BILL" : "RECHARGE";
+        String txnNo = "DEMO-" + System.currentTimeMillis() + "-" + roomId;
+        UtilityPaymentLog log = new UtilityPaymentLog();
+        log.setTxnNo(txnNo);
+        log.setRoomId(roomId);
+        log.setBillId(billId);
+        log.setOperatorId((Long) request.getAttribute("currentUserId"));
+        log.setActionType(action);
+        log.setElectricDelta(eAfter.subtract(eBefore));
+        log.setWaterDelta(wAfter.subtract(wBefore));
+        log.setElectricBefore(eBefore);
+        log.setWaterBefore(wBefore);
+        log.setElectricAfter(eAfter);
+        log.setWaterAfter(wAfter);
+        log.setChannel("DEMO");
+        log.setRemark("演示环境模拟扣款，非微信支付/校园卡实扣");
+        log.setCreateTime(java.time.LocalDateTime.now());
+        paymentLogMapper.insert(log);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("room", updatedRoom);
+        payload.put("txnNo", txnNo);
+        payload.put("demoSimulated", true);
+        payload.put("channel", "DEMO");
+        payload.put("actionType", action);
+        payload.put("electricBefore", eBefore);
+        payload.put("waterBefore", wBefore);
+        payload.put("electricAfter", eAfter);
+        payload.put("waterAfter", wAfter);
+        payload.put("notice", "演示模拟：本流水仅本地核销，未对接微信支付或校园卡网关");
+        return Result.success("【演示模拟】缴费/充值已核销（非真实支付），流水号 " + txnNo, payload);
     }
 
     @GetMapping("/threshold-rules")

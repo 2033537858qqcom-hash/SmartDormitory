@@ -15,6 +15,7 @@
               <el-radio-button label="STUDENT">学生</el-radio-button>
               <el-radio-button label="DORM_MANAGER">宿管员</el-radio-button>
               <el-radio-button label="REPAIRMAN">维修师傅</el-radio-button>
+              <el-radio-button label="COUNSELOR">辅导员</el-radio-button>
               <el-radio-button label="ADMIN">管理员</el-radio-button>
             </el-radio-group>
             <el-input
@@ -94,6 +95,7 @@
             <el-option label="学生" value="STUDENT" />
             <el-option label="宿管员" value="DORM_MANAGER" />
             <el-option label="维修师傅" value="REPAIRMAN" />
+            <el-option label="辅导员（只读）" value="COUNSELOR" />
             <el-option label="系统管理员" value="ADMIN" />
           </el-select>
         </el-form-item>
@@ -208,7 +210,7 @@ const noticeForm = reactive({
 })
 
 const roleName = (r) => {
-  const m = { ADMIN: '系统管理员', DORM_MANAGER: '楼栋宿管员', REPAIRMAN: '维修师傅', STUDENT: '学生' }
+  const m = { ADMIN: '系统管理员', DORM_MANAGER: '楼栋宿管员', REPAIRMAN: '维修师傅', COUNSELOR: '辅导员', STUDENT: '学生' }
   return m[r] || r
 }
 
@@ -216,6 +218,7 @@ const roleTag = (r) => {
   if (r === 'ADMIN') return 'danger'
   if (r === 'DORM_MANAGER') return 'success'
   if (r === 'REPAIRMAN') return 'warning'
+  if (r === 'COUNSELOR') return 'info'
   return 'primary'
 }
 

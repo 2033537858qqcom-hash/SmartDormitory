@@ -37,6 +37,7 @@ class DormManagerBuildingScopeTest {
     @Mock SmartAllocationService smartAllocationService;
     @Mock BuildingScopeService buildingScope;
     @Mock UtilityBillMapper utilityBillMapper;
+    @Mock UtilityPaymentLogMapper paymentLogMapper;
     @Mock SmartUtilityService smartUtilityService;
     @Mock RepairOrderMapper repairOrderMapper;
     @Mock SmartRepairService smartRepairService;
@@ -50,7 +51,7 @@ class DormManagerBuildingScopeTest {
     void init() {
         dormController = new DormManageController(
                 buildingMapper, roomMapper, bedMapper, userMapper, habitProfileMapper, smartAllocationService, buildingScope);
-        utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
+        utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService, paymentLogMapper);
         repairController = new RepairOrderController(
                 repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
         lenient().when(buildingScope.resolve(any())).thenReturn(Set.of(1L));

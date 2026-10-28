@@ -3,7 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 const rolePermissions = {
   ADMIN: ['dashboard', 'smart-alloc', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair', 'user-notice'],
   DORM_MANAGER: ['dashboard', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair'],
-  REPAIRMAN: ['repair-dispatch']
+  REPAIRMAN: ['repair-dispatch'],
+  COUNSELOR: ['dashboard', 'dorm-visual', 'civilized-affair']
 }
 
 const routes = [
@@ -20,7 +21,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        meta: { title: '数据概览', roles: ['ADMIN', 'DORM_MANAGER'] },
+        meta: { title: '数据概览', roles: ['ADMIN', 'DORM_MANAGER', 'COUNSELOR'] },
         component: () => import('@/views/Dashboard.vue')
       },
       {
@@ -32,7 +33,7 @@ const routes = [
       {
         path: 'dorm-visual',
         name: 'DormVisual',
-        meta: { title: '房态管理', roles: ['ADMIN', 'DORM_MANAGER'] },
+        meta: { title: '房态管理', roles: ['ADMIN', 'DORM_MANAGER', 'COUNSELOR'] },
         component: () => import('@/views/DormVisual.vue')
       },
       {
@@ -54,7 +55,7 @@ const routes = [
       {
         path: 'civilized-affair/:section',
         name: 'CivilizedAffair',
-        meta: { title: '综合宿务', roles: ['ADMIN', 'DORM_MANAGER'] },
+        meta: { title: '综合宿务', roles: ['ADMIN', 'DORM_MANAGER', 'COUNSELOR'] },
         component: () => import('@/views/CivilizedAffair.vue'),
         props: true
       },

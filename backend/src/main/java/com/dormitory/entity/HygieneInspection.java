@@ -25,4 +25,6 @@ public class HygieneInspection {
     private String remark;
     private Long inspectorId;
     private LocalDateTime createTime;
+    /** JSON 数组：现场照片路径或 dataURL（演示本地上传） */
+    private String photoUrls;
 }

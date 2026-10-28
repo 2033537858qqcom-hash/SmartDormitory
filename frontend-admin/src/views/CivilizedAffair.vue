@@ -82,7 +82,18 @@
       <el-tab-pane label="卫生检查" name="hygiene">
         <div class="section-header">
           <span class="section-subtitle">四项内务评分（地面25 + 床铺25 + 书桌25 + 安全25 = 100分）</span>
-          <el-button type="primary" size="small" icon="Plus" @click="hygieneVisible = true">录入卫生检查</el-button>
+          <div class="toolbar-actions">
+            <el-select v-model="trendRoomId" clearable filterable placeholder="查看寝室卫生趋势" size="small" style="width: 220px" @change="loadHygieneTrend">
+              <el-option v-for="r in rooms" :key="r.id" :label="`${r.buildingName} · ${r.roomNo}室`" :value="r.id" />
+            </el-select>
+            <el-button v-if="canWrite" type="primary" size="small" icon="Plus" @click="hygieneVisible = true">录入卫生检查</el-button>
+            <el-tag v-else type="info" size="small" effect="plain">辅导员只读</el-tag>
+          </div>
+        </div>
+        <div v-if="trendRoomId" class="hygiene-trend-card">
+          <div class="sec-label">{{ trendMeta.buildingName }} · {{ trendMeta.roomNo }}室 · 近次卫生总分趋势</div>
+          <div ref="hygieneTrendRef" class="hygiene-trend-chart"></div>
+          <p v-if="!(trendPoints || []).length" class="list-empty">该寝室暂无足够的历史检查记录</p>
         </div>
         <p v-if="!loading && !loadError && !hygieneList.length" class="list-empty">暂无卫生检查记录</p>
         <ul v-else-if="hygieneList.length" class="score-list" aria-label="卫生检查记录">
@@ -95,6 +106,11 @@
               <div><dt>安全</dt><dd>{{ row.safetyScore ?? '—' }}</dd></div>
             </dl>
             <div class="score-result"><span>总分 · {{ row.grade || '未评级' }}</span><strong class="tabular-nums">{{ row.totalScore ?? '—' }} <small>分</small></strong></div>
+            <div class="hygiene-photos" v-if="hygienePhotos(row).length">
+              <a v-for="(u, i) in hygienePhotos(row)" :key="i" :href="photoSrc(u)" target="_blank" rel="noopener">
+                <img :src="photoSrc(u)" alt="检查现场照片" />
+              </a>
+            </div>
             <p class="hygiene-remark">{{ row.remark || '暂无检查评语' }}</p>
           </li>
         </ul>
@@ -128,8 +144,10 @@
               <p v-if="row.status !== 'PENDING'" class="row-note">审批意见：{{ row.reviewComment || '已归档' }}</p>
             </div>
             <div v-if="row.status === 'PENDING'" class="review-actions">
-              <el-button type="primary" size="small" @click="reviewAdjust(row, 'APPROVED')">批准并同步床位</el-button>
-              <el-button size="small" @click="confirmRejectAdjust(row)">驳回</el-button>
+              <template v-if="canWrite">
+                <el-button type="primary" size="small" @click="reviewAdjust(row, 'APPROVED')">批准并同步床位</el-button>
+                <el-button size="small" @click="confirmRejectAdjust(row)">驳回</el-button>
+              </template>
             </div>
           </li>
         </ul>
@@ -161,13 +179,13 @@
             <el-select v-model="curfewBuildingId" clearable placeholder="全部管辖楼栋" size="small" style="width: 160px">
               <el-option v-for="b in buildings" :key="b.id" :label="b.buildingName" :value="b.id" />
             </el-select>
-            <el-button type="primary" plain size="small" icon="Aim" :loading="auditingCurfew" @click="handleCurfewAudit">
+            <el-button v-if="canWrite" type="primary" plain size="small" icon="Aim" :loading="auditingCurfew" @click="handleCurfewAudit">
               按楼栋批量门禁稽核
             </el-button>
-            <el-button size="small" icon="Plus" @click="disciplineVisible = true">
+            <el-button size="small" icon="Plus" v-if="canWrite" @click="disciplineVisible = true">
               录入违纪/晚归
             </el-button>
-            <el-button size="small" icon="User" @click="visitorDialogVisible = true">
+            <el-button size="small" icon="User" v-if="canWrite" @click="visitorDialogVisible = true">
               登记外来访客
             </el-button>
           </div>
@@ -184,8 +202,11 @@
             <el-input v-model="gateCode" size="large" clearable placeholder="输入通行码 VP-xxxxxx" class="gate-input" @keyup.enter="verifyGate(false)">
               <template #prepend>门岗</template>
             </el-input>
-            <el-button type="primary" size="large" :loading="gateLoading" @click="verifyGate(false)">核验</el-button>
-            <el-button size="large" :disabled="!gateResult || !gateResult.passOk" :loading="gateLoading" @click="verifyGate(true)">核验并签离</el-button>
+            <template v-if="canWrite">
+              <el-button type="primary" size="large" :loading="gateLoading" @click="verifyGate(false)">核验</el-button>
+              <el-button size="large" :disabled="!gateResult || !gateResult.passOk" :loading="gateLoading" @click="verifyGate(true)">核验并签离</el-button>
+            </template>
+            <el-alert v-else title="辅导员只读：门岗核验与签离由宿管操作" type="info" :closable="false" show-icon />
           </div>
           <div v-if="gateResult" class="gate-pass-card" :class="{ ok: gateResult.passOk, warn: gateResult.overstayFlag === 1, done: gateResult.status === 1 }">
             <div class="gate-pass-badge">{{ gateResult.passOk ? '通行通过' : (gateResult.status === 1 ? '已签离' : '需人工复核') }}</div>
@@ -242,7 +263,7 @@
                   <div v-if="row.appealWitness">证明人：{{ row.appealWitness }}</div>
                   <div v-if="row.appealAttachments">附件占位：{{ formatAttachments(row.appealAttachments) }}</div>
                 </div>
-                <div v-if="row.status === 3" class="appeal-actions">
+                <div v-if="canWrite && row.status === 3" class="appeal-actions">
                   <el-button type="success" plain size="small" @click="reviewDiscipline(row, true)">
                     准予核销 (恢复文明分)
                   </el-button>
@@ -269,7 +290,7 @@
                     </strong>
                     <div class="toolbar-actions">
                       <el-tag v-if="row.overstayFlag === 1" type="danger" size="small">超时在访</el-tag>
-                      <el-button v-if="row.status === 0" type="primary" link @click="leaveVisitor(row.id)">核验签离</el-button>
+                      <el-button v-if="canWrite && row.status === 0" type="primary" link @click="leaveVisitor(row.id)">核验签离</el-button>
                       <span v-else class="record-status">已签离</span>
                     </div>
                   </div>
@@ -324,6 +345,13 @@
         </el-form-item>
         <el-form-item label="用电安全(25)">
           <el-input-number v-model="hygieneForm.safetyScore" :min="0" :max="25" />
+        </el-form-item>
+        <el-form-item label="现场照片">
+          <input type="file" accept="image/*" multiple @change="onHygienePhotos" />
+          <div v-if="hygieneForm.photoList.length" class="hygiene-photos preview">
+            <img v-for="(u, i) in hygieneForm.photoList" :key="i" :src="photoSrc(u)" alt="预览" />
+          </div>
+          <p class="form-hint">最多 3 张，演示本地压缩上传</p>
         </el-form-item>
         <el-form-item label="检查评语">
           <el-input v-model="hygieneForm.remark" />
@@ -443,12 +471,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
+import * as echarts from 'echarts'
 import request, { downloadExport } from '@/api/request'
-const isAdmin = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}').role === 'ADMIN'
+const adminUser = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}')
+const isAdmin = adminUser.role === 'ADMIN'
+const canWrite = adminUser.role !== 'COUNSELOR'
 
 const route = useRoute()
 const router = useRouter()
@@ -570,8 +601,14 @@ const hygieneForm = reactive({
   bedScore: 25,
   deskScore: 24,
   safetyScore: 25,
-  remark: '内务整洁，予以表扬'
+  remark: '内务整洁，予以表扬',
+  photoList: []
 })
+const trendRoomId = ref(null)
+const trendPoints = ref([])
+const trendMeta = reactive({ buildingName: '', roomNo: '' })
+const hygieneTrendRef = ref(null)
+let hygieneTrendChart = null
 
 const disciplineVisible = ref(false)
 const disciplineForm = reactive({
@@ -727,13 +764,90 @@ const submitVisitor = async () => {
   }
 }
 
+const hygienePhotos = (row) => {
+  if (!row?.photoUrls) return []
+  try {
+    const raw = typeof row.photoUrls === 'string' ? JSON.parse(row.photoUrls) : row.photoUrls
+    return Array.isArray(raw) ? raw.slice(0, 3) : []
+  } catch (_) { return [] }
+}
+const photoSrc = (u) => {
+  if (!u) return ''
+  if (u.startsWith('http') || u.startsWith('data:') || u.startsWith('blob:')) return u
+  return u.startsWith('/') ? u : ('/' + u)
+}
+const onHygienePhotos = async (ev) => {
+  const files = Array.from(ev.target.files || []).slice(0, 3)
+  const list = []
+  for (const f of files) {
+    const dataUrl = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.readAsDataURL(f)
+    })
+    // 演示压缩：过长则截断提示，仍存短 dataURL/文件名占位
+    if (typeof dataUrl === 'string' && dataUrl.length > 180000) {
+      list.push(`/uploads/hygiene/demo-${Date.now()}-${f.name}`)
+    } else {
+      list.push(dataUrl)
+    }
+  }
+  hygieneForm.photoList = list
+}
+const loadHygieneTrend = async () => {
+  if (!trendRoomId.value) {
+    trendPoints.value = []
+    if (hygieneTrendChart) { hygieneTrendChart.clear() }
+    return
+  }
+  try {
+    const res = await request.get('/affair/hygiene-trend', { params: { roomId: trendRoomId.value, limit: 12 } })
+    const data = res.data || {}
+    trendMeta.buildingName = data.buildingName || ''
+    trendMeta.roomNo = data.roomNo || ''
+    trendPoints.value = data.points || []
+    await nextTick()
+    renderHygieneTrend()
+  } catch (_) {
+    trendPoints.value = []
+  }
+}
+const renderHygieneTrend = () => {
+  if (!hygieneTrendRef.value) return
+  if (!hygieneTrendChart) hygieneTrendChart = echarts.init(hygieneTrendRef.value)
+  const pts = trendPoints.value || []
+  hygieneTrendChart.setOption({
+    grid: { left: 40, right: 16, top: 24, bottom: 32 },
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: pts.map(p => p.checkWeek || p.checkDate || `#${p.id}`),
+      axisLabel: { color: '#6e6e73', fontSize: 11 }
+    },
+    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: '#6e6e73' } },
+    series: [{
+      type: 'line',
+      smooth: true,
+      data: pts.map(p => p.totalScore),
+      areaStyle: { opacity: 0.08 },
+      itemStyle: { color: '#0071e3' }
+    }]
+  })
+}
 const submitHygiene = async () => {
   submitting.value = true
   try {
-    await request.post('/affair/hygiene', hygieneForm)
+    const payload = {
+      ...hygieneForm,
+      photoUrls: JSON.stringify(hygieneForm.photoList || [])
+    }
+    delete payload.photoList
+    await request.post('/affair/hygiene', payload)
     ElMessage.success('卫生评分已保存')
     hygieneVisible.value = false
+    hygieneForm.photoList = []
     await loadAll()
+    if (trendRoomId.value) await loadHygieneTrend()
   } finally {
     submitting.value = false
   }
@@ -794,6 +908,12 @@ const exportCivilizedCsv = () => {
   downloadExport('civilized-rooms', '文明寝室.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
+onBeforeUnmount(() => {
+  if (hygieneTrendChart) {
+    hygieneTrendChart.dispose()
+    hygieneTrendChart = null
+  }
+})
 onMounted(() => {
   loadAll()
 })
@@ -1029,4 +1149,11 @@ onMounted(() => {
 .gate-pass-card dd { margin: 2px 0 0; font-size: 13px; }
 .text-warn { color: var(--status-warning); }
 @media (max-width: 900px) { .todo-grid { grid-template-columns: 1fr 1fr; } .gate-pass-card dl { grid-template-columns: 1fr; } }
+
+.hygiene-trend-card { margin: 12px 0 18px; padding: 14px 16px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-surface); }
+.hygiene-trend-chart { height: 220px; width: 100%; }
+.hygiene-photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.hygiene-photos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-subtle); }
+.hygiene-photos.preview img { width: 72px; height: 72px; }
+.form-hint { margin: 6px 0 0; color: var(--text-muted); font-size: 12px; }
 </style>
