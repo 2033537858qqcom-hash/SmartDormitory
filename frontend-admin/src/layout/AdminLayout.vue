@@ -2,8 +2,8 @@
   <el-container class="admin-layout">
     <el-aside :width="isCollapsed ? '72px' : '216px'" class="sidebar">
       <div class="brand" :class="{ collapsed: isCollapsed }">
-        <el-icon class="brand-mark" :size="22"><OfficeBuilding /></el-icon>
-        <div v-show="!isCollapsed" class="brand-text"><div class="title">智慧宿舍</div><div class="sub">DORMITORY</div></div>
+        <img class="brand-mark" src="/suli-icon-v2.png" alt="" />
+        <div v-show="!isCollapsed" class="brand-text"><div class="title">宿里</div><div class="sub">SULI · 宿舍管理</div></div>
       </div>
       <div v-show="!isCollapsed" class="nav-caption">{{ roleLabel }}空间</div>
       <el-menu
@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
 .sidebar { background: #ededf0; display: flex; flex-direction: column; border-right: 1px solid rgb(29 29 31 / 4%); flex-shrink: 0; overflow-x: hidden; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 28px 24px 30px; min-height: 105px; }
 .brand.collapsed { padding: 30px 0; justify-content: center; }
-.brand-mark { color: var(--text-primary); flex-shrink: 0; }
+.brand-mark { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; flex-shrink: 0; }
 .brand-text { white-space: nowrap; }
 .brand-text .title { font-size: 17px; font-weight: 600; letter-spacing: -.6px; }
 .brand-text .sub { margin-top: 3px; font-size: 10px; color: var(--text-muted); letter-spacing: 1.3px; }

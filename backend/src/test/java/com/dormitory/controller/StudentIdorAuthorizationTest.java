@@ -1,7 +1,12 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.dormitory.common.BuildingScopeService;
+import com.dormitory.common.PassCodeUtil;
+import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import com.dormitory.service.SmartAllocationService;
@@ -17,6 +22,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -52,6 +59,7 @@ class StudentIdorAuthorizationTest {
 
     @BeforeEach
     void init() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), VisitorRecord.class);
         repairController = new RepairOrderController(
                 repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
         utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService, paymentLogMapper);
@@ -67,6 +75,37 @@ class StudentIdorAuthorizationTest {
         request.setAttribute("currentUserRole", "STUDENT");
         request.setAttribute("currentUserId", id);
         return request;
+    }
+
+    @Test
+    void lateReportUsesAuthenticatedStudentAndOccupiedRoom() {
+        DormBed bed = new DormBed();
+        bed.setStudentId(10L);
+        bed.setRoomId(20L);
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(bed);
+        var result = affairController.reportLateReturn(Map.of("reason", "晚自习", "expectedTime", "23:30", "studentId", 99), student(10L));
+        assertEquals(200, result.getCode());
+        assertEquals(10L, result.getData().getStudentId());
+        assertEquals(20L, result.getData().getRoomId());
+        assertEquals(0, result.getData().getDeductScore());
+        verify(disciplineMapper).insert(any(DisciplineRecord.class));
+    }
+
+    @Test
+    void lateReportRequiresOccupiedBed() {
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(null);
+        assertNotEquals(200, affairController.reportLateReturn(Map.of("reason", "晚自习", "expectedTime", "23:30"), student(10L)).getCode());
+        verify(disciplineMapper, never()).insert(any(DisciplineRecord.class));
+    }
+
+    @Test
+    void lateReportRejectsInvalidTimeAndOtherRoles() {
+        assertNotEquals(200, affairController.reportLateReturn(Map.of("reason", "晚自习", "expectedTime", "25:00"), student(10L)).getCode());
+        MockHttpServletRequest manager = new MockHttpServletRequest();
+        manager.setAttribute("currentUserRole", "DORM_MANAGER");
+        manager.setAttribute("currentUserId", 10L);
+        assertEquals(403, affairController.reportLateReturn(Map.of("reason", "晚自习", "expectedTime", "23:30"), manager).getCode());
+        verify(disciplineMapper, never()).insert(any(DisciplineRecord.class));
     }
 
     @Test
@@ -190,5 +229,43 @@ class StudentIdorAuthorizationTest {
         assertEquals(200, res.getCode());
         assertEquals(10L, apply.getStudentId());
         verify(adjustApplyMapper).insert(argThat((DormAdjustApply a) -> Long.valueOf(10L).equals(a.getStudentId())));
+    }
+
+    @Test
+    void visitorVerificationRejectsOtherBuildingsBeforeUpdating() {
+        VisitorRecord visitor = new VisitorRecord(); visitor.setId(5L); visitor.setBuildingId(2L); visitor.setStatus(0);
+        MockHttpServletRequest manager = new MockHttpServletRequest();
+        when(visitorMapper.selectList(any(Wrapper.class))).thenReturn(List.of(visitor));
+        when(buildingScope.resolve(manager)).thenReturn(Set.of(1L));
+        when(buildingScope.forbiddenIfOutOfScope(Set.of(1L), 2L)).thenReturn(Result.error(403, "只能操作管辖楼栋内的数据"));
+        var result = affairController.verifyVisitorPass(Map.of("passCode", PassCodeUtil.fromVisitorId(5L), "checkOut", true), manager);
+        assertEquals(403, result.getCode());
+        verify(visitorMapper, never()).update(any(), any(Wrapper.class));
+    }
+
+    @Test
+    void visitorCheckoutUpdatesOnlyOnceAndNotifiesOnlyWinner() {
+        VisitorRecord visitor = new VisitorRecord(); visitor.setId(5L); visitor.setBuildingId(1L); visitor.setVisitStudentId(10L); visitor.setVisitorName("访客"); visitor.setStatus(0);
+        MockHttpServletRequest manager = new MockHttpServletRequest();
+        when(visitorMapper.selectList(any(Wrapper.class))).thenReturn(List.of(visitor));
+        when(visitorMapper.update(isNull(), any(Wrapper.class))).thenReturn(1);
+        var result = affairController.verifyVisitorPass(Map.of("passCode", PassCodeUtil.fromVisitorId(5L), "checkOut", true), manager);
+        assertEquals(1, result.getData().get("status"));
+        assertEquals(false, result.getData().get("passOk"));
+        verify(visitorMapper).update(isNull(), any(Wrapper.class));
+        verify(messageService).push(eq(10L), anyString(), anyString(), eq("VISITOR"), eq("5"));
+    }
+
+    @Test
+    void concurrentVisitorCheckoutDoesNotSendAnotherNotification() {
+        VisitorRecord snapshot = new VisitorRecord(); snapshot.setId(5L); snapshot.setBuildingId(1L); snapshot.setVisitStudentId(10L); snapshot.setStatus(0);
+        VisitorRecord signedOut = new VisitorRecord(); signedOut.setId(5L); signedOut.setBuildingId(1L); signedOut.setVisitStudentId(10L); signedOut.setStatus(1);
+        MockHttpServletRequest manager = new MockHttpServletRequest();
+        when(visitorMapper.selectList(any(Wrapper.class))).thenReturn(List.of(snapshot));
+        when(visitorMapper.update(isNull(), any(Wrapper.class))).thenReturn(0);
+        when(visitorMapper.selectById(5L)).thenReturn(signedOut);
+        var result = affairController.verifyVisitorPass(Map.of("passCode", PassCodeUtil.fromVisitorId(5L), "checkOut", true), manager);
+        assertEquals(1, result.getData().get("status"));
+        verify(messageService, never()).push(anyLong(), anyString(), anyString(), anyString(), anyString());
     }
 }

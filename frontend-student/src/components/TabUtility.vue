@@ -79,21 +79,31 @@
       </div>
     </div>
 
-    <BottomSheet v-model="rechargeSheet" title="寝室水电费充值（演示模拟）">
-      <p class="demo-sheet-note">本操作为演示环境模拟扣款，将生成 DEMO 流水号；不会调用微信支付或任何真实支付网关。</p>
+    <BottomSheet v-model="rechargeSheet" title="寝室水电费充值">
+      <p class="demo-sheet-note">演示充值不会产生真实扣款；支付宝沙箱请使用测试环境。</p>
       <div class="form-row">
-        <label>充值账户</label>
-        <div class="type-grid">
-          <button type="button" class="type-chip spring-btn" :class="{ active: rechargeTarget === 'ELECTRIC' }" @click="rechargeTarget = 'ELECTRIC'">电费账户</button>
-          <button type="button" class="type-chip spring-btn" :class="{ active: rechargeTarget === 'WATER' }" @click="rechargeTarget = 'WATER'">水费账户</button>
+        <div class="selection-label" id="recharge-target-label">充值账户</div>
+        <div class="type-grid" role="group" aria-labelledby="recharge-target-label">
+          <button type="button" class="type-chip spring-btn" :class="{ active: rechargeTarget === 'ELECTRIC' }" :aria-pressed="rechargeTarget === 'ELECTRIC'" @click="rechargeTarget = 'ELECTRIC'"><span>电费账户</span><span v-if="rechargeTarget === 'ELECTRIC'" class="selection-check" aria-hidden="true">✓</span></button>
+          <button type="button" class="type-chip spring-btn" :class="{ active: rechargeTarget === 'WATER' }" :aria-pressed="rechargeTarget === 'WATER'" @click="rechargeTarget = 'WATER'"><span>水费账户</span><span v-if="rechargeTarget === 'WATER'" class="selection-check" aria-hidden="true">✓</span></button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="selection-label" id="pay-channel-label">支付通道</div>
+        <div class="type-grid channel-grid" role="group" aria-labelledby="pay-channel-label">
+          <button type="button" class="type-chip channel-chip spring-btn" :class="{ active: payChannel === 'DEMO' }" :aria-pressed="payChannel === 'DEMO'" @click="payChannel = 'DEMO'"><span class="channel-copy"><span>演示模拟</span><small>本地模拟充值</small></span><span v-if="payChannel === 'DEMO'" class="selection-check" aria-hidden="true">✓</span></button>
+          <button type="button" class="type-chip channel-chip spring-btn" :class="{ active: payChannel === 'ALIPAY' }" :aria-pressed="payChannel === 'ALIPAY'" @click="payChannel = 'ALIPAY'"><span class="channel-copy"><span>支付宝沙箱</span><small>沙箱环境支付</small></span><span v-if="payChannel === 'ALIPAY'" class="selection-check" aria-hidden="true">✓</span></button>
         </div>
       </div>
       <div class="form-row">
         <label for="recharge-amt">充值金额（元）</label>
         <input id="recharge-amt" v-model.number="rechargeAmount" type="number" min="10" step="10" class="inp tabular-nums" />
       </div>
+      <div v-if="payChannel === 'ALIPAY'" class="alipay-tip-box">
+        <b>支付宝沙箱</b>：需要先配置沙箱账号；未配置时将使用演示模式充值。
+      </div>
       <button type="button" class="sheet-submit spring-btn" :disabled="submitting" @click="submitRecharge">
-        {{ submitting ? '正在充值...' : '确认充值（演示模拟扣款）' }}
+        {{ submitting ? '正在处理...' : (payChannel === 'ALIPAY' ? '前往支付宝沙箱付款' : '确认充值（演示模拟扣款）') }}
       </button>
     </BottomSheet>
     <BottomSheet v-model="historySheet" title="缴费流水（演示模拟）">
@@ -129,6 +139,7 @@ const isLowBalance = computed(() => {
 const submitting = ref(false)
 const rechargeSheet = ref(false)
 const rechargeTarget = ref('ELECTRIC')
+const payChannel = ref('DEMO')
 const rechargeAmount = ref(50)
 const historySheet = ref(false)
 const historyLoading = ref(false)
@@ -174,15 +185,46 @@ const submitRecharge = async () => {
   submitting.value = true
   try {
     const isElec = rechargeTarget.value === 'ELECTRIC'
-    const res = await submitDemoPayment(api, sessionStorage, crypto, {
-      roomId: props.dash.room?.id || 1,
-      electricRecharge: isElec ? rechargeAmount.value : 0,
-      waterRecharge: isElec ? 0 : rechargeAmount.value
-    })
-    rechargeSheet.value = false
-    const txn = res.data?.txnNo || res.data?.data?.txnNo
-    emit('toast', { msg: `【演示模拟】已充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
-    emit('refresh')
+    const roomId = props.dash.room?.id || 1
+    if (payChannel.value === 'ALIPAY') {
+      const res = await api.post('/utility/pay/alipay-create', {
+        roomId,
+        electricRecharge: isElec ? rechargeAmount.value : 0,
+        waterRecharge: isElec ? 0 : rechargeAmount.value
+      })
+      const data = res.data?.data || res.data || {}
+      if (data.mode === 'SDK_PAGE' && data.formHtml) {
+        emit('toast', { msg: '支付宝沙箱订单创建成功，正在拉起收银台...', type: 'info' })
+        rechargeSheet.value = false
+        const div = document.createElement('div')
+        div.innerHTML = data.formHtml
+        document.body.appendChild(div)
+        const form = div.querySelector('form')
+        if (form) form.submit()
+        return
+      } else {
+        emit('toast', { msg: data.tip || '支付宝沙箱未配置密钥，自动降级为演示快速充值', type: 'info' })
+        const demoRes = await submitDemoPayment(api, sessionStorage, crypto, {
+          roomId,
+          electricRecharge: isElec ? rechargeAmount.value : 0,
+          waterRecharge: isElec ? 0 : rechargeAmount.value
+        })
+        rechargeSheet.value = false
+        const txn = demoRes.data?.txnNo || demoRes.data?.data?.txnNo
+        emit('toast', { msg: `【沙箱降级演示】已充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
+        emit('refresh')
+      }
+    } else {
+      const res = await submitDemoPayment(api, sessionStorage, crypto, {
+        roomId,
+        electricRecharge: isElec ? rechargeAmount.value : 0,
+        waterRecharge: isElec ? 0 : rechargeAmount.value
+      })
+      rechargeSheet.value = false
+      const txn = res.data?.txnNo || res.data?.data?.txnNo
+      emit('toast', { msg: `【演示模拟】已充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
+      emit('refresh')
+    }
   } catch (e) {
     emit('toast', { msg: e.response?.data?.message || e.message || '充值失败', type: 'error' })
   } finally {
@@ -731,6 +773,37 @@ const payBill = async (b) => {
   color: var(--text-secondary);
   margin-bottom: 5px;
 }
+.selection-label {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.type-chip {
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px 13px;
+  border: 1px solid #e8e8ed;
+  border-radius: 13px;
+  background: #f8f8fa;
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+}
+.type-chip.active { border-color: #93bff0; background: var(--accent-subtle); color: var(--accent-primary); }
+.selection-check { display: grid; place-items: center; flex: 0 0 19px; width: 19px; height: 19px; border-radius: 50%; background: var(--accent-primary); color: #fff; font-size: 12px; line-height: 1; }
+.channel-chip { min-height: 62px; align-items: center; }
+.channel-copy { min-width: 0; display: grid; gap: 2px; }
+.channel-copy small { color: var(--text-muted); font-size: 11px; line-height: 1.4; font-weight: 400; }
+.type-chip.active .channel-copy small { color: #526d8e; }
+@media (max-width: 340px) { .type-chip { padding: 10px; font-size: 12px; } .type-grid { gap: 6px; } }
 .inp {
   width: 100%;
   border: 1px solid var(--border-strong);
@@ -755,5 +828,6 @@ const payBill = async (b) => {
 @media (max-width: 360px) { .balance-card { padding: 20px 17px; }.btn-group { gap: 3px; }.act-btn { font-size: 11px; }.b-val { font-size: 25px; } }
 
 .demo-banner { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #fff6e5; color: #9a5b00; font-size: 12px; line-height: 1.5; }
+.alipay-tip-box { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 12px; line-height: 1.55; }
 .demo-sheet-note { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: #fff6e5; color: #9a5b00; font-size: 12px; line-height: 1.55; }
 </style>

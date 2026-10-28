@@ -1,0 +1,204 @@
+<view class="repair-page container">
+  <view class="page-heading"><view class="page-title">报修服务</view><view class="page-subtitle">提交维修申请，跟踪处理进度</view></view>
+  <view wx:if="{{unratedCount}}" class="repair-reminder">有 {{unratedCount}} 单报修待评价</view>
+  <view class="repair-hero card">
+    <view class="hero-copy"><view class="hero-title">寝室故障报修</view><view class="hero-sub">{{roomSummary ? '当前寝室：' + roomSummary : '分配寝室后可在线提交报修'}}</view></view>
+    <button class="hero-action spring-btn" bindtap="switchTab" data-tab="submit">＋ 发起报修</button>
+  </view>
+  <view class="list-heading"><text>我的报修</text><text>{{orderList.length}} 单</text></view>
+
+  <!-- 1. 提交工单面板 -->
+  <view wx:if="{{activeTab === 'submit'}}" class="sheet-mask {{formSheetClosing ? 'sheet-mask-leave' : ''}}" bindtap="switchTab" data-tab="list">
+    <view class="sheet-panel repair-sheet {{formSheetClosing ? 'sheet-panel-leave' : ''}}" catchtap="stopPropagation">
+      <view class="sheet-grabber"></view><view class="sheet-head"><text class="sheet-title">发起报修</text><text class="sheet-close" bindtap="switchTab" data-tab="list" aria-label="关闭">×</text></view>
+      <scroll-view scroll-y show-scrollbar="{{false}}" class="repair-form-scroll">
+
+      <!-- 报修类型选择 -->
+      <view class="input-group">
+        <text class="input-label">报修类别</text>
+        <view class="category-grid">
+          <view
+            wx:for="{{categories}}"
+            wx:key="key"
+            class="cat-item spring-btn {{form.repairType === item.key ? 'cat-active' : ''}}"
+            bindtap="selectCategory"
+            data-key="{{item.key}}"
+          >
+            <text class="cat-name">{{item.name}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 报修标题 -->
+      <view class="input-group">
+        <text class="input-label">故障简述 / 标题</text>
+        <input
+          class="form-input"
+          placeholder="例如：卫生间水管爆管漏水、空调插座跳闸"
+          value="{{form.title}}"
+          bindinput="onInputTitle"
+        />
+        <view wx:if="{{isHighPriority}}" class="priority-alert">
+          已识别为可能的紧急故障，提交后将优先处理。
+        </view>
+      </view>
+
+      <!-- 详细描述 -->
+      <view class="input-group">
+        <text class="input-label">详细情况说明</text>
+        <textarea
+          class="form-textarea"
+          placeholder="请详细描述故障现象、具体位置及方便师傅上门维修的时间段..."
+          value="{{form.description}}"
+          bindinput="onInputDesc"
+          maxlength="300"
+        ></textarea>
+      </view>
+
+      <!-- 现场照片上传 -->
+      <view class="input-group">
+        <text class="input-label">现场照片 (最多3张)</text>
+        <view class="photo-list">
+          <view wx:for="{{photoUrls}}" wx:key="*this" class="photo-item">
+            <image src="{{item}}" mode="aspectFill" class="photo-img" bindtap="previewImage" data-url="{{item}}"></image>
+            <text class="del-photo" bindtap="deletePhoto" data-index="{{index}}">×</text>
+          </view>
+          <view wx:if="{{photoUrls.length < 3}}" class="upload-btn spring-btn" bindtap="chooseAndUploadPhoto">
+            <text class="upload-plus">+</text>
+            <text class="upload-text">添加照片</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 提交按钮 -->
+      <button
+        class="btn-primary spring-btn submit-btn"
+        loading="{{submitting}}"
+        disabled="{{submitting}}"
+        bindtap="handleSubmitOrder"
+      >
+        {{submitting ? '正在提交...' : '提交报修'}}
+      </button>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 2. 工单列表面板 -->
+  <view class="list-panel">
+    <view wx:if="{{loading && !orderList.length}}" class="empty-box card"><view class="empty-text">正在加载报修记录...</view></view>
+    <view wx:elif="{{loadError && !orderList.length}}" class="empty-box card"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="empty-action spring-btn" bindtap="loadOrders">重新加载</button></view>
+    <view wx:elif="{{orderList.length === 0}}" class="empty-box card">
+      <view class="empty-title">暂无报修记录</view>
+      <view class="empty-text">寝室设施如遇故障，可在线报修并查看处理进度。</view>
+      <button class="empty-action spring-btn" bindtap="switchTab" data-tab="submit">发起报修</button>
+    </view>
+
+    <view wx:for="{{orderList}}" wx:key="id" class="order-card card">
+      <view class="order-head">
+        <view class="order-no">工单号: {{item.orderNo}}</view>
+        <view class="order-status badge {{item.statusClass}}">
+          {{item.statusText}}
+        </view>
+      </view>
+
+      <view class="order-title-row">
+        <text class="order-prio badge {{item.priorityClass}}">{{item.priorityText}}</text>
+        <text class="order-title">{{item.title}}</text>
+      </view>
+
+      <view class="order-desc">{{item.description}}</view>
+
+      <!-- 照片列表 -->
+      <view wx:if="{{item.photos && item.photos.length}}" class="order-photos">
+        <image
+          wx:for="{{item.photos}}"
+          wx:for-item="p"
+          wx:key="*this"
+          src="{{p}}"
+          mode="aspectFill"
+          class="order-thumb"
+          bindtap="previewImage"
+          data-url="{{p}}"
+        ></image>
+      </view>
+
+      <view class="order-meta-info">
+        <view class="meta-row" wx:if="{{item.roomNo}}">
+          <text class="meta-label">申报寝室：</text>
+          <text class="meta-val">{{item.buildingName}} {{item.roomNo}}室</text>
+        </view>
+        <view class="meta-row" wx:if="{{item.workerName && item.workerName !== '待指派'}}">
+          <text class="meta-label">维修师傅：</text>
+          <text class="meta-val">{{item.workerName}} ({{item.workerPhone}})</text>
+        </view>
+        <view class="meta-row" wx:if="{{item.dueAt}}">
+          <text class="meta-label">SLA承诺：</text>
+          <text class="meta-val {{item.overdue ? 'sla-overdue' : ''}}">
+            {{item.dueAtText}} {{item.overdue ? '(已超时)' : ''}}
+          </text>
+        </view>
+      </view>
+
+      <!-- 服务评分模块：未评分则显示评分按钮，已评分则展示星级 -->
+      <view class="rating-box" wx:if="{{item.status === 'COMPLETED' || item.status === 'RATED'}}">
+        <block wx:if="{{item.status === 'COMPLETED' && !item.rating}}">
+          <view class="unrated-prompt">
+            <text class="prompt-text">维修已完工，请为本次维修师傅服务打分</text>
+            <button class="btn-primary rate-act-btn spring-btn" bindtap="openRateModal" data-order="{{item}}">
+              去评价
+            </button>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="rated-display">
+            <view class="star-row">
+              <text class="rate-label">服务评价：</text>
+              <text class="star-icon" wx:for="{{5}}" wx:for-item="star" wx:for-index="sIdx" wx:key="*this">
+                {{sIdx < item.rating ? '★' : '☆'}}
+              </text>
+              <text class="rate-num">{{item.rating}}星</text>
+            </view>
+            <view class="rate-comment" wx:if="{{item.ratingComment}}">
+              "{{item.ratingComment}}"
+            </view>
+          </view>
+        </block>
+      </view>
+    </view>
+  </view>
+
+  <!-- 评分弹窗 Modal -->
+  <view wx:if="{{rateModalVisible}}" class="sheet-mask {{rateSheetClosing ? 'sheet-mask-leave' : ''}}" bindtap="closeRateModal">
+    <view class="sheet-panel {{rateSheetClosing ? 'sheet-panel-leave' : ''}}" catchtap="stopPropagation">
+      <view class="sheet-grabber"></view><view class="sheet-head"><view class="sheet-title">评价维修服务</view><text class="sheet-close" bindtap="closeRateModal" aria-label="关闭">×</text></view>
+      <view class="modal-sub">工单：{{curRateOrder.title}}</view>
+
+      <view class="star-selector">
+        <text
+          wx:for="{{5}}"
+          wx:key="*this"
+          class="modal-star spring-btn {{index < rateForm.rating ? 'modal-star-act' : ''}}"
+          bindtap="setStarRating"
+          data-score="{{index + 1}}"
+        >
+          ★
+        </text>
+      </view>
+      <view class="star-hint-text">{{rateHintText}}</view>
+
+      <textarea
+        class="rate-input-comment"
+        placeholder="请留下您对维修效率、师傅态度或修复效果的宝贵评价..."
+        value="{{rateForm.comment}}"
+        bindinput="onInputRateComment"
+      ></textarea>
+
+      <view class="modal-actions">
+        <button class="btn-secondary modal-cancel spring-btn" bindtap="closeRateModal">取消</button>
+        <button class="btn-primary modal-confirm spring-btn" loading="{{submittingRate}}" disabled="{{submittingRate}}" bindtap="submitRating">
+          确认提交
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -70,7 +70,10 @@
 
       <div class="sec-bar section-gap">
         <h3 class="sec-title">调宿与退宿申请进度</h3>
-        <button type="button" class="mini-add-btn spring-btn" @click="openSheetWithCheck('adjust')">+ 申请调宿/退宿</button>
+        <div class="sec-btn-row">
+          <button type="button" class="mini-sec-btn spring-btn" @click="openAdjustHabitSheet">🎯 调宿习惯设置</button>
+          <button type="button" class="mini-add-btn spring-btn" @click="openSheetWithCheck('adjust')">+ 申请调宿/退宿</button>
+        </div>
       </div>
 
       <div v-if="!(dash.myAdjusts && dash.myAdjusts.length)" class="empty-tip">
@@ -133,6 +136,45 @@
       </div>
 
       <template v-if="adjustForm.applyType === 'ADJUST'">
+                <!-- 调宿生活习惯偏好与可滑动雷达图 -->
+        <div class="adjust-habit-box">
+          <div class="adj-habit-head">
+            <div class="adj-habit-title">
+              <span class="sparkle-icon">✨</span>
+              <b>调宿作息偏好与画像</b>
+            </div>
+            <button
+              type="button"
+              class="adj-habit-toggle spring-btn"
+              @click="showAdjustRadar = !showAdjustRadar"
+            >
+              {{ showAdjustRadar ? '收起雷达图 ▲' : '滑动调整偏好 ▼' }}
+            </button>
+          </div>
+          <p class="adj-habit-desc">
+            想要调换宿舍？建议直接在下方雷达图滑动调整作息偏好，系统将基于最新偏好为您重新匹配推荐寝室。
+          </p>
+
+          <div v-if="showAdjustRadar" class="adj-radar-wrap">
+            <HabitRadarChart
+              v-model="adjustHabitForm"
+              compact
+              :show-legend="false"
+            />
+            <div class="adj-habit-actions">
+              <span class="adj-habit-tip">👆 直接拖动雷达顶点即可调分</span>
+              <button
+                type="button"
+                class="save-adjust-habit-btn spring-btn"
+                :disabled="savingAdjustHabit"
+                @click="saveAdjustHabitProfile"
+              >
+                {{ savingAdjustHabit ? '保存中...' : '保存习惯并刷新推荐' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- 智能推荐契合寝室列表 -->
         <div v-if="recommendedRooms.length" class="rec-box">
           <div class="rec-header">✨ 基于您的六维画像智能推荐空床：</div>
@@ -302,6 +344,18 @@
         </button>
       </div>
     </BottomSheet>
+
+    <!-- 调宿生活习惯设置抽屉 -->
+    <BottomSheet v-model="adjustHabitSheetVisible" title="调宿生活习惯设置">
+      <TabHabitRadar
+        :dash="dash"
+        in-sheet
+        mode="transfer"
+        @refresh="$emit('refresh')"
+        @toast="$emit('toast', $event)"
+        @saved="adjustHabitSheetVisible = false"
+      />
+    </BottomSheet>
   </div>
 </template>
 
@@ -311,6 +365,8 @@ import QRCode from 'qrcode'
 import api from '../api'
 import ResidenceRequests from './ResidenceRequests.vue'
 import BottomSheet from './BottomSheet.vue'
+import HabitRadarChart from './HabitRadarChart.vue'
+import TabHabitRadar from './TabHabitRadar.vue'
 
 const props = defineProps({
   dash: { type: Object, default: () => ({}) },
@@ -340,6 +396,53 @@ const selectedBuildingId = ref(1)
 const rechargeSheet = ref(false)
 const rechargeTarget = ref('ELECTRIC')
 const rechargeAmount = ref(50)
+
+const adjustHabitSheetVisible = ref(false)
+const showAdjustRadar = ref(false)
+const savingAdjustHabit = ref(false)
+const adjustHabitForm = reactive({
+  scheduleScore: 3,
+  sleepDepthScore: 3,
+  acTempScore: 3,
+  cleanlinessScore: 3,
+  atmosphereScore: 3,
+  odorSensitiveScore: 5
+})
+
+const openAdjustHabitSheet = () => {
+  adjustHabitSheetVisible.value = true
+}
+
+const saveAdjustHabitProfile = async () => {
+  savingAdjustHabit.value = true
+  try {
+    await api.post('/smart-alloc/habit-profile', {
+      studentId: props.dash.user?.id,
+      ...adjustHabitForm
+    })
+    emit('toast', { msg: '调宿作息偏好已保存，推荐寝室已更新', type: 'success' })
+    emit('refresh')
+  } catch (err) {
+    emit('toast', { msg: '保存失败，请稍后重试', type: 'error' })
+  } finally {
+    savingAdjustHabit.value = false
+  }
+}
+
+watch(
+  () => props.dash.habitProfile,
+  (hp) => {
+    if (hp) {
+      adjustHabitForm.scheduleScore = hp.scheduleScore || 3
+      adjustHabitForm.sleepDepthScore = hp.sleepDepthScore || 3
+      adjustHabitForm.acTempScore = hp.acTempScore || 3
+      adjustHabitForm.cleanlinessScore = hp.cleanlinessScore || 3
+      adjustHabitForm.atmosphereScore = hp.atmosphereScore || 3
+      adjustHabitForm.odorSensitiveScore = hp.odorSensitiveScore || 5
+    }
+  },
+  { immediate: true }
+)
 
 const adjustSheet = ref(false)
 const adjustForm = reactive({
@@ -1210,4 +1313,86 @@ onMounted(() => {
 @media (max-width: 360px) { .balance-card { padding: 20px 17px; }.btn-group { gap: 3px; }.act-btn { font-size: 11px; }.b-val { font-size: 25px; } }
 .attach-preview { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 .sec-head-inline { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+
+.sec-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mini-sec-btn {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--accent-primary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.adjust-habit-box {
+  background: var(--accent-subtle);
+  border: 1px solid rgba(0, 110, 219, 0.16);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.adj-habit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.adj-habit-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.adj-habit-toggle {
+  border: 1px solid var(--accent-primary);
+  background: var(--bg-surface);
+  color: var(--accent-primary);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 99px;
+  cursor: pointer;
+}
+.adj-habit-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+.adj-radar-wrap {
+  margin-top: 10px;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  padding: 10px 6px 12px;
+}
+.adj-habit-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px 0;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 6px;
+}
+.adj-habit-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.save-adjust-habit-btn {
+  background: var(--accent-primary);
+  color: white;
+  border: 0;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.save-adjust-habit-btn:disabled {
+  opacity: 0.6;
+}
 </style>

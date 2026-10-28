@@ -252,15 +252,52 @@ public class SmartAllocationService {
                 continue;
             }
 
+            List<DormBed> occupiedInRoom = bedMapper.selectList(
+                    new LambdaQueryWrapper<DormBed>()
+                            .eq(DormBed::getRoomId, room.getId())
+                            .eq(DormBed::getStatus, 1)
+            );
+            List<StudentHabitProfile> existingRoommateProfiles = new ArrayList<>();
+            for (DormBed ob : occupiedInRoom) {
+                if (ob.getStudentId() != null) {
+                    StudentHabitProfile existingProfile = habitProfileMapper.selectOne(
+                            new LambdaQueryWrapper<StudentHabitProfile>().eq(StudentHabitProfile::getStudentId, ob.getStudentId())
+                    );
+                    if (existingProfile != null) {
+                        existingRoommateProfiles.add(existingProfile);
+                    }
+                }
+            }
+
             List<SysUser> chosenStudents = new ArrayList<>();
             List<StudentHabitProfile> chosenProfiles = new ArrayList<>();
 
-            // 选取第一个种子学生
-            SysUser seed = remaining.remove(0);
+            // 选取种子学生：若已有老生在住，优先选取与已有老生综合契合度最高的候选人
+            SysUser seed;
+            if (!existingRoommateProfiles.isEmpty()) {
+                SysUser bestSeed = null;
+                double bestSeedScore = -1.0;
+                for (SysUser cand : remaining) {
+                    StudentHabitProfile cp = profileMap.get(cand.getId());
+                    double s = 0.0;
+                    for (StudentHabitProfile erp : existingRoommateProfiles) {
+                        s += calculatePairCompatibility(erp, cp, weights);
+                    }
+                    double avg = s / existingRoommateProfiles.size();
+                    if (avg > bestSeedScore) {
+                        bestSeedScore = avg;
+                        bestSeed = cand;
+                    }
+                }
+                seed = bestSeed != null ? bestSeed : remaining.get(0);
+                remaining.remove(seed);
+            } else {
+                seed = remaining.remove(0);
+            }
             chosenStudents.add(seed);
             chosenProfiles.add(profileMap.get(seed.getId()));
 
-            // 贪心吸纳与当前簇平均契合度最高的学生，直到填满该寝室空床位
+            // 贪心吸纳与当前寝室（已有老生 + 已选新生）平均契合度最高的学生，直到填满该寝室空床位
             while (chosenStudents.size() < emptyBeds.size() && !remaining.isEmpty()) {
                 SysUser bestCandidate = null;
                 double bestScore = -1.0;
@@ -268,6 +305,7 @@ public class SmartAllocationService {
                 for (SysUser candidate : remaining) {
                     StudentHabitProfile cp = profileMap.get(candidate.getId());
                     double sumSim = 0.0;
+                    int compCount = 0;
                     for (int mIdx = 0; mIdx < chosenProfiles.size(); mIdx++) {
                         StudentHabitProfile existing = chosenProfiles.get(mIdx);
                         SysUser existingStu = chosenStudents.get(mIdx);
@@ -276,8 +314,13 @@ public class SmartAllocationService {
                             sim += 8.0; // 同班级优先聚拢加权激励
                         }
                         sumSim += sim;
+                        compCount++;
                     }
-                    double avgSim = sumSim / chosenProfiles.size();
+                    for (StudentHabitProfile erp : existingRoommateProfiles) {
+                        sumSim += calculatePairCompatibility(erp, cp, weights);
+                        compCount++;
+                    }
+                    double avgSim = compCount > 0 ? (sumSim / compCount) : 0.0;
                     if (avgSim > bestScore) {
                         bestScore = avgSim;
                         bestCandidate = candidate;
@@ -290,7 +333,9 @@ public class SmartAllocationService {
                 }
             }
 
-            double harmonyScore = calculateGroupHarmony(chosenProfiles, weights);
+            List<StudentHabitProfile> allProfilesInRoom = new ArrayList<>(existingRoommateProfiles);
+            allProfilesInRoom.addAll(chosenProfiles);
+            double harmonyScore = calculateGroupHarmony(allProfilesInRoom, weights);
             sumSmartScore += harmonyScore;
             totalAllocatedStudents += chosenStudents.size();
 
@@ -337,8 +382,9 @@ public class SmartAllocationService {
             roomDetail.put("buildingName", building.getBuildingName());
             roomDetail.put("roomNo", room.getRoomNo());
             roomDetail.put("harmonyScore", harmonyScore);
-            roomDetail.put("groupStyleTag", inferGroupStyleTag(chosenProfiles));
-            roomDetail.put("explanation", explainGroup(chosenProfiles));
+            roomDetail.put("groupStyleTag", inferGroupStyleTag(allProfilesInRoom));
+            roomDetail.put("explanation", explainGroup(allProfilesInRoom));
+            roomDetail.put("existingOccupantCount", existingRoommateProfiles.size());
             roomDetail.put("students", studentItems);
             allocatedRoomDetails.add(roomDetail);
         }
@@ -374,7 +420,7 @@ public class SmartAllocationService {
         result.put("traditionalAvgHarmonyScore", traditionalFormatted);
         result.put("scoreImprovement", improvement);
         result.put("roomAllocations", allocatedRoomDetails);
-        result.put("scoreNote", "契合度仅比较本次新分配学生，未计入原住室友；未填写问卷按默认画像计算。单人组为 100 分，不代表已有室友匹配度。");
+        result.put("scoreNote", "契合度已涵盖房间内新分配学生及原住室友画像；未填写问卷按默认画像计算。");
         result.put("unallocatedStudents", remaining.stream().map(student -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("studentId", student.getId()); item.put("studentNo", student.getUsername());

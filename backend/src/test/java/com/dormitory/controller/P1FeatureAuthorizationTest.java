@@ -1,6 +1,9 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.PassCodeUtil;
 import com.dormitory.common.Result;
@@ -87,6 +90,7 @@ class P1FeatureAuthorizationTest {
 
     @Test
     void visitorVerifyReturnsGreenPassAndCanCheckout() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), VisitorRecord.class);
         VisitorRecord v = new VisitorRecord();
         v.setId(3L);
         v.setVisitorName("李家长");
@@ -99,6 +103,7 @@ class P1FeatureAuthorizationTest {
         v.setEnterTime(LocalDateTime.now().minusMinutes(30));
         v.setStatus(0);
         when(visitorMapper.selectList(any())).thenReturn(List.of(v));
+        when(visitorMapper.update(isNull(), any(Wrapper.class))).thenReturn(1);
         SysUser stu = new SysUser();
         stu.setId(10L);
         stu.setRealName("张三");
@@ -118,7 +123,7 @@ class P1FeatureAuthorizationTest {
         Result<Map<String, Object>> leave = affairController.verifyVisitorPass(
                 Map.of("passCode", code, "checkOut", true), admin());
         assertEquals(200, leave.getCode());
-        verify(visitorMapper).updateById(any(VisitorRecord.class));
+        verify(visitorMapper).update(isNull(), any(Wrapper.class));
         verify(messageService).push(eq(10L), contains("签离"), anyString(), eq("VISITOR"), anyString());
     }
 

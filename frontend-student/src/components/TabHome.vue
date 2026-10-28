@@ -1,7 +1,7 @@
 <template>
   <div class="tab-home">
     <section v-if="isAllocated" class="residence-card">
-      <button type="button" class="room-heading spring-btn" @click="$emit('go-tab', 'habit')">
+      <button type="button" class="room-heading spring-btn" @click="$emit('go-tab', { tab: 'affair', action: 'adjust' })">
         <span class="room-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V7h7v14M11 3h7v18M2 21h20M7 10v1m0 3v1m7-8v1m0 3v1m0 3v1" /></svg></span>
         <span class="room-heading-copy"><h2>{{ dash.room.roomNo }} 室 · {{ dash.bed?.bedNo }} 号床</h2><span>{{ dash.building?.buildingName }}</span></span>
         <span class="room-chevron" aria-hidden="true">›</span>
@@ -16,19 +16,39 @@
       <h2>{{ hasProfile ? '正在等待分寝' : '从了解你的习惯开始' }}</h2>
       <p>{{ hasProfile ? '宿管中心将根据生活习惯，为你安排合适的寝室与室友。' : '填写一份生活习惯问卷，帮助我们为你找到作息相近的室友。' }}</p>
       <div class="progress-steps"><div :class="{ done: hasProfile, active: !hasProfile }"><span>{{ hasProfile ? '✓' : '1' }}</span>填写问卷</div><i :class="{ done: hasProfile }"></i><div :class="{ active: hasProfile }"><span>2</span>等待分寝</div><i></i><div><span>3</span>入住</div></div>
-      <button type="button" class="unalloc-btn spring-btn" @click="$emit('go-tab', 'habit')">{{ hasProfile ? '查看习惯问卷' : '开始填写问卷' }}<span aria-hidden="true">›</span></button>
+      <button type="button" class="unalloc-btn spring-btn" @click="$emit('go-tab', 'habit')">{{ hasProfile ? '查看选宿习惯' : '开始填写问卷' }}<span aria-hidden="true">›</span></button>
       <div class="account-pending">水电账户待开通 · 分寝后自动启用</div>
     </section>
     <!-- 快捷入口（统一 SVG 线性图标，“访客绿码”直接进入访客功能） -->
     <div class="quick-bar">
-      <button type="button" class="q-item spring-btn" @click="$emit('go-tab', 'habit')">
+      <!-- 仅在未分寝新生阶段显示「选宿画像」，已入住状态下展示「调宿办理」 -->
+      <button
+        v-if="!isAllocated"
+        type="button"
+        class="q-item spring-btn"
+        @click="$emit('go-tab', 'habit')"
+      >
         <span class="q-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
         </span>
-        <span>习惯问卷</span>
+        <span>选宿画像</span>
+      </button>
+
+      <button
+        v-else
+        type="button"
+        class="q-item spring-btn"
+        @click="$emit('go-tab', { tab: 'affair', action: 'adjust' })"
+      >
+        <span class="q-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4" />
+          </svg>
+        </span>
+        <span>调宿办理</span>
       </button>
 
       <button type="button" class="q-item spring-btn" @click="handleRepairClick">
@@ -76,7 +96,7 @@
         <button type="button" class="roommates-summary spring-btn" :aria-expanded="showRoommates" @click="showRoommates = !showRoommates"><span class="mate-avatar">{{ (dash.roomRadar.roommates.find(m => m.studentId !== dash.user?.id)?.realName || '友').slice(0, 1) }}</span><span class="summary-copy"><b>与你作息相近的室友</b><small>室友契合度 {{ dash.room.harmonyScore ?? '暂无' }}{{ dash.room.harmonyScore != null ? '%' : '' }} · 文明分 {{ Number(dash.room.civilizedScore || 0).toFixed(1) }}</small></span><span class="group-chevron" :class="{ expanded: showRoommates }" aria-hidden="true">›</span></button>
         <div v-if="showRoommates" class="mate-list">
           <div v-for="m in dash.roomRadar.roommates" :key="m.studentId" class="mate-item"><span class="bed-badge">{{ m.bedNo }} 床</span><div class="mate-info"><b>{{ m.realName }}<small v-if="m.studentId === dash.user?.id">我</small></b><p>{{ m.profile?.hobbyTags || m.className }}</p></div><span class="m-habit">{{ scheduleLabel(m.profile?.scheduleScore) }}</span></div>
-          <button type="button" class="compare-link spring-btn" @click="$emit('go-tab', 'habit')">查看生活习惯对比<span aria-hidden="true">›</span></button>
+          <button type="button" class="compare-link spring-btn" @click="$emit('go-tab', 'habit')">查看室友习惯对比与调宿校准<span aria-hidden="true">›</span></button>
         </div>
       </div>
     </section>

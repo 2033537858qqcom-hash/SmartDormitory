@@ -7,6 +7,9 @@ import com.dormitory.entity.UtilityPaymentLog;
 import com.dormitory.mapper.DormRoomMapper;
 import com.dormitory.mapper.UtilityBillMapper;
 import com.dormitory.mapper.UtilityPaymentLogMapper;
+import com.dormitory.common.AlipayConfig;
+import com.alipay.easysdk.factory.Factory;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class SmartUtilityService {
     private final UtilityBillMapper utilityBillMapper;
     private final DormRoomMapper roomMapper;
     private final UtilityPaymentLogMapper paymentLogMapper;
+    private final AlipayConfig alipayConfig;
 
     /**
      * 阶梯电价核算规则：
@@ -166,8 +170,13 @@ public class SmartUtilityService {
             UtilityBill bill = utilityBillMapper.selectById(billId);
             if (bill == null || !Objects.equals(roomId, bill.getRoomId())) throw new IllegalArgumentException("账单不属于当前寝室");
             if (!Integer.valueOf(0).equals(bill.getPayStatus())) throw new IllegalArgumentException("账单已缴纳或状态无效");
-            eAfter = eAfter.subtract(bill.getElectricCost() == null ? BigDecimal.ZERO : bill.getElectricCost()).max(BigDecimal.ZERO);
-            wAfter = wAfter.subtract(bill.getWaterCost() == null ? BigDecimal.ZERO : bill.getWaterCost()).max(BigDecimal.ZERO);
+            BigDecimal elecCost = bill.getElectricCost() == null ? BigDecimal.ZERO : bill.getElectricCost();
+            BigDecimal waterCost = bill.getWaterCost() == null ? BigDecimal.ZERO : bill.getWaterCost();
+            if (eBefore.compareTo(elecCost) < 0 || wBefore.compareTo(waterCost) < 0) {
+                throw new IllegalArgumentException(String.format("寝室预存余额不足（电费需 %.2f 元，当前 %.2f 元；水费需 %.2f 元，当前 %.2f 元），请先充值后再进行账单抵扣", elecCost, eBefore, waterCost, wBefore));
+            }
+            eAfter = eBefore.subtract(elecCost);
+            wAfter = wBefore.subtract(waterCost);
             bill.setPayStatus(1);
             bill.setPayTime(LocalDateTime.now());
             if (utilityBillMapper.updateById(bill) != 1) throw new IllegalStateException("账单更新失败");
@@ -212,5 +221,139 @@ public class SmartUtilityService {
         m.put("waterAbnormalAvgFactor", 1.6);
         m.put("ruleText", "用电：超过 max(145kWh, 楼栋均值×1.5) 标记异常；用水：超过 max(18吨, 楼栋均值×1.6) 标记异常。");
         return m;
+    }
+
+    public boolean isAlipayEnabled() {
+        return alipayConfig != null && alipayConfig.isEnabled();
+    }
+
+    /**
+     * 支付宝沙箱统一下单（调用 Alipay EasySDK 插件）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> createAlipayOrder(Long roomId, Long billId, BigDecimal electricRecharge,
+                                                 BigDecimal waterRecharge, Long operatorId) {
+        DormRoom room = roomMapper.selectById(roomId);
+        if (room == null) throw new IllegalArgumentException("寝室不存在");
+
+        BigDecimal totalAmount;
+        String subject;
+        String actionType;
+        BigDecimal eDelta = electricRecharge != null ? electricRecharge : BigDecimal.ZERO;
+        BigDecimal wDelta = waterRecharge != null ? waterRecharge : BigDecimal.ZERO;
+
+        if (billId != null) {
+            UtilityBill bill = utilityBillMapper.selectById(billId);
+            if (bill == null || !Objects.equals(roomId, bill.getRoomId())) throw new IllegalArgumentException("账单不属于当前寝室");
+            if (!Integer.valueOf(0).equals(bill.getPayStatus())) throw new IllegalArgumentException("账单已缴纳或状态无效");
+            totalAmount = bill.getTotalCost() != null ? bill.getTotalCost() : BigDecimal.ZERO;
+            subject = "宿舍 " + room.getRoomNo() + " 室 " + bill.getBillMonth() + " 水电费缴纳";
+            actionType = "PAY_BILL";
+        } else {
+            if (eDelta.signum() <= 0 && wDelta.signum() <= 0) throw new IllegalArgumentException("充值金额必须大于零");
+            totalAmount = eDelta.add(wDelta);
+            subject = "宿舍 " + room.getRoomNo() + " 室水电预存充值";
+            actionType = "RECHARGE";
+        }
+
+        String outTradeNo = "ALI-" + System.currentTimeMillis() + "-" + RandomUtil.randomNumbers(4);
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("outTradeNo", outTradeNo);
+        res.put("totalAmount", totalAmount);
+        res.put("subject", subject);
+        res.put("actionType", actionType);
+        res.put("alipayEnabled", alipayConfig != null && alipayConfig.isEnabled());
+
+        if (alipayConfig != null && alipayConfig.isEnabled()) {
+            try {
+                String returnUrl = alipayConfig.getReturnUrl() != null ? alipayConfig.getReturnUrl() : "http://localhost:5174";
+                var payResponse = Factory.Payment.Page().pay(subject, outTradeNo, totalAmount.setScale(2, RoundingMode.HALF_UP).toString(), returnUrl);
+                res.put("formHtml", payResponse.getBody());
+                res.put("mode", "SDK_PAGE");
+            } catch (Exception e) {
+                throw new IllegalStateException("支付宝沙箱统一下单失败：" + e.getMessage(), e);
+            }
+        } else {
+            res.put("formHtml", null);
+            res.put("mode", "DEMO_FALLBACK");
+            res.put("tip", "支付宝沙箱插件已就绪（当前为演示模拟通道；配置沙箱密钥后即可无缝切换真实沙箱付款）");
+        }
+
+        UtilityPaymentLog log = new UtilityPaymentLog();
+        log.setTxnNo(outTradeNo);
+        log.setRoomId(roomId);
+        log.setBillId(billId);
+        log.setOperatorId(operatorId);
+        log.setActionType(actionType);
+        log.setElectricDelta(eDelta);
+        log.setWaterDelta(wDelta);
+        log.setElectricBefore(room.getElectricBalance());
+        log.setWaterBefore(room.getWaterBalance());
+        log.setChannel(alipayConfig != null && alipayConfig.isEnabled() ? "ALIPAY_PENDING" : "DEMO_PENDING");
+        log.setRemark(billId != null ? ("BILL:" + billId) : ("RECHARGE:" + eDelta + ":" + wDelta));
+        log.setCreateTime(LocalDateTime.now());
+        paymentLogMapper.insert(log);
+
+        return res;
+    }
+
+    /**
+     * 处理支付宝异步回调通知 (WebHook 自动验签与订单核销)
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public String handleAlipayNotify(Map<String, String> params) {
+        if (alipayConfig == null || !alipayConfig.isEnabled()) {
+            return "failure";
+        }
+        try {
+            boolean verified = Boolean.TRUE.equals(Factory.Payment.Common().verifyNotify(params));
+            if (!verified) {
+                return "failure";
+            }
+            String tradeStatus = params.get("trade_status");
+            String outTradeNo = params.get("out_trade_no");
+            if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
+                return "success";
+            }
+            UtilityPaymentLog log = paymentLogMapper.selectOne(new LambdaQueryWrapper<UtilityPaymentLog>()
+                    .eq(UtilityPaymentLog::getTxnNo, outTradeNo));
+            if (log == null) {
+                return "failure";
+            }
+            if ("ALIPAY".equals(log.getChannel())) {
+                return "success"; // 已处理，幂等返回
+            }
+
+            DormRoom room = roomMapper.selectOne(new LambdaQueryWrapper<DormRoom>()
+                    .eq(DormRoom::getId, log.getRoomId()).last("FOR UPDATE"));
+            if (room == null) return "failure";
+
+            BigDecimal eBefore = room.getElectricBalance() != null ? room.getElectricBalance() : BigDecimal.ZERO;
+            BigDecimal wBefore = room.getWaterBalance() != null ? room.getWaterBalance() : BigDecimal.ZERO;
+
+            if ("PAY_BILL".equals(log.getActionType()) && log.getBillId() != null) {
+                UtilityBill bill = utilityBillMapper.selectById(log.getBillId());
+                if (bill != null && Integer.valueOf(0).equals(bill.getPayStatus())) {
+                    bill.setPayStatus(1);
+                    bill.setPayTime(LocalDateTime.now());
+                    utilityBillMapper.updateById(bill);
+                }
+                log.setElectricAfter(eBefore);
+                log.setWaterAfter(wBefore);
+            } else {
+                BigDecimal eAfter = eBefore.add(log.getElectricDelta() != null ? log.getElectricDelta() : BigDecimal.ZERO);
+                BigDecimal wAfter = wBefore.add(log.getWaterDelta() != null ? log.getWaterDelta() : BigDecimal.ZERO);
+                room.setElectricBalance(eAfter);
+                room.setWaterBalance(wAfter);
+                roomMapper.updateById(room);
+                log.setElectricAfter(eAfter);
+                log.setWaterAfter(wAfter);
+            }
+            log.setChannel("ALIPAY");
+            paymentLogMapper.updateById(log);
+            return "success";
+        } catch (Exception e) {
+            return "failure";
+        }
     }
 }

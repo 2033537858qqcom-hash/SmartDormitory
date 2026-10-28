@@ -1,0 +1,59 @@
+.current-card {
+  padding: 28rpx 34rpx;
+}
+
+.curr-head {
+  color: #86868b;
+  font-size: 22rpx;
+}
+
+.curr-body {
+  color: #1d1d1f;
+  font-size: 29rpx;
+  font-weight: 600;
+  margin-top: 8rpx;
+}
+
+.type-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+}
+
+.type-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 82rpx;
+  border: 2rpx solid transparent;
+  border-radius: 20rpx;
+  background: #f5f5f7;
+  color: #515154;
+  font-size: 25rpx;
+}
+
+.type-act {
+  color: #006edb;
+  background: #edf4ff;
+  border-color: #006edb;
+  font-weight: 600;
+}
+
+.checkout-notice {
+  color: #9d650a;
+  background: #fbf5e9;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  margin-bottom: 24rpx;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 16rpx;
+}
+
+.retry-btn {
+  margin-top: 24rpx;
+}

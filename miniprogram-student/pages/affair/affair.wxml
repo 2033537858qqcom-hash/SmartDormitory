@@ -1,0 +1,249 @@
+<view class="affair-page container">
+  <view class="page-heading"><view class="page-title">宿务服务</view><view class="page-subtitle">管理住宿事务，查看申请进度</view></view>
+  <view wx:if="{{loading && !dash}}" class="card empty-box"><view class="empty-text">正在加载宿务信息...</view></view>
+  <view wx:elif="{{loadError && !dash}}" class="card empty-box"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="loadAffairData">重新加载</button></view>
+  <block wx:else>
+  <!-- 顶部分段切换 -->
+  <view class="tab-segment card">
+    <view
+      class="seg-btn spring-btn {{activeTab === 'overview' ? 'seg-active' : ''}}"
+      bindtap="switchTab"
+      data-tab="overview"
+    >
+      服务概览
+    </view>
+    <view
+      class="seg-btn spring-btn {{activeTab === 'discipline' ? 'seg-active' : ''}}"
+      bindtap="switchTab"
+      data-tab="discipline"
+    >
+      晚归与申诉
+    </view>
+    <view
+      class="seg-btn spring-btn {{activeTab === 'history' ? 'seg-active' : ''}}"
+      bindtap="switchTab"
+      data-tab="history"
+    >
+      申请记录
+    </view>
+  </view>
+
+  <!-- 1. 宿务与文明评比面板 -->
+  <view wx:if="{{activeTab === 'overview'}}" class="overview-panel">
+    <!-- 文明寝室星级卡片 -->
+    <view class="civilized-card card" wx:if="{{dash.room}}">
+      <view class="civ-head">
+        <view class="civ-title-box">
+          <text class="civ-title">文明寝室</text>
+          <text class="civ-sub">{{dash.room.roomNo}} 室 · 当前星级评定</text>
+        </view>
+        <view class="star-badge">
+          <text class="stars-text">{{starIcons}}</text>
+          <text class="star-label">{{dash.room.starLevel === 5 ? '五星寝室' : (dash.room.starLevel ? '文明寝室' : '评定中')}}</text>
+        </view>
+      </view>
+
+      <view class="civ-scores">
+        <view class="score-col">
+          <text class="score-val">{{dash.room.civilizedScore || '--'}}</text>
+          <text class="score-lbl">综合文明分</text>
+        </view>
+        <view class="score-col">
+          <text class="score-val">{{harmonyScoreText}}</text>
+          <text class="score-lbl">室友契合度</text>
+        </view>
+      </view>
+
+      <view class="civ-tip">
+        综合评分参考卫生、纪律与节能情况，具体评定以宿管公布结果为准。
+      </view>
+    </view>
+
+    <!-- 宿务功能导航矩阵 -->
+    <view class="affair-grid card">
+      <view class="affair-item spring-btn" bindtap="navToVisitor">
+        <view class="af-icon"><image src="/images/ui/visitor.png" mode="aspectFit" /></view>
+        <view class="af-body">
+          <view class="af-name">访客登记</view>
+          <view class="af-desc">登记亲友来访，出示通行码</view>
+        </view>
+        <text class="af-arrow">›</text>
+      </view>
+
+      <view class="affair-item spring-btn" bindtap="navToAdjust">
+        <view class="af-icon"><image src="/images/ui/swap.png" mode="aspectFit" /></view>
+        <view class="af-body">
+          <view class="af-name">调宿与退宿申请</view>
+          <view class="af-desc">选择目标寝室，提交调宿或退宿申请</view>
+        </view>
+        <text class="af-arrow">›</text>
+      </view>
+
+      <view class="affair-item spring-btn" bindtap="navToResidence">
+        <view class="af-icon"><image src="/images/ui/residence.png" mode="aspectFit" /></view>
+        <view class="af-body">
+          <view class="af-name">住宿业务申请</view>
+          <view class="af-desc">入住登记·假期留宿审批申请</view>
+        </view>
+        <text class="af-arrow">›</text>
+      </view>
+
+      <view class="affair-item spring-btn" bindtap="switchTab" data-tab="discipline">
+        <view class="af-icon"><image src="/images/ui/clock.png" mode="aspectFit" /></view>
+        <view class="af-body">
+          <view class="af-name">晚归提前报备</view>
+          <view class="af-desc">填写事由和预计归寝时间</view>
+        </view>
+        <text class="af-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 2. 晚归报备与申诉面板 -->
+  <view wx:elif="{{activeTab === 'discipline'}}" class="discipline-panel">
+    <!-- 晚归报备表单 -->
+    <view class="report-card card">
+      <view class="section-title">
+        <text class="title-text">提前提交晚归报备</text>
+        <text class="title-extra">请提前提交</text>
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">报备事由</text>
+        <picker mode="selector" range="{{reportReasons}}" value="{{reasonIndex}}" bindchange="onReasonChange">
+          <view class="picker-input">
+            {{reportReasons[reasonIndex]}}
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">预计归寝时间</text>
+        <picker mode="time" value="{{expectedTime}}" bindchange="onTimeChange">
+          <view class="picker-input">
+            {{expectedTime}}
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">补充说明 (选填)</text>
+        <input
+          class="form-input"
+          placeholder="如所在实验室房间号、指导老师等..."
+          value="{{reportRemark}}"
+          bindinput="onInputRemark"
+        />
+      </view>
+
+      <button
+        class="btn-primary spring-btn report-btn"
+        loading="{{reporting}}"
+        disabled="{{reporting}}"
+        bindtap="handleSubmitReport"
+      >
+        {{reporting ? '报备提交中...' : '提交晚归报备'}}
+      </button>
+    </view>
+
+    <!-- 违纪与晚归记录及申诉 -->
+    <view class="records-card card">
+      <view class="section-title">
+        <text class="title-text">晚归与违纪记录</text>
+        <text class="title-extra">支持在线申诉</text>
+      </view>
+
+      <view wx:if="{{disciplineList.length === 0}}" class="empty-text" style="text-align: center; padding: 20rpx 0;">
+        暂无违纪晚归记录，继续保持良好的生活规范！
+      </view>
+
+      <view wx:for="{{disciplineList}}" wx:key="id" class="disc-item">
+        <view class="disc-head">
+          <text class="disc-type badge {{item.typeClass}}">{{item.typeName}}</text>
+          <text class="disc-time">{{item.recordTimeText}}</text>
+        </view>
+        <view class="disc-desc">{{item.description || item.reason || '晚归未报备'}}</view>
+        <view class="disc-footer">
+          <text class="disc-score">扣除文明积分：-{{item.deductScore || 0}}分</text>
+
+          <!-- 申诉状态或按钮 -->
+          <block wx:if="{{item.status === 2}}">
+            <text class="badge badge-green">已申诉撤销</text>
+          </block>
+          <block wx:elif="{{item.status === 3}}">
+            <text class="badge badge-amber">申诉审核中</text>
+          </block>
+          <block wx:elif="{{item.status === 1 && item.typeName !== '晚归报备'}}">
+            <button class="btn-secondary appeal-btn spring-btn" bindtap="openAppealModal" data-record="{{item}}">
+              发起在线申诉
+            </button>
+          </block>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 3. 事务历史记录面板 -->
+  <view wx:else class="history-panel">
+    <!-- 调宿记录 -->
+    <view class="history-card card">
+      <view class="section-title">
+        <text class="title-text">调宿与退宿申请记录</text>
+      </view>
+      <view wx:if="{{adjustList.length === 0}}" class="empty-text">暂无调宿申请记录</view>
+      <view wx:for="{{adjustList}}" wx:key="id" class="hist-item">
+        <view class="hist-top">
+          <text class="hist-type">{{item.applyType === 'CHECKOUT' ? '退宿申请' : '调宿申请'}}</text>
+          <text class="badge {{item.statusClass}}">{{item.statusText}}</text>
+        </view>
+        <view class="hist-sub">申请时间：{{item.createTimeText}}</view>
+        <view class="hist-reason">原因：{{item.reason}}</view>
+        <view class="hist-reply" wx:if="{{item.reviewComment}}">审核批复：{{item.reviewComment}}</view>
+      </view>
+    </view>
+
+    <!-- 访客记录 -->
+    <view class="history-card card">
+      <view class="section-title">
+        <text class="title-text">访客记录</text>
+      </view>
+      <view wx:if="{{visitorList.length === 0}}" class="empty-text">暂无访客预约记录</view>
+      <view wx:for="{{visitorList}}" wx:key="id" class="hist-item">
+        <view class="hist-top">
+          <text class="hist-type">访客：{{item.visitorName}} ({{item.passCode}})</text>
+          <text class="badge {{item.statusClass}}">{{item.statusText}}</text>
+        </view>
+        <view class="hist-sub">到访日期：{{item.visitDateText}}</view>
+        <view class="hist-reason">来访事由：{{item.visitReason}}</view>
+      </view>
+    </view>
+  </view>
+
+  </block>
+  <!-- 申诉弹窗 Modal -->
+  <view wx:if="{{appealModalVisible}}" class="sheet-mask {{appealSheetClosing ? 'sheet-mask-leave' : ''}}" bindtap="closeAppealModal">
+    <view class="sheet-panel {{appealSheetClosing ? 'sheet-panel-leave' : ''}}" catchtap="stopPropagation">
+      <view class="sheet-grabber"></view><view class="sheet-head"><view class="sheet-title">发起违纪申诉</view><text class="sheet-close" bindtap="closeAppealModal" aria-label="关闭">×</text></view>
+      <view class="modal-sub">
+        记录：{{curDiscRecord.typeName}} · 扣{{curDiscRecord.deductScore || 0}}分
+      </view>
+
+      <textarea
+        class="appeal-textarea"
+        placeholder="请详细说明晚归或违纪的客观原因（例如：参与导师国家重点研发课题攻关、因急性肠胃炎于校医院急诊就诊等）..."
+        value="{{appealReason}}"
+        bindinput="onInputAppealReason"
+        maxlength="200"
+      ></textarea>
+
+      <view class="modal-actions">
+        <button class="btn-secondary modal-cancel spring-btn" bindtap="closeAppealModal">取消</button>
+        <button class="btn-primary modal-confirm spring-btn" loading="{{submittingAppeal}}" disabled="{{submittingAppeal}}" bindtap="submitAppeal">
+          提交申诉
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

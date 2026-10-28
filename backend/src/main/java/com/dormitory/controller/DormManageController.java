@@ -140,7 +140,13 @@ public class DormManageController {
                         bm.put("studentName", stu.getRealName());
                         bm.put("studentNo", stu.getUsername());
                         bm.put("className", stu.getClassName());
-                        bm.put("phone", stu.getPhone());
+                        boolean isStudent = "STUDENT".equals(request.getAttribute("currentUserRole"));
+                        boolean isSelf = Objects.equals(request.getAttribute("currentUserId"), stu.getId());
+                        String phone = stu.getPhone();
+                        if (isStudent && !isSelf && phone != null && phone.length() >= 7) {
+                            phone = phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+                        }
+                        bm.put("phone", phone != null ? phone : "-");
                     }
                 }
                 bedViews.add(bm);

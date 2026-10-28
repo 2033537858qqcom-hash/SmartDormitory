@@ -82,3 +82,15 @@ jobs:
       - run: node --test src/*.test.js
       - run: npm ci
       - run: npm run build
+
+  miniprogram-and-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run miniprogram tests
+        run: node --test miniprogram-student/tests/*.test.js
+      - name: Run configure scripts tests
+        run: node --test scripts/*.test.js

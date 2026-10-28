@@ -113,6 +113,9 @@ class AuthInterceptorTest {
         MockHttpServletRequest appeal = new MockHttpServletRequest("POST", "/api/affair/discipline-appeal");
         appeal.addHeader("Authorization", token);
         assertTrue(interceptor.preHandle(appeal, new MockHttpServletResponse(), new Object()));
+        MockHttpServletRequest report = new MockHttpServletRequest("POST", "/api/affair/late-report");
+        report.addHeader("Authorization", token);
+        assertTrue(interceptor.preHandle(report, new MockHttpServletResponse(), new Object()));
     }
 
     @Test
@@ -128,5 +131,15 @@ class AuthInterceptorTest {
         user.setRole("DORM_MANAGER");
         assertTrue(interceptor.preHandle(review, new MockHttpServletResponse(), new Object()));
         assertFalse(interceptor.preHandle(submit, new MockHttpServletResponse(), new Object()));
+    }
+
+    @Test
+    void visitorVerificationRequiresManagerAuthorization() throws Exception {
+        when(users.selectById(7L)).thenReturn(user);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/affair/visitor-verify");
+        request.addHeader("Authorization", sessions.create(7L));
+        assertFalse(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
+        user.setRole("DORM_MANAGER");
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
     }
 }

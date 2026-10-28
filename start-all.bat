@@ -6,7 +6,7 @@ echo   《基于Java的智慧宿舍管理系统》 一键启动 (后端 + Web管
 echo =====================================================================
 
 echo [1/3] 正在启动 Spring Boot 后端 (端口: 7000)...
-start "SmartDorm-Backend (7000)" cmd /k "cd /d "%ROOT%backend" && mvn spring-boot:run"
+start "SmartDorm-Backend (7000)" cmd /k ""%ROOT%start-backend.bat""
 
 echo [2/3] 正在启动 Vue 3 Web 管理端 (端口: 5173)...
 start "SmartDorm-Web-Admin (5173)" cmd /k "cd /d "%ROOT%frontend-admin" && npm run dev"
@@ -18,5 +18,6 @@ echo.
 echo 全部服务启动窗口已拉起！
 echo - Web 管理端:     http://localhost:5173
 echo - 学生端 H5:      http://localhost:5174
+echo - 学生端小程序:   微信开发者工具直接导入 %ROOT%miniprogram-student
 echo - 后端 API:       http://localhost:7000
 pause

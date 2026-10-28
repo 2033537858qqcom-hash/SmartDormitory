@@ -1,6 +1,6 @@
 # 《基于Java的智慧宿舍管理系统设计》本科毕业设计工程
 
-## 一、 项目架构概览（一后端 + 双前端）
+## 一、 项目架构概览（一后端 + 一小程序 + 双前端）
 
 | 模块目录 | 工程职责 | 核心技术栈 | 运行端口 |
 | :--- | :--- | :--- | :--- |
@@ -22,9 +22,10 @@
 - 自动扫描报修文本中的高危词库（`跳闸/短路/火花/爆管/漏水`），自动提权为 `HIGH（高危紧急）` 置顶，并按工种匹配当前待办工单数最少的维修师傅。
 - 支持学生端结单后进行 **1~5 星维修服务回访评价**。
 
-### 3. 水电阶梯计价核算、账户余额联动与能耗突增预警（[`SmartUtilityService.java`](./backend/src/main/java/com/dormitory/service/SmartUtilityService.java)）
+### 3. 水电阶梯计价核算、账户余额联动与双通道支付网关（[`SmartUtilityService.java`](./backend/src/main/java/com/dormitory/service/SmartUtilityService.java)）
 - 自动扣除基础免额并按第一、第二阶梯单价核算水电费及人均分摊金额；超出楼栋均值 1.5 倍自动触发“违规大功率电器或漏水排查”预警。
-- **电费/水费双账户充值与缴费联动抵扣**：账单缴纳自动优先抵扣寝室预存水电余额，余额低于 ¥20 自动高亮欠费预警。
+- **电费/水费双账户充值与缴费联动抵扣**：账单缴纳自动优先抵扣寝室预存水电余额，余额不足时拦截并提示充值。
+- **支付 SDK 插件集成与双通道保底**：集成阿里官方 **`alipay-easysdk` (v2.2.3)** 插件，支持拉起支付宝沙箱电脑/手机收银台与异步验签回调核销；同时保留「⚡ 极速演示模拟通道」，在未配密钥或离线答辩场景下自动无缝降级，确保 100% 演示稳定性。
 
 ### 4. 多维量化“文明寝室”动态评比、申诉核销与激励发放（[`SmartEvaluationService.java`](./backend/src/main/java/com/dormitory/service/SmartEvaluationService.java)）
 - 按 `50% 卫生均分 + 30% 纪律晚归表现 + 20% 水电节能表现` 自动核算各寝室星级与文明示范称号。
@@ -36,7 +37,7 @@
 - **访客动态电子通行绿码**：学生端登记亲友来访后自动生成带 `VP-xxxxxx` 核验码的动态 SVG 绿码凭证（支持全屏亮码），管理端实时监测在楼时长与超时滞留预警。
 - **多角色差异化工作台**：针对后勤主任 (`ADMIN`)、楼栋宿管 (`DORM_MANAGER`)、维修工程师 (`REPAIRMAN`)、辅导员只读 (`COUNSELOR`) 动态裁剪导航菜单与专属工作台。服务端已限制角色入口，并已对学生写接口做会话身份绑定、对宿管按 `manager_id` 做楼栋数据范围过滤；仍仅供本地演示，请勿公开部署真实数据。
 - **报修 SLA**：创建工单时按优先级写入截止时间（高危 4h / 普通 24h / 低优 48h），列表展示「已超时」徽章。
-- **水电缴费为演示模拟**：充值/缴费生成 `DEMO-` 流水号与余额快照，界面标注非微信支付；未对接真实支付网关或闸机硬件。
+- **水电缴费支持双通道**：学生端支持自由切换「⚡ 演示模拟充值」与「🚀 支付宝沙箱支付」；若已配置沙箱密钥则唤起支付宝收银台，未配密钥时自动以 DEMO 模式快速核销。
 - **业务处理与追踪**：调宿审批核验并锁定床位，退宿需记录钥匙、设施和清理交接；学生可提交入住登记、假期留宿申请并查看审核结果。水电模拟操作支持请求重试去重与流水查询，能耗异常可记录排查状态并关联唯一报修工单。
 - **报修提醒与方案说明**：工单临近截止时向维修人员发送站内提醒，超时后通知维修人员及宿管；分寝预览展示组内习惯差异和未分配原因，支持导出报告及查看人工床位变更记录。
 
@@ -59,8 +60,9 @@
 或分别在终端执行：
 
 ```bash
-# 1. 启动后端 (7000)
-cd backend && mvn spring-boot:run
+# 1. 启动后端 (7000)，并自动配置小程序局域网地址
+# Windows: start-backend.bat
+bash start-backend.sh
 
 # 2. 启动 Web 管理端 (5173)
 cd frontend-admin && npm install && npm run dev
@@ -68,6 +70,8 @@ cd frontend-admin && npm install && npm run dev
 # 3. 启动学生端 Vite H5 (5174)
 cd frontend-student && npm install && npm run dev
 ```
+
+本地后端启动时（包括 IntelliJ IDEA 和 Maven 直接启动）会调用 Node.js 脚本，将当前网卡的 IPv4 和实际监听端口写入小程序 `utils/config.js`。手机和电脑需处于可互通的同一局域网；多网卡选错时，可在启动前设置 `SMART_DORM_IP` 为本机网卡地址（Windows PowerShell：`$env:SMART_DORM_IP="192.168.1.100"`；macOS/Linux：`export SMART_DORM_IP=192.168.1.100`）。后端运行期间切换网络后，需运行 `node scripts/configure-miniprogram.js` 或重启后端，再重新编译并启动真机调试。自动配置需要 Node.js；若脚本失败，后端仍会启动并打印提示。
 
 ---
 
@@ -97,3 +101,33 @@ cd frontend-student && npm install && npm run dev
 - 后端：`mvn -q test`（JDK 17）
 - MySQL：使用独立测试库检查并发调宿和缴费重试
 - 学生端和管理端：Node 测试及生产构建
+
+---
+
+## 七、 支付宝沙箱支付与 0 成本演示指南（无需购买域名与云服务器）
+
+系统采用阿里官方最新轻量级 SDK **`alipay-easysdk`**，完全适配 Spring Boot 3 与 JDK 17。
+
+### 1. 0 成本环境说明
+- **无需购买域名**：支付宝沙箱联调支持局域网 IP / 本地 `localhost`；同步回跳 (`returnUrl`) 走前端本地地址，不需要任何域名备案。
+- **无需购买服务器**：所有服务直接在本机（笔记本或台式机）运行即可。
+- **异步回调 (`notifyUrl`)**：如需演示支付宝公网回调通知入库，可使用免费内网穿透工具：
+  
+  ```bash
+  # 下载免费版 cpolar (或 natapp)，一条命令穿透本地后端端口 7000
+  cpolar http 7000
+  # 将生成的公网 https 地址填入 backend/.env 中的 ALIPAY_NOTIFY_URL 即可
+  ```
+
+### 2. 启用支付宝沙箱
+
+1. 访问 [支付宝开放平台·沙箱应用](https://open.alipay.com/develop/sandbox/app) 获取 **AppID**、**应用私钥** 与 **支付宝公钥**。
+2. 在 `backend/.env` 中开启并填入密钥（或修改 `backend/src/main/resources/application.yml`）：
+   ```properties
+   ALIPAY_ENABLED=true
+   ALIPAY_APP_ID=90210001xxxxxxxx
+   ALIPAY_PRIVATE_KEY=MIIEvgIBADAN...
+   ALIPAY_PUBLIC_KEY=MIIBIjAN...
+   ALIPAY_RETURN_URL=http://localhost:5174
+   ```
+3. 启动项目，进入学生端（`http://localhost:5174`）「水电缴费」→「水电充值」选择「🚀 支付宝沙箱支付」，点击后即可自动拉起支付宝沙箱网页收银台，使用沙箱买家账号（或沙箱钱包 APP）完成充值演示！

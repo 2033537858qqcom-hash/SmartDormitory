@@ -1,0 +1,56 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/manager-visitor/manager-visitor",
+    "pages/home/home",
+    "pages/habit/habit",
+    "pages/repair/repair",
+    "pages/utility/utility",
+    "pages/affair/affair",
+    "pages/visitor-pass/visitor-pass",
+    "pages/adjust-apply/adjust-apply",
+    "pages/residence/residence"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#f5f5f7",
+    "navigationBarTitleText": "宿里 · 智慧宿舍",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f5f7"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#76767d",
+    "selectedColor": "#006edb",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/repair/repair",
+        "text": "报修",
+        "iconPath": "images/tab-repair.png",
+        "selectedIconPath": "images/tab-repair-active.png"
+      },
+      {
+        "pagePath": "pages/utility/utility",
+        "text": "水电",
+        "iconPath": "images/tab-utility.png",
+        "selectedIconPath": "images/tab-utility-active.png"
+      },
+      {
+        "pagePath": "pages/affair/affair",
+        "text": "宿务",
+        "iconPath": "images/tab-affair.png",
+        "selectedIconPath": "images/tab-affair-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

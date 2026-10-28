@@ -7,6 +7,7 @@ import com.dormitory.entity.UtilityPaymentLog;
 import com.dormitory.mapper.DormRoomMapper;
 import com.dormitory.mapper.UtilityBillMapper;
 import com.dormitory.mapper.UtilityPaymentLogMapper;
+import com.dormitory.common.AlipayConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +23,7 @@ class UtilityPaymentWorkflowTest {
     @Mock DormRoomMapper rooms;
     @Mock UtilityBillMapper bills;
     @Mock UtilityPaymentLogMapper logs;
+    @Mock AlipayConfig alipayConfig;
     @InjectMocks SmartUtilityService service;
 
     private DormRoom room() {
@@ -39,6 +41,50 @@ class UtilityPaymentWorkflowTest {
         assertThrows(IllegalArgumentException.class, () -> service.processPayment(1L, 8L, BigDecimal.ZERO, BigDecimal.ZERO, 7L, "payment_request_002"));
         verify(rooms, never()).updateById(any(DormRoom.class));
         verify(logs, never()).insert(any(UtilityPaymentLog.class));
+    }
+
+    @Test
+    void rejectsBillPaymentWhenBalanceIsInsufficient() {
+        DormRoom lowRoom = new DormRoom();
+        lowRoom.setId(1L);
+        lowRoom.setElectricBalance(new BigDecimal("10.00"));
+        lowRoom.setWaterBalance(new BigDecimal("5.00"));
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(lowRoom);
+
+        UtilityBill expensiveBill = new UtilityBill();
+        expensiveBill.setId(9L);
+        expensiveBill.setRoomId(1L);
+        expensiveBill.setPayStatus(0);
+        expensiveBill.setElectricCost(new BigDecimal("50.00"));
+        expensiveBill.setWaterCost(new BigDecimal("20.00"));
+        when(bills.selectById(9L)).thenReturn(expensiveBill);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.processPayment(1L, 9L, BigDecimal.ZERO, BigDecimal.ZERO, 7L, "payment_request_low_bal"));
+        verify(rooms, never()).updateById(any(DormRoom.class));
+        verify(logs, never()).insert(any(UtilityPaymentLog.class));
+    }
+
+    @Test
+    void allowsBillPaymentWhenBalanceIsSufficient() {
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(room());
+        when(rooms.updateById(any(DormRoom.class))).thenReturn(1);
+
+        UtilityBill affordableBill = new UtilityBill();
+        affordableBill.setId(10L);
+        affordableBill.setRoomId(1L);
+        affordableBill.setPayStatus(0);
+        affordableBill.setElectricCost(new BigDecimal("15.00"));
+        affordableBill.setWaterCost(new BigDecimal("5.00"));
+        when(bills.selectById(10L)).thenReturn(affordableBill);
+        when(bills.updateById(any(UtilityBill.class))).thenReturn(1);
+
+        var result = service.processPayment(1L, 10L, BigDecimal.ZERO, BigDecimal.ZERO, 7L, "payment_request_afford");
+        assertEquals(new BigDecimal("15.00"), result.get("electricAfter"));
+        assertEquals(new BigDecimal("15.00"), result.get("waterAfter"));
+        verify(rooms).updateById(any(DormRoom.class));
+        verify(bills).updateById(argThat((UtilityBill b) -> Integer.valueOf(1).equals(b.getPayStatus())));
+        verify(logs).insert(any(UtilityPaymentLog.class));
     }
 
     @Test

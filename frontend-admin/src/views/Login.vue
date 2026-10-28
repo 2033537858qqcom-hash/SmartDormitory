@@ -2,11 +2,9 @@
   <div class="login-page">
     <div class="login-card surface-card">
       <div class="login-header">
-        <div class="logo-badge" aria-hidden="true">
-          <el-icon :size="24"><OfficeBuilding /></el-icon>
-        </div>
-        <h2 class="heading-balance">智慧宿舍管理系统</h2>
-        <p class="body-pretty">登录后勤工作空间</p>
+        <img class="logo-badge" src="/suli-icon-v2.png" alt="" />
+        <h2 class="heading-balance">宿里</h2>
+        <p class="body-pretty">智慧宿舍 · 后勤工作空间</p>
       </div>
 
       <el-form :model="form" label-position="top" @submit.prevent="handleLogin">
@@ -97,11 +95,8 @@ const handleLogin = async () => {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: var(--accent-subtle);
-  color: var(--accent-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
+  object-fit: cover;
   margin-bottom: 12px;
 }
 .login-header h2 {

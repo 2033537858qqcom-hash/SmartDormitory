@@ -1,0 +1,30 @@
+<view class="visitor-page container">
+  <view class="page-heading"><view class="page-title">访客登记</view><view class="page-subtitle">登记来访信息，出示通行码供宿管核验</view></view>
+  <view wx:if="{{loading && !activePass}}" class="empty-box card"><view class="empty-text">正在加载访客信息...</view></view>
+  <view wx:elif="{{loadError}}" class="empty-box card"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="loadPassData">重新加载</button></view>
+  <block wx:else>
+  <view wx:if="{{activePass}}" class="pass-card">
+    <view class="pass-header"><view class="pass-badge">访客通行码 · 在访中</view></view>
+    <view class="qr-container">
+      <view class="qr-box"><canvas type="2d" id="qrCanvas" class="qr-canvas"></canvas></view>
+      <view class="passcode-text">{{activePass.passCode}}</view>
+    </view>
+    <view class="pass-meta">
+      <view class="meta-item"><text class="m-label">访客姓名</text><text class="m-val">{{activePass.visitorName}}</text></view>
+      <view class="meta-item"><text class="m-label">访问寝室</text><text class="m-val">{{roomInfo}}</text></view>
+      <view class="meta-item"><text class="m-label">登记时间</text><text class="m-val">{{activePass.visitDateText}}</text></view>
+      <view class="meta-item"><text class="m-label">来访事由</text><text class="m-val">{{activePass.visitReason}}</text></view>
+    </view>
+    <view class="pass-tip">向宿管出示通行码，或提供编号进行核验。</view>
+    <button class="btn-secondary toggle-btn spring-btn" bindtap="toggleNewForm">{{showForm ? '收起登记表单' : '登记新访客'}}</button>
+  </view>
+  <view wx:if="{{!activePass || showForm}}" class="form-card card">
+    <view class="section-title"><text class="title-text">来访信息</text></view>
+    <view class="input-group"><text class="input-label">访客姓名</text><input class="form-input" placeholder="请输入访客姓名" value="{{form.visitorName}}" bindinput="onInputName" /></view>
+    <view class="input-group"><text class="input-label">联系电话</text><input class="form-input" type="number" maxlength="11" placeholder="请输入访客手机号" value="{{form.visitorPhone}}" bindinput="onInputPhone" /></view>
+    <view class="input-group"><text class="input-label">与本人关系（选填）</text><input class="form-input" placeholder="例如：家人" value="{{form.relation}}" bindinput="onInputRelation" /></view>
+    <view class="input-group"><text class="input-label">来访事由</text><picker mode="selector" range="{{reasonPresets}}" value="{{reasonIndex}}" bindchange="onReasonChange"><view class="picker-input">{{reasonPresets[reasonIndex]}}<text class="picker-arrow">›</text></view></picker></view>
+    <button class="btn-primary spring-btn submit-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmitVisitor">{{submitting ? '提交中...' : '登记访客'}}</button>
+  </view>
+  </block>
+</view>

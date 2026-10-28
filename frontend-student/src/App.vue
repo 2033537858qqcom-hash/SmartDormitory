@@ -1,7 +1,8 @@
 <template>
   <div v-if="!currentStudentId" class="login-stage">
     <form class="student-login" @submit.prevent="login">
-      <h1>智慧宿舍</h1>
+      <img class="student-brand-icon" src="/suli-icon-v2.png" alt="" />
+      <h1>宿里</h1>
       <p>请使用学生账号登录</p>
       <label>学号 <input v-model.trim="loginForm.username" autocomplete="username" required /></label>
       <label>密码 <input v-model="loginForm.password" type="password" autocomplete="current-password" required /></label>
@@ -84,7 +85,7 @@
             </div>
           </div>
 
-          <!-- 四个 Tab 页面视图 -->
+          <!-- Tab 页面视图 -->
           <TabHome
             v-if="currentTab === 'home'"
             :dash="dash"
@@ -125,6 +126,18 @@
         </template>
       </main>
 
+      <!-- 生活习惯画像抽屉弹层（用于已分寝学生查看室友对比或调宿偏好设置） -->
+      <BottomSheet v-model="habitSheetVisible" title="生活习惯画像">
+        <TabHabitRadar
+          :dash="dash"
+          in-sheet
+          :mode="habitSheetMode"
+          @refresh="loadDashboard"
+          @toast="showToast"
+          @saved="habitSheetVisible = false"
+        />
+      </BottomSheet>
+
       <!-- 底部导航栏 TabBar（统一 SVG 线性图标） -->
       <nav class="wx-tabbar" aria-label="底部主导航">
         <button
@@ -147,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import api from './api'
 import { signInStudent } from './session'
 import TabHome from './components/TabHome.vue'
@@ -155,8 +168,9 @@ import TabHabitRadar from './components/TabHabitRadar.vue'
 import TabRepair from './components/TabRepair.vue'
 import TabUtility from './components/TabUtility.vue'
 import TabAffair from './components/TabAffair.vue'
+import BottomSheet from './components/BottomSheet.vue'
 
-const tabs = [
+const allTabs = [
   {
     key: 'home',
     label: '首页',
@@ -164,7 +178,7 @@ const tabs = [
   },
   {
     key: 'habit',
-    label: '习惯',
+    label: '选宿习惯',
     paths: [
       'M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z',
       'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'
@@ -203,6 +217,25 @@ const loading = ref(true)
 const loadError = ref(false)
 const dash = ref({})
 const isHeaderCollapsed = ref(false)
+const habitSheetVisible = ref(false)
+const habitSheetMode = ref('normal')
+
+const isAllocated = computed(() => Boolean(dash.value?.room && dash.value?.bed))
+
+// 仅在学生第一次进行选宿舍（未分配宿舍的新生阶段）在底部导航栏展示「选宿习惯」；已分寝入住学生精简为日常 4 个主导航
+const tabs = computed(() => {
+  if (!isAllocated.value) {
+    return allTabs
+  }
+  return allTabs.filter(t => t.key !== 'habit')
+})
+
+// 若已入住学生当前停留在 habit tab，自动归位至 home
+watch(isAllocated, (alloc) => {
+  if (alloc && currentTab.value === 'habit') {
+    currentTab.value = 'home'
+  }
+})
 
 const toastInfo = reactive({
   text: '',
@@ -214,7 +247,8 @@ const sentinelRef = ref(null)
 let sentinelObserver = null
 
 const navTitle = computed(() => {
-  const found = tabs.find(t => t.key === currentTab.value)
+  if (currentTab.value === 'habit') return isAllocated.value ? '调宿画像' : '选宿习惯'
+  const found = tabs.value.find(t => t.key === currentTab.value)
   return found ? found.label : '智慧宿舍'
 })
 
@@ -241,15 +275,31 @@ const selectTab = (key) => {
   }
 }
 
-const handleNavigate = async (target) => {
-  messageKey.value = target && typeof target === 'object' ? target.key || '' : ''
+const handleNavigate = async (target, secondArg) => {
+  let targetTab = 'home'
+  let targetAction = ''
+  let key = ''
+
   if (typeof target === 'object' && target !== null) {
-    utilityInitialAction.value = target.action || ''
-    currentTab.value = target.tab || 'home'
+    targetTab = target.tab || 'home'
+    targetAction = target.action || ''
+    key = target.key || ''
   } else {
-    utilityInitialAction.value = ''
-    currentTab.value = target
+    targetTab = target
+    targetAction = secondArg || ''
   }
+
+  messageKey.value = key
+  utilityInitialAction.value = targetAction
+
+  // 已入住学生通过点击室友习惯对比或调宿习惯入口，以抽屉弹层展示，不破坏底部导航
+  if (targetTab === 'habit' && isAllocated.value) {
+    habitSheetMode.value = targetAction === 'transfer' ? 'transfer' : 'normal'
+    habitSheetVisible.value = true
+    return
+  }
+
+  currentTab.value = targetTab
   if (scrollBodyRef.value) {
     scrollBodyRef.value.scrollTop = 0
   }
@@ -308,9 +358,15 @@ const sessionExpired = () => {
 
 onMounted(() => {
   window.addEventListener('student-session-expired', sessionExpired)
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('out_trade_no')) {
+    currentTab.value = 'utility'
+    showToast({ msg: `支付宝沙箱付款完成（单号：${params.get('out_trade_no')}）`, type: 'success' })
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
   if (currentStudentId.value) {
-  loading.value = true
-  loadDashboard()
+    loading.value = true
+    loadDashboard()
   }
   if (window.IntersectionObserver && sentinelRef.value && scrollBodyRef.value) {
     sentinelObserver = new IntersectionObserver(
@@ -334,6 +390,7 @@ onBeforeUnmount(() => {
 <style>
 .login-stage { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg-canvas); }
 .student-login { width: min(100%, 360px); padding: 32px; border-radius: 24px; background: white; box-shadow: 0 12px 40px rgb(29 29 31 / 8%); }
+.student-brand-icon { display: block; width: 48px; height: 48px; border-radius: 12px; object-fit: cover; margin-bottom: 16px; }
 .student-login h1 { font-size: 25px; margin: 0 0 8px; }.student-login p { color: #6e6e73; margin-bottom: 22px; }
 .student-login label { display: grid; gap: 7px; margin: 16px 0; font-size: 14px; }.student-login input { padding: 12px; border: 1px solid #c9c9ce; border-radius: 9px; font: inherit; }
 .student-login button { width: 100%; border: 0; border-radius: 10px; padding: 12px; color: white; background: #176bd6; font: inherit; cursor: pointer; }.student-login .login-error { color: #b42318; margin: 10px 0; }

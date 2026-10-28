@@ -46,7 +46,7 @@ public class DormAffairController {
 
     @GetMapping("/evaluation")
     public Result<List<Map<String, Object>>> getCivilizedEvaluation(HttpServletRequest request) {
-        List<Map<String, Object>> all = smartEvaluationService.evaluateAllRooms();
+        List<Map<String, Object>> all = smartEvaluationService.evaluateAllRooms(false);
         Set<Long> scope = buildingScope.resolve(request);
         if (scope == null) return Result.success(all);
         if (scope.isEmpty()) return Result.success(List.of());
@@ -127,7 +127,7 @@ public class DormAffairController {
         if (h.getCheckDate() == null) h.setCheckDate(LocalDate.now());
         hygieneMapper.insert(h);
         // 联动触发文明寝室量化重算
-        smartEvaluationService.evaluateAllRooms();
+        smartEvaluationService.evaluateAllRooms(true);
         return Result.success("卫生检查记录已保存并同步更新文明寝室量化分", h);
     }
 
@@ -218,6 +218,32 @@ public class DormAffairController {
         return Result.success(res);
     }
 
+    @PostMapping("/late-report")
+    public Result<DisciplineRecord> reportLateReturn(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        if (!"STUDENT".equals(request.getAttribute("currentUserRole")) || !(request.getAttribute("currentUserId") instanceof Long)) {
+            return Result.error(403, "仅学生可提交晚归报备");
+        }
+        String reason = Objects.toString(body.get("reason"), "").trim();
+        String expectedTime = Objects.toString(body.get("expectedTime"), "").trim();
+        if (reason.isEmpty() || reason.length() > 150 || !expectedTime.matches("([01]\\d|2[0-3]):[0-5]\\d")) {
+            return Result.error("请填写有效的报备事由和预计归寝时间");
+        }
+        Long studentId = (Long) request.getAttribute("currentUserId");
+        DormBed bed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                .eq(DormBed::getStudentId, studentId).eq(DormBed::getStatus, 1).last("LIMIT 1"));
+        if (bed == null) return Result.error("当前没有在住床位，无法报备");
+        DisciplineRecord record = new DisciplineRecord();
+        record.setStudentId(studentId);
+        record.setRoomId(bed.getRoomId());
+        record.setRecordType("LATE_RETURN");
+        record.setDeductScore(0);
+        record.setOccurTime(LocalDateTime.now());
+        record.setStatus(1);
+        record.setDescription("[学生报备] " + reason + "；预计归寝 " + expectedTime);
+        disciplineMapper.insert(record);
+        return Result.success("晚归报备已提交", record);
+    }
+
     @PostMapping("/discipline")
     public Result<DisciplineRecord> saveDiscipline(@RequestBody DisciplineRecord d, HttpServletRequest request) {
         if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
@@ -246,7 +272,7 @@ public class DormAffairController {
             }
         }
         disciplineMapper.insert(d);
-        smartEvaluationService.evaluateAllRooms();
+        smartEvaluationService.evaluateAllRooms(true);
         return Result.success("违纪/晚归记录已登记并同步更新寝室量化分", d);
     }
 
@@ -318,7 +344,7 @@ public class DormAffairController {
             d.setDescription(desc + " | [申诉驳回] " + reviewNote);
         }
         disciplineMapper.updateById(d);
-        smartEvaluationService.evaluateAllRooms();
+        smartEvaluationService.evaluateAllRooms(true);
         if (d.getStudentId() != null) {
             messageService.push(d.getStudentId(),
                     approved ? "违纪申诉已通过" : "违纪申诉未通过",
@@ -541,7 +567,7 @@ public class DormAffairController {
         }
 
         if (createdWarnings > 0) {
-            smartEvaluationService.evaluateAllRooms();
+            smartEvaluationService.evaluateAllRooms(true);
         }
 
         Map<String, Object> res = new LinkedHashMap<>();
@@ -844,6 +870,7 @@ public class DormAffairController {
 
 
     @PostMapping("/visitor-verify")
+    @Transactional
     public Result<Map<String, Object>> verifyVisitorPass(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String raw = body != null && body.get("passCode") != null ? body.get("passCode").toString() : "";
         String code = PassCodeUtil.normalize(raw);
@@ -869,26 +896,38 @@ public class DormAffairController {
             Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
             return typed;
         }
-        SysUser stu = userMapper.selectById(matched.getVisitStudentId());
-        DormBuilding b = buildingMapper.selectById(matched.getBuildingId());
         LocalDateTime now = LocalDateTime.now();
+        boolean alreadyLeft = matched.getStatus() != null && matched.getStatus() == 1;
+        if (checkOut && Integer.valueOf(0).equals(matched.getStatus())) {
+            int updated = visitorMapper.update(null, new LambdaUpdateWrapper<VisitorRecord>()
+                    .eq(VisitorRecord::getId, matched.getId())
+                    .eq(VisitorRecord::getStatus, 0)
+                    .set(VisitorRecord::getLeaveTime, now)
+                    .set(VisitorRecord::getStatus, 1));
+            if (updated == 1) {
+                matched.setLeaveTime(now);
+                matched.setStatus(1);
+                if (matched.getVisitStudentId() != null) {
+                    messageService.push(matched.getVisitStudentId(), "访客已签离",
+                            matched.getVisitorName() + " 已于门岗核验签离", "VISITOR", String.valueOf(matched.getId()));
+                }
+            } else {
+                matched = visitorMapper.selectById(matched.getId());
+                if (matched == null) return Result.error("访客记录已不存在，请重新核验");
+                Result<?> latestDenied = buildingScope.forbiddenIfOutOfScope(scope, matched.getBuildingId());
+                if (latestDenied != null) return Result.error(403, "只能操作管辖楼栋内的数据");
+                if (!Integer.valueOf(1).equals(matched.getStatus())) return Result.error("访客状态已变化，请重新核验");
+            }
+            alreadyLeft = true;
+        }
+        SysUser stu = matched.getVisitStudentId() == null ? null : userMapper.selectById(matched.getVisitStudentId());
+        DormBuilding b = matched.getBuildingId() == null ? null : buildingMapper.selectById(matched.getBuildingId());
         long stayMinutes = 0;
         if (matched.getEnterTime() != null) {
             LocalDateTime end = matched.getLeaveTime() != null ? matched.getLeaveTime() : now;
             stayMinutes = Math.max(1, Duration.between(matched.getEnterTime(), end).toMinutes());
         }
-        boolean overstay = matched.getStatus() != null && matched.getStatus() == 0 && stayMinutes > 120;
-        boolean alreadyLeft = matched.getStatus() != null && matched.getStatus() == 1;
-        if (checkOut && !alreadyLeft) {
-            matched.setLeaveTime(now);
-            matched.setStatus(1);
-            visitorMapper.updateById(matched);
-            alreadyLeft = true;
-            if (matched.getVisitStudentId() != null) {
-                messageService.push(matched.getVisitStudentId(), "访客已签离",
-                        matched.getVisitorName() + " 已于门岗核验签离", "VISITOR", String.valueOf(matched.getId()));
-            }
-        }
+        boolean overstay = Integer.valueOf(0).equals(matched.getStatus()) && stayMinutes > 120;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", matched.getId());
         m.put("passCode", PassCodeUtil.fromVisitorId(matched.getId()));
@@ -908,7 +947,8 @@ public class DormAffairController {
         m.put("status", matched.getStatus());
         m.put("passOk", !alreadyLeft && matched.getStatus() != null && matched.getStatus() == 0);
         m.put("verifiedAt", now);
-        String tip = alreadyLeft ? "该通行码已签离" : (overstay ? "在访中但已超时，建议签离" : "核验通过，允许通行");
+        String tip = alreadyLeft ? "该通行码已签离" : (!Integer.valueOf(0).equals(matched.getStatus())
+                ? "访客状态异常，请人工复核" : (overstay ? "在访中但已超时，建议签离" : "核验通过，允许通行"));
         return Result.success(tip, m);
     }
 
@@ -922,9 +962,22 @@ public class DormAffairController {
                 Result<VisitorRecord> typed = (Result<VisitorRecord>) denied;
                 return typed;
             }
-            v.setLeaveTime(LocalDateTime.now());
-            v.setStatus(1);
-            visitorMapper.updateById(v);
+            if (Integer.valueOf(0).equals(v.getStatus())) {
+                LocalDateTime now = LocalDateTime.now();
+                int updated = visitorMapper.update(null, new LambdaUpdateWrapper<VisitorRecord>()
+                        .eq(VisitorRecord::getId, id).eq(VisitorRecord::getStatus, 0)
+                        .set(VisitorRecord::getLeaveTime, now).set(VisitorRecord::getStatus, 1));
+                if (updated == 1) { v.setLeaveTime(now); v.setStatus(1); }
+                else {
+                    v = visitorMapper.selectById(id);
+                    if (v == null) return Result.error("访客记录已不存在");
+                    Result<?> latestDenied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), v.getBuildingId());
+                    if (latestDenied != null) return Result.error(403, "只能操作管辖楼栋内的数据");
+                    if (!Integer.valueOf(1).equals(v.getStatus())) return Result.error("访客状态已变化，请重新核验");
+                }
+            } else if (!Integer.valueOf(1).equals(v.getStatus())) {
+                return Result.error("访客状态异常，请人工复核");
+            }
         }
         return Result.success("访客已签离", v);
     }

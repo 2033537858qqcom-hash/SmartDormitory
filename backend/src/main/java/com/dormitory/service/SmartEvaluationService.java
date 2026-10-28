@@ -27,8 +27,12 @@ public class SmartEvaluationService {
     private final UtilityBillMapper utilityBillMapper;
     private final SysNoticeMapper noticeMapper;
 
-    @Transactional(rollbackFor = Exception.class)
     public List<Map<String, Object>> evaluateAllRooms() {
+        return evaluateAllRooms(false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public List<Map<String, Object>> evaluateAllRooms(boolean persist) {
         List<DormRoom> rooms = roomMapper.selectList(
                 new LambdaQueryWrapper<DormRoom>().orderByAsc(DormRoom::getBuildingId).orderByAsc(DormRoom::getRoomNo)
         );
@@ -80,9 +84,11 @@ public class SmartEvaluationService {
                 honorTitle = "重点督导整改寝室";
             }
 
-            room.setCivilizedScore(formattedScore);
-            room.setStarLevel(starLevel);
-            roomMapper.updateById(room);
+            if (persist) {
+                room.setCivilizedScore(formattedScore);
+                room.setStarLevel(starLevel);
+                roomMapper.updateById(room);
+            }
 
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("roomId", room.getId());
@@ -111,7 +117,7 @@ public class SmartEvaluationService {
     public Map<String, Object> rewardFiveStarRooms(BigDecimal subsidyAmount) {
         BigDecimal reward = (subsidyAmount != null && subsidyAmount.compareTo(BigDecimal.ZERO) > 0)
                 ? subsidyAmount : BigDecimal.valueOf(30.00);
-        List<Map<String, Object>> evalList = evaluateAllRooms();
+        List<Map<String, Object>> evalList = evaluateAllRooms(true);
         List<String> rewardedNames = new ArrayList<>();
 
         for (Map<String, Object> row : evalList) {

@@ -1,0 +1,101 @@
+<view class="adjust-page container">
+  <view class="page-heading"><view class="page-title">宿舍调整</view><view class="page-subtitle">提交调宿或退宿申请</view></view>
+  <view wx:if="{{loading}}" class="card empty-box"><view class="empty-text">正在加载住宿信息...</view></view>
+  <view wx:elif="{{loadError}}" class="card empty-box"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="loadCurrent">重新加载</button></view>
+  <block wx:else>
+  <!-- 当前住宿卡片 -->
+  <view class="current-card card" wx:if="{{currentRoom}}">
+    <view class="curr-head">当前在住信息</view>
+    <view class="curr-body">
+      {{currentBuilding.buildingName || ''}} · {{currentRoom.roomNo}} 室 · {{currentBed.bedNo}} 号床
+    </view>
+  </view>
+
+  <view class="form-card card">
+    <view class="section-title">
+      <text class="title-text">宿舍调整申请表</text>
+    </view>
+
+    <!-- 申请类型切换 -->
+    <view class="input-group">
+      <text class="input-label">申请类型</text>
+      <view class="type-segment">
+        <view
+          class="type-btn spring-btn {{applyType === 'ADJUST' ? 'type-act' : ''}}"
+          bindtap="setApplyType"
+          data-type="ADJUST"
+        >
+          调换寝室
+        </view>
+        <view
+          class="type-btn spring-btn {{applyType === 'CHECKOUT' ? 'type-act' : ''}}"
+          bindtap="setApplyType"
+          data-type="CHECKOUT"
+        >
+          退宿申请
+        </view>
+      </view>
+    </view>
+
+    <!-- 调宿目标选择 -->
+    <block wx:if="{{applyType === 'ADJUST'}}">
+      <view class="input-group">
+        <text class="input-label">拟调入目标楼栋</text>
+        <picker mode="selector" range="{{buildingNames}}" value="{{buildingIndex}}" bindchange="onBuildingChange">
+          <view class="picker-input">
+            {{buildingNames[buildingIndex] || '请选择目标楼栋'}}
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">拟调入目标房间</text>
+        <picker mode="selector" range="{{roomNos}}" value="{{roomIndex}}" bindchange="onRoomChange">
+          <view class="picker-input">
+            {{roomsLoading ? '正在加载房间...' : (roomsError ? '加载失败，请重新选择楼栋' : (roomNos[roomIndex] || '暂无可选房间'))}}
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">目标床位号</text>
+        <picker mode="selector" range="{{bedOptions}}" value="{{bedIndex}}" bindchange="onBedChange">
+          <view class="picker-input">
+            {{bedOptions[bedIndex] || '请选择床位'}}
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+    </block>
+
+    <!-- 申请理由说明 -->
+    <view class="input-group">
+      <text class="input-label">申请理由阐述</text>
+      <textarea
+        class="form-textarea"
+        placeholder="{{applyType === 'ADJUST' ? '请说明调宿原因（如作息习惯差异、考研早起自习、同班同组科研集聚等）...' : '请说明退宿原因（如毕业离校、申请校外走读、休学入伍等）...'}}"
+        value="{{reason}}"
+        bindinput="onInputReason"
+        maxlength="200"
+      ></textarea>
+    </view>
+
+    <!-- 退宿交接提醒 -->
+    <view wx:if="{{applyType === 'CHECKOUT'}}" class="checkout-notice">
+      退宿时请在宿管处完成钥匙、设施和寝室清理交接。
+    </view>
+
+    <!-- 提交按钮 -->
+    <button
+      class="btn-primary spring-btn submit-btn"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bindtap="handleSubmit"
+    >
+      {{submitting ? '申请提交中...' : '确认提交申请'}}
+    </button>
+  </view>
+  </block>
+</view>

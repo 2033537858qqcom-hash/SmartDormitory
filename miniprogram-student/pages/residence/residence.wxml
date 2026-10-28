@@ -1,0 +1,100 @@
+<view class="residence-page container">
+  <view class="page-heading"><view class="page-title">住宿申请</view><view class="page-subtitle">提交入住或假期留宿申请</view></view>
+  <!-- 业务申请表单卡片 -->
+  <view class="form-card card">
+    <view class="section-title">
+      <text class="title-text">住宿业务申请</text>
+    </view>
+
+    <!-- 申请类型 -->
+    <view class="input-group">
+      <text class="input-label">申请业务类型</text>
+      <view class="type-segment">
+        <view
+          class="type-btn spring-btn {{requestType === 'CHECKIN' ? 'type-act' : ''}}"
+          bindtap="selectType"
+          data-type="CHECKIN"
+        >
+          入住登记
+        </view>
+        <view
+          class="type-btn spring-btn {{requestType === 'HOLIDAY' ? 'type-act' : ''}}"
+          bindtap="selectType"
+          data-type="HOLIDAY"
+        >
+          假期留宿
+        </view>
+      </view>
+    </view>
+
+    <!-- 留宿日期范围 (仅在 HOLIDAY 时展示) -->
+    <block wx:if="{{requestType === 'HOLIDAY'}}">
+      <view class="date-row">
+        <view class="date-col">
+          <text class="input-label">留宿开始日期</text>
+          <picker mode="date" value="{{fromDate}}" bindchange="onFromDateChange">
+            <view class="picker-input">{{fromDate || '请选择'}}</view>
+          </picker>
+        </view>
+        <view class="date-col">
+          <text class="input-label">留宿结束日期</text>
+          <picker mode="date" value="{{toDate}}" bindchange="onToDateChange">
+            <view class="picker-input">{{toDate || '请选择'}}</view>
+          </picker>
+        </view>
+      </view>
+    </block>
+
+    <!-- 申请理由说明 -->
+    <view class="input-group">
+      <text class="input-label">申请事由与说明</text>
+      <textarea
+        class="form-textarea"
+        placeholder="{{requestType === 'CHECKIN' ? '请填写新生到校报到入住确认及相关说明...' : '请说明留宿原因（如学科竞赛集训、实验室科研课题、暑期社会实践等）...'}}"
+        value="{{reason}}"
+        bindinput="onInputReason"
+        maxlength="200"
+      ></textarea>
+    </view>
+
+    <button
+      class="btn-primary spring-btn submit-btn"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bindtap="handleSubmit"
+    >
+      {{submitting ? '提交审核中...' : '提交住宿申请'}}
+    </button>
+  </view>
+
+  <!-- 申请历史记录卡片 -->
+  <view class="records-card card">
+    <view class="section-title">
+      <text class="title-text">我的申请记录</text>
+      <text class="title-extra">{{requests.length}} 条记录</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="empty-text records-empty">正在加载申请记录...</view>
+    <view wx:elif="{{loadError}}" class="empty-text records-empty" bindtap="loadRequests">暂时无法加载，点击重试</view>
+    <view wx:elif="{{requests.length === 0}}" class="empty-text records-empty">
+      暂无住宿申请记录
+    </view>
+
+    <view wx:for="{{requests}}" wx:key="id" wx:if="{{!loading && !loadError}}" class="req-item">
+      <view class="req-top">
+        <text class="req-type">{{item.typeText}}</text>
+        <text class="badge {{item.statusClass}}">{{item.statusText}}</text>
+      </view>
+
+      <view class="req-dates" wx:if="{{item.fromDate && item.toDate}}">
+        留宿区间：{{item.fromDate}} ~ {{item.toDate}}
+      </view>
+
+      <view class="req-reason">事由：{{item.reason}}</view>
+
+      <view class="req-reply" wx:if="{{item.reviewComment}}">
+        宿管审批意见：{{item.reviewComment}}
+      </view>
+    </view>
+  </view>
+</view>

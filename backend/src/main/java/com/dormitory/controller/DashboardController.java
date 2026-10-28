@@ -113,8 +113,18 @@ public class DashboardController {
             repairTypeChart.add(item);
         }
 
-        // 3. 月度水电能耗趋势 (折线图)
-        List<String> months = Arrays.asList("2026-08", "2026-09", "2026-10");
+        // 3. 月度水电能耗趋势 (折线图，动态提取实际账单月份)
+        List<String> distinctMonths = bills.stream()
+                .map(UtilityBill::getBillMonth)
+                .filter(m -> m != null && !m.isBlank())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+        List<String> months = distinctMonths.isEmpty() ?
+                Arrays.asList(java.time.LocalDate.now().minusMonths(2).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")),
+                        java.time.LocalDate.now().minusMonths(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")),
+                        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")))
+                : (distinctMonths.size() > 6 ? distinctMonths.subList(distinctMonths.size() - 6, distinctMonths.size()) : distinctMonths);
         List<Double> electricTrend = new ArrayList<>();
         List<Double> waterTrend = new ArrayList<>();
         for (String m : months) {

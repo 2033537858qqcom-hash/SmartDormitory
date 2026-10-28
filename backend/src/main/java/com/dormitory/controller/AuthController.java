@@ -66,7 +66,7 @@ public class AuthController {
 
         if ("DORM_MANAGER".equals(user.getRole())) {
             DormBuilding managed = buildingMapper.selectOne(
-                    new LambdaQueryWrapper<DormBuilding>().eq(DormBuilding::getManagerId, user.getId())
+                    new LambdaQueryWrapper<DormBuilding>().eq(DormBuilding::getManagerId, user.getId()).last("LIMIT 1")
             );
             data.put("managedBuilding", managed);
         }
@@ -281,13 +281,28 @@ public class AuthController {
     }
 
     @DeleteMapping("/user/{id}")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public Result<String> deleteUser(@PathVariable Long id) {
         if (id != null && id == 1L) {
             return Result.error("超级管理员账号不可删除");
         }
+        // 1. 若为学生，级联释放其占用的床位并重算寝室契合度
+        List<DormBed> beds = bedMapper.selectList(new LambdaQueryWrapper<DormBed>().eq(DormBed::getStudentId, id));
+        for (DormBed b : beds) {
+            bedMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<DormBed>()
+                    .eq(DormBed::getId, b.getId())
+                    .set(DormBed::getStudentId, null).set(DormBed::getCheckInDate, null).set(DormBed::getStatus, 0));
+            smartAllocationService.recalculateRoomHarmony(b.getRoomId());
+        }
+        // 2. 清理学生画像
+        habitProfileMapper.delete(new LambdaQueryWrapper<StudentHabitProfile>().eq(StudentHabitProfile::getStudentId, id));
+        // 3. 若为宿管，解除其所管辖楼栋的绑定关系
+        buildingMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<DormBuilding>()
+                .eq(DormBuilding::getManagerId, id).set(DormBuilding::getManagerId, null));
+
         sysUserMapper.deleteById(id);
         sessions.revokeUser(id);
-        return Result.success("账号已删除", "OK");
+        return Result.success("账号及关联床位资源已成功清理", "OK");
     }
 
     private static boolean isBcrypt(String password) {

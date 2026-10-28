@@ -306,4 +306,40 @@ public class UtilityBillController {
         utilityBillMapper.updateById(bill);
         return Result.success("排查记录已保存", bill);
     }
+
+    @GetMapping("/pay/config")
+    public Result<Map<String, Object>> getPaymentConfig() {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("alipayEnabled", smartUtilityService.isAlipayEnabled());
+        map.put("sandbox", true);
+        map.put("demoSupported", true);
+        map.put("channels", List.of("DEMO", "ALIPAY_SANDBOX"));
+        return Result.success(map);
+    }
+
+    @PostMapping("/pay/alipay-create")
+    public Result<Map<String, Object>> createAlipayOrder(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        Long roomId = Long.valueOf(body.get("roomId").toString());
+        Long billId = body.get("billId") != null ? Long.valueOf(body.get("billId").toString()) : null;
+        BigDecimal electric = body.get("electricRecharge") != null ? new BigDecimal(body.get("electricRecharge").toString()) : BigDecimal.ZERO;
+        BigDecimal water = body.get("waterRecharge") != null ? new BigDecimal(body.get("waterRecharge").toString()) : BigDecimal.ZERO;
+        Long operatorId = (Long) request.getAttribute("currentUserId");
+        Map<String, Object> order = smartUtilityService.createAlipayOrder(roomId, billId, electric, water, operatorId);
+        return Result.success("支付宝订单已生成", order);
+    }
+
+    @PostMapping("/pay/alipay-notify")
+    public String alipayNotify(HttpServletRequest request) {
+        Map<String, String> params = new HashMap<>();
+        Map<String, String[]> requestParams = request.getParameterMap();
+        for (String name : requestParams.keySet()) {
+            String[] values = requestParams.get(name);
+            String valueStr = "";
+            for (int i = 0; i < values.length; i++) {
+                valueStr = (i == values.length - 1) ? valueStr + values[i] : valueStr + values[i] + ",";
+            }
+            params.put(name, valueStr);
+        }
+        return smartUtilityService.handleAlipayNotify(params);
+    }
 }

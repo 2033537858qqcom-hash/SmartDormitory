@@ -1,0 +1,63 @@
+<view wx:if="{{!checkingSession}}" class="login-page">
+  <view class="login-header">
+    <view class="logo-circle">
+      <image class="logo-image" src="/images/ui/suli-icon-v2.png" mode="aspectFill" />
+    </view>
+    <view class="brand-title">宿里</view>
+    <view class="brand-sub">让宿舍生活更简单。学生与宿管使用各自账号登录。</view>
+  </view>
+
+  <view class="login-card card">
+    <view class="card-title">账号登录</view>
+
+    <view class="input-group">
+      <text class="input-label">学号 / 账号</text>
+      <input
+        class="login-input"
+        type="text"
+        placeholder="请输入学号或宿管账号"
+        value="{{username}}"
+        bindinput="onInputUsername"
+      />
+    </view>
+
+    <view class="input-group">
+      <text class="input-label">登录密码</text>
+      <input
+        class="login-input"
+        type="password"
+        placeholder="请输入登录密码"
+        value="{{password}}"
+        bindinput="onInputPassword"
+      />
+    </view>
+
+    <button
+      class="btn-primary spring-btn login-btn"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bindtap="handleLogin"
+    >
+      {{loading ? '登录中...' : '立即登录'}}
+    </button>
+  </view>
+
+  <view class="demo-section">
+    <view class="demo-title">
+      <text class="demo-title-text">演示账号</text>
+      <text class="demo-title-note">选择后自动填入</text>
+    </view>
+    <view class="demo-grid">
+      <view
+        wx:for="{{demoAccounts}}"
+        wx:key="username"
+        class="demo-item spring-btn {{username === item.username ? 'active' : ''}}"
+        bindtap="selectDemoAccount"
+        data-account="{{item}}"
+      >
+        <view class="demo-name">{{item.name}}</view>
+        <view class="demo-meta">{{item.username}} · {{item.desc}}</view>
+      </view>
+    </view>
+  </view>
+</view>

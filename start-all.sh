@@ -6,7 +6,7 @@ echo "  《基于Java的智慧宿舍管理系统》 启动脚本 (需本机已�
 echo "====================================================================="
 
 echo "[1/3] 启动后端 :7000 ..."
-(cd "$ROOT/backend" && mvn spring-boot:run) &
+bash "$ROOT/start-backend.sh" &
 BACKEND_PID=$!
 
 echo "[2/3] 启动管理端 :5173 ..."
@@ -26,6 +26,7 @@ echo
 echo "服务已在后台拉起（Ctrl+C 结束本脚本并尝试停止子进程）："
 echo "  - Web 管理端: http://localhost:5173"
 echo "  - 学生端 H5:  http://localhost:5174"
+echo "  - 学生端小程序: 微信开发者工具导入 $ROOT/miniprogram-student"
 echo "  - 后端 API:   http://localhost:7000"
 echo "也可分别在三个终端手动启动，参见 README。"
 wait

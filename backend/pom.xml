@@ -65,6 +65,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 支付宝官方 EasySDK (支持沙箱/真实支付、自动验签) -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-easysdk</artifactId>
+            <version>2.2.3</version>
+        </dependency>
+
         <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,0 +1,114 @@
+.login-page {
+  min-height: 100vh;
+  padding: 70rpx 36rpx calc(50rpx + env(safe-area-inset-bottom));
+}
+
+.login-header {
+  padding: 12rpx 2rpx 40rpx;
+}
+
+.logo-circle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 32rpx;
+  overflow: hidden;
+  background: #09132e;
+  margin-bottom: 34rpx;
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+}
+
+.brand-title {
+  color: #1d1d1f;
+  font-size: 58rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -1rpx;
+}
+
+.brand-sub {
+  margin-top: 14rpx;
+  color: #76767d;
+  font-size: 26rpx;
+}
+
+.login-card {
+  padding: 36rpx;
+}
+
+.card-title {
+  color: #1d1d1f;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 30rpx;
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 38rpx;
+}
+
+.demo-section {
+  margin-top: 42rpx;
+}
+
+.demo-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 4rpx 18rpx;
+}
+
+.demo-title-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.demo-title-note {
+  font-size: 22rpx;
+  color: #86868b;
+}
+
+.demo-grid {
+  overflow: hidden;
+  border-radius: 36rpx;
+  background: #fff;
+  padding: 0 28rpx;
+}
+
+.demo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  min-height: 86rpx;
+  padding: 18rpx 0;
+}
+
+.demo-item + .demo-item {
+  border-top: 1rpx solid #eeeef0;
+}
+
+.demo-name {
+  color: #1d1d1f;
+  font-size: 25rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.demo-meta {
+  color: #86868b;
+  font-size: 21rpx;
+  text-align: right;
+}
+
+.demo-item.active .demo-name {
+  color: #006edb;
+}

@@ -1,0 +1,65 @@
+<view class="home-page container">
+  <view wx:if="{{loading && !dash}}" class="home-skeleton">
+    <view class="sk-kicker shimmer"></view><view class="sk-title shimmer"></view><view class="sk-sub shimmer"></view>
+    <view class="sk-card shimmer"></view><view class="sk-actions"><view class="shimmer"></view><view class="shimmer"></view><view class="shimmer"></view><view class="shimmer"></view></view>
+  </view>
+  <view wx:elif="{{loadError && !dash}}" class="card load-error"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary" bindtap="loadDashboard">重新加载</button></view>
+  <block wx:else>
+    <view class="home-header">
+      <view class="eyebrow-row"><text>{{currentDate}}</text><text class="logout-btn spring-btn" bindtap="handleLogout">退出登录</text></view>
+      <view class="heading-row"><text class="home-title">我的宿舍</text><text class="home-status">{{dash.room ? '已入住' : '待分寝'}}</text></view>
+      <view class="home-greeting">你好，{{dash.user.realName || '同学'}}。</view>
+    </view>
+
+    <view wx:if="{{dash.room}}" class="room-card card">
+      <view class="room-head spring-btn" bindtap="navToAdjust" role="button" aria-label="查看宿舍调整">
+        <view class="room-icon"><image src="/images/ui/building.png" mode="aspectFit" /></view>
+        <view class="room-title-box"><view class="room-no">{{dash.room.roomNo}} 室<text wx:if="{{dash.bed}}"> · {{dash.bed.bedNo}} 号床</text></view><view class="building-name">{{dash.building.buildingName || '我的宿舍'}}</view></view>
+        <text class="chevron">›</text>
+      </view>
+      <view class="balance-grid">
+        <view class="balance-item spring-btn" bindtap="navToUtility" role="button"><view class="balance-label">电费余额</view><view class="balance-val {{dash.room.electricBalance != null && dash.room.electricBalance < 20 ? 'val-warn' : ''}}">{{electricBalanceText}}</view><view class="balance-hint" wx:if="{{dash.room.electricBalance != null && dash.room.electricBalance < 20}}">余额偏低</view></view>
+        <view class="balance-item spring-btn" bindtap="navToUtility" role="button"><view class="balance-label">水费余额</view><view class="balance-val {{dash.room.waterBalance != null && dash.room.waterBalance < 20 ? 'val-warn' : ''}}">{{waterBalanceText}}</view><view class="balance-hint" wx:if="{{dash.room.waterBalance != null && dash.room.waterBalance < 20}}">余额偏低</view></view>
+      </view>
+    </view>
+    <view wx:else class="unalloc-card card">
+      <view class="unalloc-top"><text>新生入宿</text><text>{{dash.habitProfile ? '问卷已提交' : '待填写问卷'}}</text></view>
+      <view class="unalloc-title">{{dash.habitProfile ? '正在等待分寝' : '从了解你的习惯开始'}}</view>
+      <view class="unalloc-desc">{{dash.habitProfile ? '宿管中心将根据生活习惯，为你安排合适的寝室与室友。' : '填写生活习惯问卷，帮助我们为你找到作息相近的室友。'}}</view>
+      <view class="step-bar"><view class="step-node {{dash.habitProfile ? 'step-done' : 'step-curr'}}"><text class="step-num">{{dash.habitProfile ? '✓' : '1'}}</text><text>填写问卷</text></view><view class="step-line"></view><view class="step-node {{dash.habitProfile ? 'step-curr' : ''}}"><text class="step-num">2</text><text>等待分寝</text></view><view class="step-line"></view><view class="step-node"><text class="step-num">3</text><text>入住</text></view></view>
+      <button class="btn-primary spring-btn unalloc-btn" bindtap="navToHabit">{{dash.habitProfile ? '查看选宿习惯' : '开始填写问卷'}}</button>
+      <view class="account-pending">水电账户待开通 · 分寝后自动启用</view>
+    </view>
+
+    <view class="quick-nav">
+      <view class="quick-item spring-btn" bindtap="handleQuickNav" data-type="adjust" role="button"><view class="q-icon"><image src="{{dash.room ? '/images/ui/swap.png' : '/images/ui/profile.png'}}" mode="aspectFit" /></view><text>{{dash.room ? '调宿办理' : '选宿画像'}}</text></view>
+      <view class="quick-item spring-btn" bindtap="handleQuickNav" data-type="repair" role="button"><view class="q-icon"><image src="/images/ui/repair.png" mode="aspectFit" /></view><text>故障报修</text></view>
+      <view class="quick-item spring-btn" bindtap="handleQuickNav" data-type="utility" role="button"><view class="q-icon"><image src="/images/ui/bolt.png" mode="aspectFit" /></view><text>水电缴费</text></view>
+      <view class="quick-item spring-btn" bindtap="handleQuickNav" data-type="visitor" role="button"><view class="q-icon"><image src="/images/ui/visitor.png" mode="aspectFit" /></view><text>访客登记</text></view>
+    </view>
+    <view wx:if="{{unratedCount > 0}}" class="unrated-banner spring-btn" bindtap="navToRepair">有 {{unratedCount}} 单报修待评价 <text>去评价 ›</text></view>
+
+    <view wx:if="{{dash.room && dash.roomRadar && dash.roomRadar.roommates.length}}" class="home-section">
+      <view class="home-section-head"><text>住在一起</text><text>{{dash.roomRadar.roommates.length}} 人寝</text></view>
+      <view class="group-surface">
+        <view class="roommates-summary spring-btn" bindtap="toggleRoommates" role="button" aria-expanded="{{showRoommates}}">
+          <view class="mate-avatar">{{userInitial}}</view><view class="summary-copy"><view class="summary-title">我的室友</view><view class="summary-sub">室友契合度 {{dash.room.harmonyScore != null ? dash.room.harmonyScore + '%' : '暂无数据'}}</view></view><text class="chevron {{showRoommates ? 'chevron-open' : ''}}">›</text>
+        </view>
+        <view wx:if="{{showRoommates}}" class="mate-list">
+          <view wx:for="{{dash.roomRadar.roommates}}" wx:key="studentId" class="mate-row"><view class="bed-pill">{{item.bedNo}} 床</view><view class="mate-body"><view class="mate-name">{{item.realName}}<text wx:if="{{item.studentId === dash.user.id}}" class="self-tag">我</text></view><view class="mate-meta">{{item.profile.hobbyTags || item.className || '暂无标签'}}</view></view><text class="mate-habit">{{item.scheduleLabel}}</text></view>
+          <view class="compare-link spring-btn" bindtap="navToHabit">查看室友习惯对比 <text>›</text></view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{dash.messages && dash.messages.length}}" class="home-section">
+      <view class="home-section-head"><text>我的消息</text><text>{{dash.unreadMessageCount || 0}} 未读</text></view>
+      <view class="group-surface"><view wx:for="{{dash.messages}}" wx:key="id" class="message-row"><view class="message-copy"><view class="message-title"><text wx:if="{{item.readFlag === 0}}" class="unread-dot"></text>{{item.title}}</view><view class="message-desc">{{item.content}}</view><view class="message-time">{{item.createTimeText}}</view></view><text wx:if="{{item.readFlag === 0}}" class="mark-read spring-btn" bindtap="markMsgRead" data-id="{{item.id}}">已读</text></view></view>
+    </view>
+    <view class="home-section">
+      <view class="home-section-head"><text>校园通知</text><text>{{dash.notices.length || 0}} 则公告</text></view>
+      <view class="group-surface"><view wx:if="{{!dash.notices || !dash.notices.length}}" class="notice-empty">暂时没有新的校园通知。</view><view wx:for="{{dash.notices}}" wx:key="id" class="notice-row spring-btn" bindtap="openNotice" data-notice="{{item}}" role="button"><view class="notice-copy"><view class="notice-title">{{item.title}}</view><view class="notice-meta">{{item.publisherName || '宿管中心'}} · {{item.publishTimeText}}</view></view><text class="chevron">›</text></view></view>
+    </view>
+  </block>
+  <view wx:if="{{noticeVisible}}" class="sheet-mask {{noticeClosing ? 'sheet-mask-leave' : ''}}" bindtap="closeNotice"><view class="sheet-panel {{noticeClosing ? 'sheet-panel-leave' : ''}}" catchtap="stopPropagation"><view class="sheet-grabber"></view><view class="sheet-head"><text class="sheet-title">{{activeNotice.title}}</text><text class="sheet-close" bindtap="closeNotice" role="button" aria-label="关闭">×</text></view><view class="notice-detail-meta">{{activeNotice.publisherName || '宿管中心'}} · {{activeNotice.publishTimeText}}</view><scroll-view scroll-y class="notice-detail-body">{{activeNotice.content || '暂无内容'}}</scroll-view><button class="btn-secondary sheet-done spring-btn" bindtap="closeNotice">我知道了</button></view></view>
+</view>

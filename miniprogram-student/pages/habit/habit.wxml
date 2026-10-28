@@ -1,0 +1,89 @@
+<view class="habit-page container">
+  <view class="page-heading"><view class="page-title">生活习惯</view><view class="page-subtitle">记录你的日常偏好，遇见作息相近的室友。</view></view>
+  <view wx:if="{{loading}}" class="card empty-box"><view class="empty-text">正在加载生活画像...</view></view>
+  <view wx:elif="{{loadError}}" class="card empty-box"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="initData">重新加载</button></view>
+  <block wx:else>
+  <!-- 雷达图展示卡片 -->
+  <view class="radar-card card">
+    <view class="radar-head">
+      <view class="radar-title">六维生活画像雷达</view>
+      <view class="radar-legend">
+        <view class="legend-item">
+          <text class="dot dot-mine"></text>
+          <text class="leg-text">我的画像</text>
+        </view>
+        <view class="legend-item" wx:if="{{hasRoomRadar}}">
+          <text class="dot dot-room"></text>
+          <text class="leg-text">寝室均值</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Canvas 2D 雷达图 -->
+    <view class="canvas-box">
+      <canvas type="2d" id="radarCanvas" class="radar-canvas"></canvas>
+    </view>
+
+    <view class="radar-summary" wx:if="{{harmonyScoreText}}">
+      <text class="sum-text">{{harmonyScoreText}}</text>
+    </view>
+  </view>
+
+  <!-- 问卷录入与调整表单 -->
+  <view class="form-card card">
+    <view class="section-title">
+      <text class="title-text">习惯问卷</text>
+      <text class="title-extra">用于智能聚类分寝</text>
+    </view>
+
+    <!-- 六个维度的分段选择器 -->
+    <view wx:for="{{dimensionList}}" wx:key="key" class="dim-group">
+      <view class="dim-head">
+        <text class="dim-title">{{item.title}}</text>
+        <text class="dim-curr-label">{{item.currentLabel}}</text>
+      </view>
+
+      <slider min="1" max="5" step="1" value="{{form[item.key]}}" activeColor="#006edb" backgroundColor="#e8e8ed" block-size="20" data-key="{{item.key}}" bindchanging="onSliderChange" bindchange="onSliderChange" />
+      <view class="slider-ends"><text>1分 · {{item.options[0].label}}</text><text>5分 · {{item.options[4].label}}</text></view>
+    </view>
+
+    <!-- 兴趣与标签 -->
+    <view class="tag-section">
+      <view class="dim-head">
+        <text class="dim-title">兴趣标签</text>
+      </view>
+      <view class="tags-cloud">
+        <view
+          wx:for="{{presetTags}}"
+          wx:key="*this"
+          class="tag-pill spring-btn {{selectedTagsMap[item] ? 'tag-active' : ''}}"
+          bindtap="toggleTag"
+          data-tag="{{item}}"
+        >
+          {{item}}
+        </view>
+      </view>
+      <view class="custom-tag-row">
+        <input
+          class="custom-tag-input"
+          placeholder="自定义标签（回车或点击添加）"
+          value="{{customTagInput}}"
+          bindinput="onInputCustomTag"
+          bindconfirm="addCustomTag"
+        />
+        <text class="add-tag-btn spring-btn" bindtap="addCustomTag">添加</text>
+      </view>
+    </view>
+
+    <!-- 提交保存按钮 -->
+    <button
+      class="btn-primary spring-btn save-btn"
+      loading="{{saving}}"
+      disabled="{{saving}}"
+      bindtap="handleSaveProfile"
+    >
+      {{saving ? '画像保存中...' : '保存生活画像问卷'}}
+    </button>
+  </view>
+  </block>
+</view>
