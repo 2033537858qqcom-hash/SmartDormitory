@@ -61,6 +61,14 @@
       </button>
     </div>
 
+    <button
+      v-if="pendingRateCount > 0"
+      type="button"
+      class="pending-rate-banner spring-btn"
+      @click="$emit('go-tab', 'repair')"
+    >
+      您有 {{ pendingRateCount }} 单报修待评价，点击去评价 ›
+    </button>
 
     <section v-if="isAllocated && dash.roomRadar?.roommates?.length" class="section-box">
       <div class="sec-head"><h2>住在一起</h2><span>{{ dash.roomRadar.roommates.length }} 人寝</span></div>
@@ -105,6 +113,7 @@ const emit = defineEmits(['go-tab', 'refresh', 'toast'])
 
 const isAllocated = computed(() => Boolean(props.dash.room && props.dash.bed))
 const hasProfile = computed(() => Boolean(props.dash.habitProfile && props.dash.habitProfile.scheduleScore))
+const pendingRateCount = computed(() => (props.dash.myRepairs || []).filter(r => r.status === 'COMPLETED').length)
 
 const showRoommates = ref(false)
 const noticeSheetVisible = ref(false)
@@ -147,7 +156,7 @@ const handleVisitorClick = () => {
     emit('toast', { msg: '分配寝室后可申请访客电子绿码', type: 'info' })
     return
   }
-  emit('go-tab', { tab: 'utility', action: 'visitor' })
+  emit('go-tab', { tab: 'affair', action: 'visitor' })
 }
 
 const openNoticeDetail = (n) => {
@@ -199,4 +208,5 @@ const openNoticeDetail = (n) => {
 .notice-copy { flex: 1; min-width: 0; }.notice-copy b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; font-weight: 500; line-height: 1.65; }.notice-copy small { display: block; margin-top: 5px; font-size: 11px; color: var(--text-muted); }.empty-notices { padding: 20px 0; color: var(--text-muted); font-size: 13px; }
 .nd-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }.nd-content { font-size: 15px; line-height: 1.9; color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }.nd-close-btn { margin-top: 25px; width: 100%; padding: 13px; color: white; border: 0; border-radius: 12px; background: var(--accent-primary); }
 @media (max-width: 360px) { .residence-card, .unalloc-card { padding: 19px 17px; }.room-heading { gap: 10px; }.room-heading h2 { font-size: 19px; }.balance-item strong { font-size: 24px; }.q-item { font-size: 11px; }.progress-steps { gap: 5px; }.progress-steps>div { gap: 4px; } }
+.pending-rate-banner { width: 100%; margin: -8px 0 22px; padding: 12px 14px; border: 0; border-radius: 14px; background: #fff7e8; color: #9a6700; font-size: 13px; text-align: left; font-weight: 500; }
 </style>

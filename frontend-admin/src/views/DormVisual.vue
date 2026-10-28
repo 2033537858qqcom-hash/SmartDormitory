@@ -17,7 +17,10 @@
             </el-radio-button>
           </el-radio-group>
         </div>
-        <el-button type="primary" size="small" icon="Plus" @click="roomDialogVisible = true">新增房间</el-button>
+        <div class="toolbar-actions">
+          <el-button v-if="currentUser.role === 'ADMIN'" size="small" @click="openManagerBind">楼栋宿管绑定</el-button>
+          <el-button type="primary" size="small" icon="Plus" @click="roomDialogVisible = true">新增房间</el-button>
+        </div>
       </div>
     </el-card>
 
@@ -136,6 +139,30 @@
         <el-button type="primary" :loading="submitting" @click="createRoom">确认创建</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="managerBindVisible" title="楼栋 ↔ 宿管绑定" width="520px">
+      <p style="margin:0 0 12px;color:#666;font-size:13px;">为每栋楼指定 managerId，宿管登录后仅能操作绑定楼栋数据。</p>
+      <el-table :data="buildings" size="small">
+        <el-table-column prop="buildingName" label="楼栋" min-width="120" />
+        <el-table-column label="性别" width="80">
+          <template #default="{ row }">{{ row.genderType === 1 ? '男生' : '女生' }}</template>
+        </el-table-column>
+        <el-table-column label="当前宿管" min-width="120">
+          <template #default="{ row }">{{ row.managerName || '未指派' }}</template>
+        </el-table-column>
+        <el-table-column label="指定宿管" min-width="160">
+          <template #default="{ row }">
+            <el-select v-model="row._managerId" clearable placeholder="选择宿管" size="small" style="width: 140px">
+              <el-option v-for="m in dormManagers" :key="m.id" :label="m.realName" :value="m.id" />
+            </el-select>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="managerBindVisible = false">关闭</el-button>
+        <el-button type="primary" :loading="submitting" @click="saveManagerBinds">保存绑定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -158,6 +185,8 @@ const currentRoom = ref(null)
 const currentBed = ref(null)
 const selectedStudentId = ref(null)
 
+const managerBindVisible = ref(false)
+const dormManagers = ref([])
 const roomDialogVisible = ref(false)
 const newRoom = reactive({
   buildingId: 1,
@@ -165,6 +194,40 @@ const newRoom = reactive({
   roomNo: '305',
   capacity: 4
 })
+
+
+const openManagerBind = async () => {
+  const res = await request.get('/auth/users', { params: { role: 'DORM_MANAGER' } })
+  dormManagers.value = res.data || []
+  buildings.value = (buildings.value || []).map(b => ({ ...b, _managerId: b.managerId }))
+  managerBindVisible.value = true
+}
+
+const saveManagerBinds = async () => {
+  submitting.value = true
+  try {
+    for (const b of buildings.value) {
+      if (b._managerId === b.managerId) continue
+      await request.post('/dorm/building', {
+        id: b.id,
+        buildingCode: b.buildingCode,
+        buildingName: b.buildingName,
+        genderType: b.genderType,
+        totalFloors: b.totalFloors,
+        managerId: b._managerId || null,
+        locationDesc: b.locationDesc,
+        remark: b.remark
+      })
+    }
+    ElMessage.success('楼栋宿管绑定已更新')
+    managerBindVisible.value = false
+    await loadBuildings()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || e.message || '保存失败')
+  } finally {
+    submitting.value = false
+  }
+}
 
 const loadBuildings = async () => {
   const res = await request.get('/dorm/buildings')
@@ -236,6 +299,8 @@ const submitBedAssign = async (studentId) => {
     ElMessage.success('床位状态与寝室契合度已更新')
     bedDialogVisible.value = false
     await loadRooms()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || e.message || '床位操作失败')
   } finally {
     submitting.value = false
   }

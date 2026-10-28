@@ -67,10 +67,10 @@ public class AuthInterceptor implements HandlerInterceptor {
                     "/api/smart-alloc/candidates", "/api/repair/list", "/api/utility/bills",
                     "/api/affair/evaluation", "/api/affair/hygiene", "/api/affair/adjust-list",
                     "/api/affair/discipline", "/api/affair/visitors", "/api/affair/curfew-stats",
-                    "/api/affair/notices").contains(path);
+                    "/api/affair/notices", "/api/auth/users").contains(path);
         }
         return "POST".equals(method) && (Set.of("/api/dorm/room", "/api/dorm/assign-bed",
-                "/api/repair/submit", "/api/repair/process", "/api/utility/meter-entry",
+                "/api/repair/submit", "/api/repair/process", "/api/repair/reassign", "/api/repair/cancel", "/api/utility/meter-entry",
                 "/api/utility/pay-or-recharge", "/api/affair/curfew-check", "/api/affair/discipline",
                 "/api/affair/discipline-review", "/api/affair/visitor", "/api/affair/hygiene",
                 "/api/affair/adjust-review").contains(path) || path.matches("/api/affair/visitor-leave/[0-9]+"));

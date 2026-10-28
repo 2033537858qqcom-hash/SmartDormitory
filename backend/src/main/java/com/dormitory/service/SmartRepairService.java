@@ -100,4 +100,51 @@ public class SmartRepairService {
         repairOrderMapper.insert(order);
         return order;
     }
+
+    /**
+     * 管理端改派：将工单指派给同工种（或任意在岗）维修工，并写入派单备注。
+     */
+    public RepairOrder reassignWorker(Long orderId, Long newWorkerId, String remark) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("工单不存在");
+        }
+        if (!java.util.Set.of("PENDING", "ASSIGNED", "PROCESSING").contains(order.getStatus())) {
+            throw new IllegalStateException("仅待派单/待维修/维修中工单可改派");
+        }
+        SysUser worker = sysUserMapper.selectById(newWorkerId);
+        if (worker == null || !"REPAIRMAN".equals(worker.getRole()) || Integer.valueOf(0).equals(worker.getStatus())) {
+            throw new IllegalArgumentException("目标维修工无效或已停用");
+        }
+        Long oldId = order.getAssignedWorkerId();
+        order.setAssignedWorkerId(newWorkerId);
+        if ("PENDING".equals(order.getStatus())) {
+            order.setStatus("ASSIGNED");
+        }
+        String note = (remark != null && !remark.isBlank()) ? remark.trim() : "管理端改派";
+        String prev = order.getDispatchRemark() != null ? order.getDispatchRemark() + "；" : "";
+        order.setDispatchRemark(prev + note + " -> " + worker.getRealName()
+                + (oldId != null ? "（原指派#" + oldId + "）" : ""));
+        repairOrderMapper.updateById(order);
+        return order;
+    }
+
+    /**
+     * 取消/关闭工单并写备注（不进入评价流）。
+     */
+    public RepairOrder cancelOrder(Long orderId, String remark) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("工单不存在");
+        }
+        if (java.util.Set.of("COMPLETED", "RATED", "CANCELLED").contains(order.getStatus())) {
+            throw new IllegalStateException("工单已结束，无法取消");
+        }
+        String note = (remark != null && !remark.isBlank()) ? remark.trim() : "管理端关闭";
+        order.setStatus("CANCELLED");
+        order.setRepairResult((order.getRepairResult() != null ? order.getRepairResult() + "；" : "") + "[已取消] " + note);
+        order.setFinishTime(java.time.LocalDateTime.now());
+        repairOrderMapper.updateById(order);
+        return order;
+    }
 }

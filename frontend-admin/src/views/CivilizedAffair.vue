@@ -132,8 +132,11 @@
             </div>
           </div>
           <div class="toolbar-actions">
+            <el-select v-model="curfewBuildingId" clearable placeholder="全部管辖楼栋" size="small" style="width: 160px">
+              <el-option v-for="b in buildings" :key="b.id" :label="b.buildingName" :value="b.id" />
+            </el-select>
             <el-button type="primary" plain size="small" icon="Aim" :loading="auditingCurfew" @click="handleCurfewAudit">
-              模拟23:00门禁考勤稽核
+              按楼栋批量门禁稽核
             </el-button>
             <el-button size="small" icon="Plus" @click="disciplineVisible = true">
               录入违纪/晚归
@@ -142,6 +145,28 @@
               登记外来访客
             </el-button>
           </div>
+        </div>
+
+        <div v-if="curfewAuditResult" class="curfew-result surface-card" style="margin: 12px 0 16px; padding: 12px 14px;">
+          <div class="section-header" style="margin-bottom: 8px;">
+            <span class="section-title">本轮稽核结果</span>
+            <span class="unit-note tabular-nums">
+              扫描 {{ curfewAuditResult.scannedCount || 0 }} · 豁免 {{ curfewAuditResult.exemptedCount || 0 }} · 预警 {{ curfewAuditResult.warnedCount || 0 }}
+            </span>
+          </div>
+          <el-table :data="curfewResultRows" size="small" max-height="220">
+            <el-table-column prop="studentName" label="学生" min-width="100" />
+            <el-table-column label="寝室" min-width="140">
+              <template #default="{ row }">{{ row.buildingName }} {{ row.roomNo }}室</template>
+            </el-table-column>
+            <el-table-column label="结果" width="110">
+              <template #default="{ row }">
+                <el-tag :type="row.auditResult === 'EXEMPTED' ? 'success' : 'warning'" size="small">
+                  {{ row.auditResult === 'EXEMPTED' ? '豁免' : '预警' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
 
         <el-row :gutter="20">
@@ -160,6 +185,11 @@
                 </div>
                 <p class="row-meta tabular-nums">{{ formatDateTime(row.occurTime) }}</p>
                 <p class="row-note">{{ row.description || '暂无说明' }}</p>
+                <div v-if="row.status === 3 && (row.appealProofType || row.appealWitness || row.appealAttachments)" class="appeal-materials">
+                  <div v-if="row.appealProofType">证明类型：{{ row.appealProofType }}</div>
+                  <div v-if="row.appealWitness">证明人：{{ row.appealWitness }}</div>
+                  <div v-if="row.appealAttachments">附件占位：{{ formatAttachments(row.appealAttachments) }}</div>
+                </div>
                 <div v-if="row.status === 3" class="appeal-actions">
                   <el-button type="success" plain size="small" @click="reviewDiscipline(row, true)">
                     准予核销 (恢复文明分)
@@ -384,6 +414,14 @@ const visitorList = ref([])
 const rooms = ref([])
 const allocatedStudents = ref([])
 const curfewStats = ref({})
+const buildings = ref([])
+const curfewBuildingId = ref(null)
+const curfewAuditResult = ref(null)
+const curfewResultRows = computed(() => {
+  const r = curfewAuditResult.value
+  if (!r) return []
+  return [...(r.warned || []), ...(r.exempted || []), ...(r.normal || [])]
+})
 
 const adminQrVisible = ref(false)
 const activeVisitorQr = ref(null)
@@ -504,14 +542,15 @@ const loadAll = async () => {
   loading.value = true
   loadError.value = false
   try {
-    const [eRes, hRes, aRes, dRes, vRes, rRes, cRes, stuRes] = await Promise.all([
+    const [eRes, hRes, aRes, dRes, vRes, rRes, cRes, bRes, stuRes] = await Promise.all([
       request.get('/affair/evaluation'),
       request.get('/affair/hygiene'),
       request.get('/affair/adjust-list'),
       request.get('/affair/discipline'),
       request.get('/affair/visitors'),
       request.get('/dorm/rooms'),
-      request.get('/affair/curfew-stats'),
+      request.get('/affair/curfew-stats', { params: curfewBuildingId.value ? { buildingId: curfewBuildingId.value } : {} }),
+      request.get('/dorm/buildings'),
       request.get('/smart-alloc/candidates')
     ])
     evalList.value = eRes.data || []
@@ -521,6 +560,7 @@ const loadAll = async () => {
     visitorList.value = vRes.data || []
     rooms.value = rRes.data || []
     curfewStats.value = cRes.data || {}
+    buildings.value = bRes.data || []
     allocatedStudents.value = (stuRes.data || []).filter(s => s.allocated)
   } catch (e) {
     loadError.value = true
@@ -549,11 +589,25 @@ const handleRewardFiveStar = async () => {
   }
 }
 
+const formatAttachments = (raw) => {
+  if (!raw) return '-'
+  try {
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (Array.isArray(arr)) {
+      return arr.map(x => String(x).startsWith('data:') ? '（已上传图片占位）' : x).join('、')
+    }
+  } catch (_) { /* ignore */ }
+  return String(raw).slice(0, 80)
+}
+
 const handleCurfewAudit = async () => {
   auditingCurfew.value = true
   try {
-    const res = await request.post('/affair/curfew-check', {})
-    ElMessage.success(res.message || '23:00门禁考勤稽核已完成')
+    const body = {}
+    if (curfewBuildingId.value) body.buildingId = curfewBuildingId.value
+    const res = await request.post('/affair/curfew-check', body)
+    curfewAuditResult.value = res.data || null
+    ElMessage.success(res.message || '楼栋批量门禁稽核已完成')
     await loadAll()
   } finally {
     auditingCurfew.value = false

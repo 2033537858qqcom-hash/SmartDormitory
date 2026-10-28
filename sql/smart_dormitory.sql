@@ -208,6 +208,9 @@ CREATE TABLE `discipline_record` (
     `description` VARCHAR(255) NOT NULL COMMENT '事件详细说明',
     `status` TINYINT DEFAULT 1 COMMENT '状态: 1-已生效, 2-申诉撤销, 3-申诉待审',
     `recorder_id` BIGINT DEFAULT NULL COMMENT '登记人ID',
+    `appeal_proof_type` VARCHAR(50) DEFAULT NULL COMMENT '申诉证明类型',
+    `appeal_witness` VARCHAR(50) DEFAULT NULL COMMENT '证明人',
+    `appeal_attachments` TEXT DEFAULT NULL COMMENT '申诉附件占位(JSON数组)',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '登记时间'
 ) ENGINE=InnoDB COMMENT='学生晚归与违纪记录表';
 

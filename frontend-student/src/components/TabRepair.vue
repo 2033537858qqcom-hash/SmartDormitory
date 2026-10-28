@@ -1,5 +1,8 @@
 <template>
   <div class="tab-repair">
+    <div v-if="pendingRateCount > 0" class="pending-rate-top">
+      有 {{ pendingRateCount }} 单待评价，请尽快完成服务评价
+    </div>
     <!-- 顶部发起报修主卡 -->
     <div class="repair-hero">
       <div>
@@ -31,14 +34,23 @@
         <div class="o-title">{{ item.title }}</div>
         <div class="o-desc">{{ item.description }}</div>
 
-        <!-- 派单与处理信息 -->
+        <!-- 派单与处理信息 + 进度时间线 -->
         <div class="dispatch-trace">
           <div class="t-row">
             <span>维修师傅：<b>{{ item.workerName || '待指派' }}</b></span>
             <span class="status-tag" :class="item.status">{{ statusLabel(item.status) }}</span>
           </div>
+          <ol class="progress-timeline" aria-label="报修进度">
+            <li :class="{ done: true }">已提交</li>
+            <li :class="{ done: ['ASSIGNED','PROCESSING','COMPLETED','RATED'].includes(item.status), current: item.status==='ASSIGNED' }">已派单</li>
+            <li :class="{ done: ['PROCESSING','COMPLETED','RATED'].includes(item.status), current: item.status==='PROCESSING' }">维修中</li>
+            <li :class="{ done: ['COMPLETED','RATED'].includes(item.status), current: item.status==='COMPLETED' }">待评价</li>
+            <li :class="{ done: item.status==='RATED' }">已完结</li>
+          </ol>
           <div v-if="item.repairResult" class="t-result">处理反馈：{{ item.repairResult }}</div>
         </div>
+
+        <div v-if="item.status === 'COMPLETED'" class="rate-reminder">维修已完成，请及时评价以便闭环归档</div>
 
         <div class="o-foot">
           <span class="o-time tabular-nums">{{ formatDateTime(item.createTime) }}</span>
@@ -157,6 +169,7 @@ const props = defineProps({
   dash: { type: Object, default: () => ({}) }
 })
 const emit = defineEmits(['refresh', 'toast'])
+const pendingRateCount = computed(() => (props.dash.myRepairs || []).filter(r => r.status === 'COMPLETED').length)
 const formatDateTime = (value) => value ? String(value).replace('T', ' ').slice(0, 16) : '今日报修'
 
 const sheetOpen = ref(false)
@@ -494,4 +507,11 @@ const submitRate = async () => {
   border-radius: 99px;
   font-size: 13px;
 }
+
+.progress-timeline { display: flex; gap: 4px; list-style: none; padding: 10px 0 0; margin: 0; flex-wrap: wrap; }
+.progress-timeline li { font-size: 10px; color: var(--text-muted); padding: 3px 7px; border-radius: 999px; background: var(--bg-muted); }
+.progress-timeline li.done { color: var(--status-success); background: var(--status-success-bg); }
+.progress-timeline li.current { color: var(--accent-primary); background: var(--accent-subtle); font-weight: 600; }
+.rate-reminder { margin-top: 10px; font-size: 12px; color: #9a6700; background: #fff7e8; border-radius: 10px; padding: 8px 10px; }
+.pending-rate-top { margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: #fff7e8; color: #9a6700; font-size: 13px; font-weight: 500; }
 </style>
