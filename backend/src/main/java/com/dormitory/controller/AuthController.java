@@ -248,8 +248,8 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public Result<String> changePassword(@RequestBody Map<String, Object> body) {
-        Long userId = Long.valueOf(body.get("userId").toString());
+    public Result<String> changePassword(@RequestBody Map<String, Object> body,
+                                         @RequestAttribute("currentUserId") Long userId) {
         String oldPwd = body.get("oldPassword").toString();
         String newPwd = body.get("newPassword").toString();
 
