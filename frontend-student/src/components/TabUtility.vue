@@ -99,6 +99,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from '../api'
+import { submitDemoPayment } from '../payment'
 import BottomSheet from './BottomSheet.vue'
 
 const props = defineProps({
@@ -146,7 +147,7 @@ const submitRecharge = async () => {
   submitting.value = true
   try {
     const isElec = rechargeTarget.value === 'ELECTRIC'
-    const res = await api.post('/utility/pay-or-recharge', {
+    const res = await submitDemoPayment(api, sessionStorage, crypto, {
       roomId: props.dash.room?.id || 1,
       electricRecharge: isElec ? rechargeAmount.value : 0,
       waterRecharge: isElec ? 0 : rechargeAmount.value
@@ -156,16 +157,17 @@ const submitRecharge = async () => {
     emit('toast', { msg: `【演示模拟】已充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
     emit('refresh')
   } catch (e) {
-    emit('toast', { msg: e.response?.data?.message || '充值失败', type: 'error' })
+    emit('toast', { msg: e.response?.data?.message || e.message || '充值失败', type: 'error' })
   } finally {
     submitting.value = false
   }
 }
 
 const payBill = async (b) => {
+  if (submitting.value) return
   submitting.value = true
   try {
-    const res = await api.post('/utility/pay-or-recharge', {
+    const res = await submitDemoPayment(api, sessionStorage, crypto, {
       roomId: props.dash.room?.id || 1,
       billId: b.id
     })
@@ -173,7 +175,7 @@ const payBill = async (b) => {
     emit('toast', { msg: `【演示模拟】${b.billMonth} 账单已核销${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
     emit('refresh')
   } catch (e) {
-    emit('toast', { msg: e.response?.data?.message || '缴费失败', type: 'error' })
+    emit('toast', { msg: e.response?.data?.message || e.message || '缴费失败', type: 'error' })
   } finally {
     submitting.value = false
   }

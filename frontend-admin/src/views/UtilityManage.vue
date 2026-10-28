@@ -31,7 +31,7 @@
           </div>
           <div class="bill-usage"><div><span>用电</span><strong>{{ bill.electricUsed }} 度</strong><small>{{ formatMoney(bill.electricCost) }}</small></div><div><span>用水</span><strong>{{ bill.waterUsed }} 吨</strong><small>{{ formatMoney(bill.waterCost) }}</small></div></div>
           <div class="bill-amount"><span>账单总额</span><strong>{{ formatMoney(bill.totalCost) }}</strong><small>人均 {{ formatMoney(bill.perCapitaCost) }}</small></div>
-          <div class="bill-action"><span :class="bill.payStatus === 1 ? 'settled' : 'unsettled'">{{ bill.payStatus === 1 ? '已缴清' : '待缴纳' }}</span><el-button v-if="bill.payStatus === 0" type="primary" plain size="small" @click="handlePayBill(bill)">扣余额核销</el-button><span v-else class="settled-note">已核销</span></div>
+          <div class="bill-action"><span :class="bill.payStatus === 1 ? 'settled' : 'unsettled'">{{ bill.payStatus === 1 ? '已缴清' : '待缴纳' }}</span><el-button v-if="bill.payStatus === 0" type="primary" plain size="small" :loading="payingId === bill.id" @click="handlePayBill(bill)">扣余额核销</el-button><span v-else class="settled-note">已核销</span></div>
           <details v-if="bill.abnormalFlag === 1" class="bill-warning"><summary>查看异常原因</summary><p>{{ bill.abnormalReason }}</p>
             <el-button type="warning" plain size="small" style="margin-top:8px" :loading="convertingId===bill.id" @click="convertAnomaly(bill)">转报修工单排查</el-button>
           </details>
@@ -106,6 +106,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request, { downloadExport } from '@/api/request'
+import { submitDemoPayment } from '@/api/payment'
 const isAdmin = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}').role === 'ADMIN'
 
 const formatMoney = (val) => '¥' + Number(val || 0).toFixed(2)
@@ -114,6 +115,7 @@ const route = useRoute()
 const loading = ref(false)
 const loadError = ref(false)
 const submitting = ref(false)
+const payingId = ref(null)
 const bills = ref([])
 const rooms = ref([])
 const onlyAbnormal = ref(route.query.abnormal === '1')
@@ -170,12 +172,15 @@ const submitEntry = async () => {
 }
 
 const handlePayBill = async (row) => {
-  const res = await request.post('/utility/pay-or-recharge', {
-    roomId: row.roomId,
-    billId: row.id
-  })
-  ElMessage.success(res.message || '【演示模拟】账单已核销（非真实支付）')
-  loadBills()
+  if (payingId.value !== null) return
+  payingId.value = row.id
+  try {
+    const res = await submitDemoPayment(request, sessionStorage, crypto, { roomId: row.roomId, billId: row.id })
+    ElMessage.success(res.message || '【演示模拟】账单已核销（非真实支付）')
+    await loadBills()
+  } finally {
+    payingId.value = null
+  }
 }
 
 const exportUtilityCsv = () => {
