@@ -3,11 +3,13 @@ package com.dormitory.controller;
 import cn.hutool.crypto.digest.BCrypt;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.dormitory.entity.SysUser;
+import com.dormitory.common.SessionService;
 import com.dormitory.mapper.SysUserMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
@@ -20,6 +22,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AuthControllerPasswordTest {
     @Mock SysUserMapper users;
+    @Spy SessionService sessions = new SessionService();
     @InjectMocks AuthController controller;
 
     private SysUser user(String password) {
@@ -81,5 +84,22 @@ class AuthControllerPasswordTest {
         assertEquals(200, controller.changePassword(Map.of("userId", 1, "oldPassword", "old", "newPassword", "new-secret")).getCode());
         assertNotNull(stored.get());
         assertTrue(BCrypt.checkpw("new-secret", stored.get()));
+    }
+
+    @Test
+    void loginIssuesSessionAndLogoutRevokesIt() {
+        when(users.selectOne(any())).thenReturn(user("secret"));
+        String token = (String) controller.login(Map.of("username", "admin", "password", "secret")).getData().get("token");
+        assertEquals(1L, sessions.getUserId(token));
+        controller.logout(token);
+        assertNull(sessions.getUserId(token));
+    }
+
+    @Test
+    void passwordResetRevokesExistingSessions() {
+        when(users.selectById(1L)).thenReturn(user("old"));
+        String token = sessions.create(1L);
+        controller.resetPassword(1L);
+        assertNull(sessions.getUserId(token));
     }
 }
