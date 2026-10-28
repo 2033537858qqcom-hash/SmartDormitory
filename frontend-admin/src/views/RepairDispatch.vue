@@ -50,6 +50,7 @@
           <el-radio-button label="PROCESSING">维修中 {{ statusCounts.processing }}</el-radio-button>
           <el-radio-button label="COMPLETED">待评价 {{ statusCounts.completed }}</el-radio-button>
           <el-radio-button label="RATED">已完结 {{ statusCounts.rated }}</el-radio-button>
+          <el-radio-button label="OVERDUE">已超时 {{ statusCounts.overdue }}</el-radio-button>
         </el-radio-group>
       </div>
       <div v-if="!loading && !orders.length" class="workspace-empty"><el-icon :size="22"><Document /></el-icon><p>暂无符合条件的报修记录</p><span>可以切换筛选条件，或新增报修工单。</span></div>
@@ -57,7 +58,7 @@
         <li v-for="row in orders" :key="row.id" class="record-row">
           <button type="button" class="record-main" @click="openDetail(row)">
             <span class="record-icon" :class="{ urgent: row.priority === 'HIGH' }"><el-icon><Tools /></el-icon></span>
-            <span class="record-copy"><span class="record-title">{{ row.title }}<span v-if="row.priority === 'HIGH'" class="urgent-label">紧急</span></span><span class="record-meta">{{ row.buildingName }} · {{ row.roomNo }}室 <span>·</span> {{ row.studentName }}</span><span class="record-meta record-id">{{ row.orderNo }} <span>·</span> {{ typeName(row.repairType) }} <span>·</span> {{ formatDateTime(row.createTime) }}</span></span>
+            <span class="record-copy"><span class="record-title">{{ row.title }}<span v-if="row.priority === 'HIGH'" class="urgent-label">紧急</span><span v-if="row.overdue" class="overdue-label">已超时</span></span><span class="record-meta">{{ row.buildingName }} · {{ row.roomNo }}室 <span>·</span> {{ row.studentName }}</span><span class="record-meta record-id">{{ row.orderNo }} <span>·</span> {{ typeName(row.repairType) }} <span>·</span> {{ formatDateTime(row.createTime) }}<template v-if="row.dueAt"> <span>·</span> SLA {{ formatDateTime(row.dueAt) }}</template></span></span>
           </button>
           <div class="record-side"><span class="record-worker">{{ row.workerName || '待指派' }}</span><span class="record-state" :class="{ urgent: row.priority === 'HIGH', done: row.status === 'RATED' }">{{ statusLabel(row.status) }}</span></div>
           <div class="record-actions"><button type="button" class="text-action" :aria-label="`查看${row.title}详情`" @click="openDetail(row)">详情 <span aria-hidden="true">›</span></button><button v-if="row.status === 'ASSIGNED' || row.status === 'PROCESSING'" type="button" class="quiet-action" :aria-label="`处理${row.title}`" @click="openProcess(row)">处理</button></div>
@@ -80,6 +81,7 @@
           </div>
           <div class="toolbar-actions">
             <el-tag v-if="currentOrder.priority === 'HIGH'" type="danger" effect="dark" size="small">高危紧急</el-tag>
+            <el-tag v-if="currentOrder.overdue" type="danger" size="small">已超时</el-tag>
             <el-tag :type="statusType(currentOrder.status)" size="small">{{ statusLabel(currentOrder.status) }}</el-tag>
           </div>
         </div>
@@ -300,7 +302,8 @@ const statusCounts = computed(() => {
     assigned: list.filter(o => o.status === 'ASSIGNED').length,
     processing: list.filter(o => o.status === 'PROCESSING').length,
     completed: list.filter(o => o.status === 'COMPLETED').length,
-    rated: list.filter(o => o.status === 'RATED').length
+    rated: list.filter(o => o.status === 'RATED').length,
+    overdue: list.filter(o => o.overdue).length
   }
 })
 
@@ -309,6 +312,9 @@ const orders = computed(() => {
   if (!statusFilter.value) return list
   if (statusFilter.value === 'PENDING_ALL') {
     return list.filter(o => ['PENDING', 'ASSIGNED', 'PROCESSING'].includes(o.status))
+  }
+  if (statusFilter.value === 'OVERDUE') {
+    return list.filter(o => o.overdue)
   }
   return list.filter(o => o.status === statusFilter.value)
 })
@@ -521,4 +527,7 @@ onMounted(() => {
 
 .photo-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .photo-grid img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-subtle); }
+
+.overdue-label { margin-left: 8px; padding: 1px 6px; border-radius: 999px; background: #ff3b30; color: #fff; font-size: 11px; font-weight: 600; }
+.record-row:has(.overdue-label) .record-state { color: #ff3b30; font-weight: 600; }
 </style>

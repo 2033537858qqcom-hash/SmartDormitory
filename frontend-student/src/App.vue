@@ -12,7 +12,7 @@
   <div v-else class="mp-stage">
     <button class="student-logout" type="button" @click="logout">退出登录</button>
 
-    <!-- 微信小程序/H5 自适应高度容器（根据可视高度铺满，底部导航始终在首屏内） -->
+    <!-- 学生端 Vite H5 自适应高度容器（小程序形态 UI；非微信小程序工程） -->
     <div class="phone-frame">
       <!-- 顶部导航栏 -->
       <header class="wx-navbar" :class="{ scrolled: isHeaderCollapsed }">

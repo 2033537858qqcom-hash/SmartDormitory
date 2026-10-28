@@ -89,6 +89,11 @@ public class RepairOrderController {
             item.put("finishTime", o.getFinishTime());
             item.put("createTime", o.getCreateTime());
             item.put("photoUrls", o.getPhotoUrls());
+            item.put("dueAt", o.getDueAt());
+            item.put("slaHours", SmartRepairService.slaHours(o.getPriority()));
+            boolean overdue = SmartRepairService.isOverdue(o, java.time.LocalDateTime.now());
+            item.put("overdue", overdue);
+            item.put("slaLabel", overdue ? "已超时" : (o.getDueAt() != null ? "SLA截止" : null));
             result.add(item);
         }
         return Result.success(result);

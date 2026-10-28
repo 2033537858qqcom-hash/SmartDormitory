@@ -19,7 +19,8 @@
         </div>
         <div class="toolbar-actions">
           <el-button v-if="currentUser.role === 'ADMIN'" size="small" @click="openManagerBind">楼栋宿管绑定</el-button>
-          <el-button type="primary" size="small" icon="Plus" @click="roomDialogVisible = true">新增房间</el-button>
+          <el-button v-if="canWrite" type="primary" size="small" icon="Plus" @click="roomDialogVisible = true">新增房间</el-button>
+          <el-tag v-if="!canWrite" type="info" size="small" effect="plain">辅导员只读视图</el-tag>
         </div>
       </div>
     </el-card>
@@ -71,7 +72,7 @@
                 <div class="stu-name">{{ bed.studentName }}</div>
                 <div class="stu-class tabular-nums">{{ bed.className || bed.studentNo }}</div>
               </div>
-              <div v-else class="empty-tip">+ 空床（点击分配）</div>
+              <div v-else class="empty-tip">{{ canWrite ? '+ 空床（点击分配）' : '空床' }}</div>
             </button>
           </div>
         </el-card>
@@ -104,12 +105,14 @@
       </div>
       <template #footer>
         <el-button @click="bedDialogVisible = false">取消</el-button>
-        <el-button v-if="currentBed?.status === 1" type="danger" :loading="submitting" @click="confirmReleaseBed">
-          办理退宿
-        </el-button>
-        <el-button v-else type="primary" :loading="submitting" @click="submitBedAssign(selectedStudentId)">
-          确认入住
-        </el-button>
+        <template v-if="canWrite">
+          <el-button v-if="currentBed?.status === 1" type="danger" :loading="submitting" @click="confirmReleaseBed">
+            办理退宿
+          </el-button>
+          <el-button v-else type="primary" :loading="submitting" @click="submitBedAssign(selectedStudentId)">
+            确认入住
+          </el-button>
+        </template>
       </template>
     </el-dialog>
 
@@ -167,11 +170,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/api/request'
 
 const currentUser = ref(JSON.parse(localStorage.getItem('dorm_admin_user') || '{}'))
+const canWrite = computed(() => currentUser.value.role !== 'COUNSELOR')
 const loading = ref(false)
 const loadError = ref(false)
 const submitting = ref(false)
@@ -265,6 +269,12 @@ const loadCandidates = async () => {
 }
 
 const handleBedClick = (room, bed) => {
+  if (!canWrite.value) {
+    if (bed.status === 1) {
+      ElMessage.info(`${bed.studentName || '在住学生'}（${bed.studentNo || bed.className || '学号未知'}）· 辅导员只读`)
+    }
+    return
+  }
   currentRoom.value = room
   currentBed.value = bed
   selectedStudentId.value = null

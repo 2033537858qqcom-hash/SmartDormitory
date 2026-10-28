@@ -96,9 +96,31 @@ public class SmartRepairService {
             remark.append("暂无空闲对应工种师傅，进入待人工调度队列");
         }
         order.setDispatchRemark(remark.toString());
+        order.setDueAt(computeDueAt(order.getCreateTime(), order.getPriority()));
 
         repairOrderMapper.insert(order);
         return order;
+    }
+
+    /** HIGH 4h / NORMAL 24h / LOW 48h */
+    public static LocalDateTime computeDueAt(LocalDateTime created, String priority) {
+        LocalDateTime base = created != null ? created : LocalDateTime.now();
+        int hours = slaHours(priority);
+        return base.plusHours(hours);
+    }
+
+    public static int slaHours(String priority) {
+        if ("HIGH".equals(priority)) return 4;
+        if ("LOW".equals(priority)) return 48;
+        return 24;
+    }
+
+    /** 未完结且已过 dueAt 视为超时 */
+    public static boolean isOverdue(RepairOrder order, LocalDateTime now) {
+        if (order == null || order.getDueAt() == null) return false;
+        String st = order.getStatus();
+        if (st == null || Set.of("COMPLETED", "RATED", "CANCELLED").contains(st)) return false;
+        return order.getDueAt().isBefore(now != null ? now : LocalDateTime.now());
     }
 
     /**

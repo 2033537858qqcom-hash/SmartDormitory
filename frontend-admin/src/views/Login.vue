@@ -51,7 +51,7 @@ const handleLogin = async () => {
   try {
     const res = await request.post('/auth/login', form)
     const user = res.data.user
-    if (!['ADMIN', 'DORM_MANAGER', 'REPAIRMAN'].includes(user.role)) {
+    if (!['ADMIN', 'DORM_MANAGER', 'REPAIRMAN', 'COUNSELOR'].includes(user.role)) {
       errorMsg.value = '请使用管理人员账号登录'
       return
     }

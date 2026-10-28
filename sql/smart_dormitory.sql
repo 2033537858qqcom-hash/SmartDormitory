@@ -152,7 +152,8 @@ CREATE TABLE `repair_order` (
     `rating_comment` VARCHAR(200) DEFAULT NULL COMMENT '学生评价内容',
     `finish_time` DATETIME DEFAULT NULL COMMENT '完成时间',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '报修时间',
-    `photo_urls` TEXT DEFAULT NULL COMMENT '故障图片(JSON数组，本地路径或dataURL演示)'
+    `photo_urls` TEXT DEFAULT NULL COMMENT '故障图片(JSON数组，本地路径或dataURL演示)',
+    `due_at` DATETIME DEFAULT NULL COMMENT 'SLA截止时间(高危4h/普通24h/低优48h)'
 ) ENGINE=InnoDB COMMENT='智能报修工单表';
 
 -- -------------------------------------------------------------------------
@@ -193,7 +194,8 @@ CREATE TABLE `hygiene_inspection` (
     `grade` VARCHAR(10) NOT NULL DEFAULT '优秀' COMMENT '评级: 优秀, 良好, 合格, 不合格',
     `remark` VARCHAR(200) DEFAULT NULL COMMENT '扣分说明或表扬备注',
     `inspector_id` BIGINT DEFAULT NULL COMMENT '检查宿管员ID',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间'
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间',
+    `photo_urls` TEXT DEFAULT NULL COMMENT '现场检查照片(JSON数组，本地路径或dataURL演示)'
 ) ENGINE=InnoDB COMMENT='宿舍卫生检查评比表';
 
 -- -------------------------------------------------------------------------
@@ -263,7 +265,8 @@ INSERT INTO `sys_user` (`id`, `username`, `password`, `real_name`, `role`, `gend
 (6, 'worker02', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '孙大伟(水暖工程师)', 'REPAIRMAN', 1, '13766661002', 'w02@edu.cn', 'WATER'),
 (7, 'worker03', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '周木生(木工师傅)', 'REPAIRMAN', 1, '13766661003', 'w03@edu.cn', 'WOOD'),
 (8, 'worker04', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '吴网通(网络与空调工)', 'REPAIRMAN', 1, '13766661004', 'w04@edu.cn', 'NETWORK'),
-(9, 'worker05', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '郑光明(值班电工)', 'REPAIRMAN', 1, '13766661005', 'w05@edu.cn', 'ELECTRIC');
+(9, 'worker05', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '郑光明(值班电工)', 'REPAIRMAN', 1, '13766661005', 'w05@edu.cn', 'ELECTRIC'),
+(29, 'counselor01', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '陈晓雯(计科辅导员)', 'COUNSELOR', 2, '13688880001', 'counselor01@edu.cn', NULL);
 
 -- 2. 插入学生账号 (10~25: 已入住学生与待智能分寝新生)
 INSERT INTO `sys_user` (`id`, `username`, `password`, `real_name`, `role`, `gender`, `phone`, `college`, `major`, `class_name`, `grade`) VALUES
@@ -422,3 +425,26 @@ CREATE TABLE `user_message` (
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     KEY `idx_user_read` (`user_id`, `read_flag`)
 ) ENGINE=InnoDB COMMENT='站内消息';
+
+-- -------------------------------------------------------------------------
+-- 15. 水电演示缴费流水 (utility_payment_log) -> P2 模拟核销凭证
+-- -------------------------------------------------------------------------
+CREATE TABLE `utility_payment_log` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '流水ID',
+    `txn_no` VARCHAR(40) NOT NULL COMMENT '演示流水号 DEMO-...',
+    `room_id` BIGINT NOT NULL COMMENT '寝室ID',
+    `bill_id` BIGINT DEFAULT NULL COMMENT '关联账单ID(缴费时)',
+    `operator_id` BIGINT DEFAULT NULL COMMENT '操作人用户ID',
+    `action_type` VARCHAR(20) NOT NULL COMMENT 'RECHARGE / PAY_BILL',
+    `electric_delta` DECIMAL(10, 2) DEFAULT 0.00 COMMENT '电费余额变动',
+    `water_delta` DECIMAL(10, 2) DEFAULT 0.00 COMMENT '水费余额变动',
+    `electric_before` DECIMAL(10, 2) DEFAULT 0.00 COMMENT '操作前电费余额',
+    `water_before` DECIMAL(10, 2) DEFAULT 0.00 COMMENT '操作前水费余额',
+    `electric_after` DECIMAL(10, 2) DEFAULT 0.00 COMMENT '操作后电费余额',
+    `water_after` DECIMAL(10, 2) DEFAULT 0.00 COMMENT '操作后水费余额',
+    `channel` VARCHAR(20) NOT NULL DEFAULT 'DEMO' COMMENT '固定 DEMO：非真实支付',
+    `remark` VARCHAR(200) DEFAULT NULL COMMENT '说明',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY `uk_txn` (`txn_no`),
+    KEY `idx_room` (`room_id`)
+) ENGINE=InnoDB COMMENT='水电演示模拟缴费流水';

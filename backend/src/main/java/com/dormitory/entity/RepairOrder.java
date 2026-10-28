@@ -32,4 +32,6 @@ public class RepairOrder {
     private LocalDateTime createTime;
     /** JSON 数组：本地上传路径或 dataURL（演示用） */
     private String photoUrls;
+    /** SLA 截止时间：高危 4h / 普通 24h / 低优 48h */
+    private LocalDateTime dueAt;
 }

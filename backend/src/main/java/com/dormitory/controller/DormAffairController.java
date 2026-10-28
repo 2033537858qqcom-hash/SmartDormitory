@@ -94,6 +94,7 @@ public class DormAffairController {
             m.put("totalScore", h.getTotalScore());
             m.put("grade", h.getGrade());
             m.put("remark", h.getRemark());
+            m.put("photoUrls", h.getPhotoUrls());
             res.add(m);
         }
         return Result.success(res);
@@ -126,6 +127,48 @@ public class DormAffairController {
         // 联动触发文明寝室量化重算
         smartEvaluationService.evaluateAllRooms();
         return Result.success("卫生检查记录已保存并同步更新文明寝室量化分", h);
+    }
+
+    /** 寝室卫生分近 N 次趋势（默认最近 12 条） */
+    @GetMapping("/hygiene-trend")
+    public Result<Map<String, Object>> hygieneTrend(@RequestParam Long roomId,
+                                                    @RequestParam(required = false, defaultValue = "12") Integer limit,
+                                                    HttpServletRequest request) {
+        DormRoom room = roomMapper.selectById(roomId);
+        if (room == null) return Result.error("寝室不存在");
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
+            return typed;
+        }
+        int lim = limit == null || limit < 1 ? 12 : Math.min(limit, 52);
+        List<HygieneInspection> list = hygieneMapper.selectList(
+                new LambdaQueryWrapper<HygieneInspection>()
+                        .eq(HygieneInspection::getRoomId, roomId)
+                        .orderByAsc(HygieneInspection::getCheckDate)
+                        .orderByAsc(HygieneInspection::getId)
+        );
+        if (list.size() > lim) {
+            list = list.subList(list.size() - lim, list.size());
+        }
+        DormBuilding b = buildingMapper.selectById(room.getBuildingId());
+        List<Map<String, Object>> points = new ArrayList<>();
+        for (HygieneInspection h : list) {
+            Map<String, Object> pt = new LinkedHashMap<>();
+            pt.put("id", h.getId());
+            pt.put("checkWeek", h.getCheckWeek());
+            pt.put("checkDate", h.getCheckDate());
+            pt.put("totalScore", h.getTotalScore());
+            pt.put("grade", h.getGrade());
+            points.add(pt);
+        }
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("roomId", roomId);
+        res.put("roomNo", room.getRoomNo());
+        res.put("buildingName", b != null ? b.getBuildingName() : "");
+        res.put("points", points);
+        return Result.success(res);
     }
 
     @GetMapping("/discipline")

@@ -47,6 +47,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private boolean allowed(String role, Long userId, String method, String path) {
         if ("ADMIN".equals(role)) return true;
+        if ("COUNSELOR".equals(role)) {
+            return counselorAllowed(method, path);
+        }
         if (!Set.of("STUDENT", "DORM_MANAGER", "REPAIRMAN").contains(role == null ? "" : role)) return false;
         if ("POST".equals(method) && Set.of("/api/auth/logout", "/api/auth/change-password").contains(path)) return true;
         // 站内消息：登录用户均可读写自己的
@@ -76,7 +79,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         if ("GET".equals(method)) {
             return Set.of("/api/dashboard/overview", "/api/dorm/buildings", "/api/dorm/rooms",
                     "/api/smart-alloc/candidates", "/api/smart-alloc/precheck", "/api/repair/list", "/api/utility/bills",
-                    "/api/utility/threshold-rules", "/api/affair/evaluation", "/api/affair/hygiene", "/api/affair/adjust-list",
+                    "/api/utility/threshold-rules", "/api/affair/evaluation", "/api/affair/hygiene", "/api/affair/hygiene-trend",
+                    "/api/affair/adjust-list",
                     "/api/affair/discipline", "/api/affair/visitors", "/api/affair/curfew-stats",
                     "/api/affair/notices", "/api/auth/users",
                     "/api/messages", "/api/messages/unread-count").contains(path);
@@ -89,5 +93,24 @@ public class AuthInterceptor implements HandlerInterceptor {
                 "/api/affair/hygiene", "/api/affair/adjust-review",
                 "/api/upload/image", "/api/messages/read",
                 "/api/auth/import-students").contains(path) || path.matches("/api/affair/visitor-leave/[0-9]+"));
+    }
+
+    /** 辅导员只读：可查看评分/违纪/房态/水电账单，禁止写操作 */
+    private boolean counselorAllowed(String method, String path) {
+        if ("POST".equals(method) && Set.of("/api/auth/logout", "/api/auth/change-password", "/api/messages/read").contains(path)) {
+            return true;
+        }
+        if (!"GET".equals(method)) return false;
+        return Set.of(
+                "/api/dashboard/overview",
+                "/api/dorm/buildings", "/api/dorm/rooms",
+                "/api/smart-alloc/candidates",
+                "/api/affair/evaluation", "/api/affair/hygiene", "/api/affair/hygiene-trend",
+                "/api/affair/adjust-list", "/api/affair/discipline",
+                "/api/affair/visitors", "/api/affair/curfew-stats", "/api/affair/notices",
+                "/api/utility/bills", "/api/utility/threshold-rules",
+                "/api/auth/users",
+                "/api/messages", "/api/messages/unread-count"
+        ).contains(path);
     }
 }

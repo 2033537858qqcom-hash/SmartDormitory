@@ -56,10 +56,52 @@ CREATE TABLE IF NOT EXISTS `user_message` (
 - 亦可在提交报修时直接传 `photoUrls` JSON 数组（含 dataURL 或相对路径），不必上 OSS。
 - 静态映射见 `WebMvcConfig` 的 `/uploads/**`。
 
-### P2 暂缓（本迭代不实现）
+## P2 增量（已有库可执行）
 
-- 卫生检查现场照片与历史趋势（P2-1）
-- 辅导员/学院只读角色（P2-2）
-- 维修工单 SLA / 催单（P2-3）
-- 缴费流水号与「演示模拟扣款」强标注（P2-4，界面已有扣余额核销语义，未单独做流水表）
-- 学生端真小程序迁移（P2-5，保持 H5 小程序形态 UI）
+```sql
+ALTER TABLE hygiene_inspection
+  ADD COLUMN photo_urls TEXT DEFAULT NULL COMMENT '现场检查照片(JSON数组)' AFTER create_time;
+
+ALTER TABLE repair_order
+  ADD COLUMN due_at DATETIME DEFAULT NULL COMMENT 'SLA截止时间' AFTER photo_urls;
+
+CREATE TABLE IF NOT EXISTS `utility_payment_log` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `txn_no` VARCHAR(40) NOT NULL,
+    `room_id` BIGINT NOT NULL,
+    `bill_id` BIGINT DEFAULT NULL,
+    `operator_id` BIGINT DEFAULT NULL,
+    `action_type` VARCHAR(20) NOT NULL,
+    `electric_delta` DECIMAL(10, 2) DEFAULT 0.00,
+    `water_delta` DECIMAL(10, 2) DEFAULT 0.00,
+    `electric_before` DECIMAL(10, 2) DEFAULT 0.00,
+    `water_before` DECIMAL(10, 2) DEFAULT 0.00,
+    `electric_after` DECIMAL(10, 2) DEFAULT 0.00,
+    `water_after` DECIMAL(10, 2) DEFAULT 0.00,
+    `channel` VARCHAR(20) NOT NULL DEFAULT 'DEMO',
+    `remark` VARCHAR(200) DEFAULT NULL,
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uk_txn` (`txn_no`),
+    KEY `idx_room` (`room_id`)
+) ENGINE=InnoDB COMMENT='水电演示模拟缴费流水';
+
+-- 辅导员演示账号（密码同其它种子：明文 123456 的 BCrypt）
+INSERT INTO sys_user (id, username, password, real_name, role, gender, phone, email, status)
+SELECT 29, 'counselor01', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i',
+       '陈晓雯(计科辅导员)', 'COUNSELOR', 2, '13688880001', 'counselor01@edu.cn', 1
+WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'counselor01');
+```
+
+### P2 说明
+
+- **P2-1** 卫生检查可附现场照片；`GET /api/affair/hygiene-trend?roomId=` 返回寝室近 N 次总分序列供折线趋势。
+- **P2-2** 角色 `COUNSELOR`：只读查看评分/违纪/房态/水电账单；菜单与路由裁剪；演示账号 `counselor01`。
+- **P2-3** 报修创建时写入 `due_at`（HIGH 4h / NORMAL 24h / LOW 48h）；列表返回 `overdue` 徽章字段。
+- **P2-4** `pay-or-recharge` 写入 `utility_payment_log` 并返回 `txnNo` + `demoSimulated`；界面强标注「演示模拟」。
+- **P2-5** 学生端仅为 Vite H5（小程序形态 UI），非微信小程序/非 Uni-app；勿宣称可在微信开发者工具打开。
+
+### 仍未做（真正超出演示范围）
+
+- 微信/支付宝真支付网关、校园卡对接
+- 实体闸机 / 人脸门禁硬件 SDK
+- 完整 uni-app / 微信原生小程序工程迁移

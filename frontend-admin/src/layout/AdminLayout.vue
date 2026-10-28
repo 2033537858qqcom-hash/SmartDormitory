@@ -172,7 +172,8 @@ const openMessage = async (m) => {
 const rolePermissions = {
   ADMIN: ['dashboard', 'smart-alloc', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair', 'user-notice'],
   DORM_MANAGER: ['dashboard', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair'],
-  REPAIRMAN: ['repair-dispatch']
+  REPAIRMAN: ['repair-dispatch'],
+  COUNSELOR: ['dashboard', 'dorm-visual', 'civilized-affair']
 }
 
 const canAccess = (menuKey) => {
@@ -191,7 +192,8 @@ const roleLabel = computed(() => {
   const map = {
     ADMIN: '系统管理员',
     DORM_MANAGER: '楼栋宿管员',
-    REPAIRMAN: '维修工程师'
+    REPAIRMAN: '维修工程师',
+    COUNSELOR: '辅导员（只读）'
   }
   return map[currentUser.value.role] || '管理人员'
 })
@@ -202,6 +204,9 @@ const roleBadgeText = computed(() => {
   }
   if (currentUser.value.role === 'REPAIRMAN') {
     return `${displayName.value} · 工种专职接单视图`
+  }
+  if (currentUser.value.role === 'COUNSELOR') {
+    return `${displayName.value} · 辅导员只读视图（评分/违纪/房态）`
   }
   return `${displayName.value} · 全局管理权限`
 })

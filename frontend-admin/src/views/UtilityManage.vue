@@ -1,5 +1,6 @@
 <template>
   <div v-loading="loading" class="page-stack">
+    <el-alert title="水电充值/缴费为演示模拟核销：生成 DEMO 流水号与余额快照，非微信支付或校园卡实扣。" type="warning" :closable="false" show-icon style="margin-bottom: 14px" />
     <div v-if="loadError" class="error-banner" role="alert">
       <span>水电账单加载失败，请重试。</span>
       <el-button type="danger" plain size="small" @click="loadBills">重试</el-button>
@@ -169,11 +170,11 @@ const submitEntry = async () => {
 }
 
 const handlePayBill = async (row) => {
-  await request.post('/utility/pay-or-recharge', {
+  const res = await request.post('/utility/pay-or-recharge', {
     roomId: row.roomId,
     billId: row.id
   })
-  ElMessage.success('账单已联动抵扣寝室水电余额并完成核销')
+  ElMessage.success(res.message || '【演示模拟】账单已核销（非真实支付）')
   loadBills()
 }
 

@@ -32,6 +32,7 @@ class StudentIdorAuthorizationTest {
     @Mock DormBedMapper bedMapper;
     @Mock BuildingScopeService buildingScope;
     @Mock UtilityBillMapper utilityBillMapper;
+    @Mock UtilityPaymentLogMapper paymentLogMapper;
     @Mock SmartUtilityService smartUtilityService;
     @Mock StudentHabitProfileMapper habitProfileMapper;
     @Mock DormAllocationLogMapper allocationLogMapper;
@@ -53,7 +54,7 @@ class StudentIdorAuthorizationTest {
     void init() {
         repairController = new RepairOrderController(
                 repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
-        utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
+        utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService, paymentLogMapper);
         allocController = new SmartAllocationController(
                 smartAllocationService, userMapper, habitProfileMapper, bedMapper, roomMapper, buildingMapper, allocationLogMapper);
         affairController = new DormAffairController(
