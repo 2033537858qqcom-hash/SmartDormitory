@@ -33,20 +33,26 @@ public class DashboardController {
     @GetMapping("/overview")
     public Result<Map<String, Object>> getOverview(HttpServletRequest request) {
         Set<Long> scope = buildingScope.resolve(request);
-        List<DormBuilding> buildings = buildingMapper.selectList(null);
-        List<DormRoom> rooms = roomMapper.selectList(null);
-        List<DormBed> beds = bedMapper.selectList(null);
-        List<RepairOrder> repairs = repairOrderMapper.selectList(null);
-        List<UtilityBill> bills = utilityBillMapper.selectList(null);
+        List<DormBuilding> allBuildings = buildingMapper.selectList(null);
+        List<DormRoom> allRooms = roomMapper.selectList(null);
+        List<DormBed> allBeds = bedMapper.selectList(null);
+        List<RepairOrder> allRepairs = repairOrderMapper.selectList(null);
+        List<UtilityBill> allBills = utilityBillMapper.selectList(null);
+        List<DormBuilding> buildings = allBuildings;
+        List<DormRoom> rooms = allRooms;
+        List<DormBed> beds = allBeds;
+        List<RepairOrder> repairs = allRepairs;
+        List<UtilityBill> bills = allBills;
         if (scope != null) {
-            buildings = buildings.stream().filter(b -> scope.contains(b.getId())).collect(Collectors.toList());
+            buildings = allBuildings.stream().filter(b -> scope.contains(b.getId())).collect(Collectors.toList());
             Set<Long> buildingIds = buildings.stream().map(DormBuilding::getId).collect(Collectors.toSet());
-            rooms = rooms.stream().filter(r -> buildingIds.contains(r.getBuildingId())).collect(Collectors.toList());
+            rooms = allRooms.stream().filter(r -> buildingIds.contains(r.getBuildingId())).collect(Collectors.toList());
             Set<Long> roomIds = rooms.stream().map(DormRoom::getId).collect(Collectors.toSet());
-            beds = beds.stream().filter(b -> roomIds.contains(b.getRoomId())).collect(Collectors.toList());
-            repairs = repairs.stream().filter(r -> buildingIds.contains(r.getBuildingId())).collect(Collectors.toList());
-            bills = bills.stream().filter(b -> buildingIds.contains(b.getBuildingId())).collect(Collectors.toList());
+            beds = allBeds.stream().filter(b -> roomIds.contains(b.getRoomId())).collect(Collectors.toList());
+            repairs = allRepairs.stream().filter(r -> buildingIds.contains(r.getBuildingId())).collect(Collectors.toList());
+            bills = allBills.stream().filter(b -> buildingIds.contains(b.getBuildingId())).collect(Collectors.toList());
         }
+        final List<DormRoom> roomSnapshot = rooms;
 
         long totalBeds = beds.size();
         long occupiedBeds = beds.stream().filter(b -> b.getStatus() != null && b.getStatus() == 1).count();
@@ -138,7 +144,7 @@ public class DashboardController {
         List<Map<String, Object>> abnormalAlerts = bills.stream()
                 .filter(b -> b.getAbnormalFlag() != null && b.getAbnormalFlag() == 1)
                 .map(b -> {
-                    DormRoom r = rooms.stream().filter(rm -> Objects.equals(rm.getId(), b.getRoomId())).findFirst().orElse(null);
+                    DormRoom r = roomSnapshot.stream().filter(rm -> Objects.equals(rm.getId(), b.getRoomId())).findFirst().orElse(null);
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("billMonth", b.getBillMonth());
                     m.put("roomName", bNameMap.getOrDefault(b.getBuildingId(), "") + "-" + (r != null ? r.getRoomNo() : b.getRoomId()));
