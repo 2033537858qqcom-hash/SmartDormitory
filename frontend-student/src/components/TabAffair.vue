@@ -68,10 +68,10 @@
         </div>
       </button>
 
-      <div class="sec-bar section-gap">
+      <div class="sec-bar section-gap adjust-progress-head">
         <h3 class="sec-title">调宿与退宿申请进度</h3>
         <div class="sec-btn-row">
-          <button type="button" class="mini-sec-btn spring-btn" @click="openAdjustHabitSheet">🎯 调宿习惯设置</button>
+          <button type="button" class="mini-sec-btn spring-btn" @click="openAdjustHabitSheet">习惯偏好</button>
           <button type="button" class="mini-add-btn spring-btn" @click="openSheetWithCheck('adjust')">+ 申请调宿/退宿</button>
         </div>
       </div>
@@ -115,23 +115,25 @@
     </div>
 
     <!-- 2. 调宿与退宿申请半屏抽屉（内置六维画像智能推荐空床位） -->
-    <BottomSheet v-model="adjustSheet" title="调换宿舍与退宿办理">
-      <div class="type-switch">
+    <BottomSheet v-model="adjustSheet" title="调宿与退宿">
+      <div class="type-switch" role="group" aria-label="申请类型">
         <button
           type="button"
           class="type-pill spring-btn"
           :class="{ active: adjustForm.applyType === 'ADJUST' }"
+          :aria-pressed="adjustForm.applyType === 'ADJUST'"
           @click="adjustForm.applyType = 'ADJUST'"
         >
-          申请调换宿舍
+          调换宿舍
         </button>
         <button
           type="button"
           class="type-pill spring-btn"
           :class="{ active: adjustForm.applyType === 'CHECKOUT' }"
+          :aria-pressed="adjustForm.applyType === 'CHECKOUT'"
           @click="adjustForm.applyType = 'CHECKOUT'"
         >
-          办理退宿离校
+          退宿离校
         </button>
       </div>
 
@@ -140,36 +142,39 @@
         <div class="adjust-habit-box">
           <div class="adj-habit-head">
             <div class="adj-habit-title">
-              <span class="sparkle-icon">✨</span>
-              <b>调宿作息偏好与画像</b>
+              <b>生活习惯偏好</b>
             </div>
             <button
               type="button"
               class="adj-habit-toggle spring-btn"
+              :aria-expanded="showAdjustRadar"
+              aria-controls="adjust-radar"
               @click="showAdjustRadar = !showAdjustRadar"
             >
-              {{ showAdjustRadar ? '收起雷达图 ▲' : '滑动调整偏好 ▼' }}
+              {{ showAdjustRadar ? '收起' : '调整偏好' }} <span aria-hidden="true">{{ showAdjustRadar ? '⌃' : '⌄' }}</span>
             </button>
           </div>
           <p class="adj-habit-desc">
-            想要调换宿舍？建议直接在下方雷达图滑动调整作息偏好，系统将基于最新偏好为您重新匹配推荐寝室。
+            调整并保存偏好后，可刷新适合你的寝室推荐。
           </p>
 
-          <div v-if="showAdjustRadar" class="adj-radar-wrap">
+          <div v-if="showAdjustRadar" id="adjust-radar" class="adj-radar-wrap">
             <HabitRadarChart
-              v-model="adjustHabitForm"
+              :model-value="adjustHabitForm"
+              @update:model-value="Object.assign(adjustHabitForm, $event)"
               compact
               :show-legend="false"
+              :show-hint="false"
             />
             <div class="adj-habit-actions">
-              <span class="adj-habit-tip">👆 直接拖动雷达顶点即可调分</span>
+              <span class="adj-habit-tip">拖动图中顶点调整分值</span>
               <button
                 type="button"
                 class="save-adjust-habit-btn spring-btn"
                 :disabled="savingAdjustHabit"
                 @click="saveAdjustHabitProfile"
               >
-                {{ savingAdjustHabit ? '保存中...' : '保存习惯并刷新推荐' }}
+                {{ savingAdjustHabit ? '保存中...' : '保存并刷新推荐' }}
               </button>
             </div>
           </div>
@@ -177,28 +182,34 @@
 
         <!-- 智能推荐契合寝室列表 -->
         <div v-if="recommendedRooms.length" class="rec-box">
-          <div class="rec-header">✨ 基于您的六维画像智能推荐空床：</div>
+          <div class="rec-heading"><div class="rec-header">推荐床位</div><span>选择后自动填写目标床位</span></div>
           <div class="rec-list">
             <button
               v-for="rec in recommendedRooms.slice(0, 3)"
               :key="rec.roomId"
               type="button"
               class="rec-card spring-btn"
-              :class="{ active: adjustForm.targetRoomId === rec.roomId }"
+              :class="{ active: adjustForm.targetRoomId === rec.roomId && adjustForm.targetBedNo === rec.recommendedBedNo }"
+              :aria-pressed="adjustForm.targetRoomId === rec.roomId && adjustForm.targetBedNo === rec.recommendedBedNo"
+              :disabled="dormOptionsLoading || dormOptionsError || !isAvailableRecommendation(rec)"
               @click="applyRecommendedRoom(rec)"
             >
               <div class="rec-top tabular-nums">
-                <b>{{ rec.buildingName }} · {{ rec.roomNo }}室 ({{ rec.recommendedBedNo }}号床)</b>
-                <span class="rec-score">契合度 {{ rec.matchScore }}%</span>
+                <b>{{ rec.buildingName }} · {{ rec.roomNo }}室</b>
+                <span class="rec-score">{{ rec.styleTag === '全新空寝·自由塑风' ? '参考分' : '契合度' }} {{ rec.matchScore }}%</span>
               </div>
-              <div class="rec-sub">{{ rec.styleTag }} · 调入后预计寝室和谐度 {{ rec.predictedHarmonyScore }}%</div>
+              <div class="rec-sub"><span>{{ rec.recommendedBedNo }}号床 · {{ rec.styleTag === '全新空寝·自由塑风' ? '暂无室友画像，分数仅供参考' : rec.styleTag }}</span><span v-if="!dormOptionsLoading && !isAvailableRecommendation(rec)">已不可选</span><span v-else-if="adjustForm.targetRoomId === rec.roomId && adjustForm.targetBedNo === rec.recommendedBedNo" class="rec-selected">已选择</span></div>
             </button>
           </div>
         </div>
 
+        <div class="adjust-section-heading"><b>目标床位</b><span>可手动更改</span></div>
+        <div v-if="dormOptionsLoading" class="adjust-status" role="status">正在加载可选床位…</div>
+        <div v-else-if="dormOptionsError" class="adjust-status" role="alert">床位信息加载失败。<button type="button" class="retry-options" @click="loadDormOptions">重新加载</button></div>
         <div class="form-row">
-          <label for="adj-building">1. 选择目标楼栋</label>
-          <select id="adj-building" v-model="selectedBuildingId" class="inp" @change="onBuildingSelectChange">
+          <label for="adj-building">目标楼栋</label>
+          <select id="adj-building" v-model="selectedBuildingId" class="inp" :disabled="dormOptionsLoading || dormOptionsError || !buildings.length" @change="onBuildingSelectChange">
+            <option v-if="!buildings.length" :value="null">暂无可选楼栋</option>
             <option v-for="b in buildings" :key="b.id" :value="b.id">
               {{ b.buildingName }} ({{ b.genderType === 1 ? '男寝' : '女寝' }})
             </option>
@@ -206,8 +217,8 @@
         </div>
 
         <div class="form-row">
-          <label for="adj-room">2. 选择有空床的房间</label>
-          <select id="adj-room" v-model="adjustForm.targetRoomId" class="inp" @change="onRoomSelectChange">
+          <label for="adj-room">目标房间</label>
+          <select id="adj-room" v-model="adjustForm.targetRoomId" class="inp" :disabled="dormOptionsLoading || dormOptionsError || !availableRoomsInBuilding.length" @change="onRoomSelectChange">
             <option v-if="!availableRoomsInBuilding.length" :value="null">该楼栋暂无可选房间</option>
             <option v-for="r in availableRoomsInBuilding" :key="r.id" :value="r.id">
               {{ r.roomNo }}室（空余 {{ Math.max(0, r.capacity - r.occupiedCount) }} 床）
@@ -216,8 +227,8 @@
         </div>
 
         <div class="form-row">
-          <label>3. 选择空闲床位</label>
-          <div v-if="freeBedsInSelectedRoom.length" class="bed-pick-grid">
+          <div class="adjust-field-label" id="adjust-bed-label">空闲床位</div>
+          <div v-if="freeBedsInSelectedRoom.length && !dormOptionsError" class="bed-pick-grid" role="group" aria-labelledby="adjust-bed-label">
             <button
               v-for="bed in freeBedsInSelectedRoom"
               :key="bed.id"
@@ -230,19 +241,19 @@
               {{ bed.bedNo }}号床 (空闲)
             </button>
           </div>
-          <div v-else class="no-bed-tip">该房间暂无空闲床位，请切换其他房间</div>
+          <div v-else-if="!dormOptionsLoading && !dormOptionsError" class="no-bed-tip">该房间暂无空闲床位，请选择其他房间</div>
         </div>
       </template>
 
       <div class="form-row">
-        <label for="adj-reason">{{ adjustForm.applyType === 'CHECKOUT' ? '退宿离校事由（如实习、休学、毕业）' : '4. 申请原因说明' }}</label>
-        <textarea id="adj-reason" v-model="adjustForm.reason" rows="2" class="inp" placeholder="请说明原因..."></textarea>
+        <label for="adj-reason">{{ adjustForm.applyType === 'CHECKOUT' ? '退宿原因' : '申请原因' }}</label>
+        <textarea id="adj-reason" v-model="adjustReason" rows="3" class="inp" :placeholder="adjustForm.applyType === 'CHECKOUT' ? '请简要说明退宿原因' : '请简要说明调宿原因'"></textarea>
       </div>
 
       <button
         type="button"
-        class="sheet-submit spring-btn"
-        :disabled="submitting || (adjustForm.applyType === 'ADJUST' && !freeBedsInSelectedRoom.length)"
+        class="sheet-submit adjust-submit spring-btn"
+        :disabled="submitting || (adjustForm.applyType === 'ADJUST' && (dormOptionsLoading || dormOptionsError || !freeBedsInSelectedRoom.some(b => b.bedNo === adjustForm.targetBedNo)))"
         @click="submitAdjust"
       >
         {{ submitting ? '正在提交...' : (adjustForm.applyType === 'CHECKOUT' ? '提交退宿离校申请' : '提交调宿申请') }}
@@ -391,7 +402,9 @@ const submitting = ref(false)
 
 const buildings = ref([])
 const allRooms = ref([])
-const selectedBuildingId = ref(1)
+const selectedBuildingId = ref(null)
+const dormOptionsLoading = ref(true)
+const dormOptionsError = ref(false)
 
 const rechargeSheet = ref(false)
 const rechargeTarget = ref('ELECTRIC')
@@ -448,8 +461,12 @@ const adjustSheet = ref(false)
 const adjustForm = reactive({
   applyType: 'ADJUST',
   targetRoomId: 3,
-  targetBedNo: 1,
-  reason: '备战考研需要早睡安静作息，申请调入作息相近的寝室'
+  targetBedNo: 1
+})
+const adjustReasons = reactive({ ADJUST: '', CHECKOUT: '' })
+const adjustReason = computed({
+  get: () => adjustReasons[adjustForm.applyType],
+  set: value => { adjustReasons[adjustForm.applyType] = value }
 })
 
 const visitorSheet = ref(false)
@@ -579,10 +596,15 @@ const submitAppeal = async () => {
 }
 
 const applyRecommendedRoom = (rec) => {
+  if (!isAvailableRecommendation(rec)) return
   selectedBuildingId.value = rec.buildingId
   adjustForm.targetRoomId = rec.roomId
   adjustForm.targetBedNo = rec.recommendedBedNo
-  adjustForm.reason = `系统六维算法推荐【${rec.buildingName}${rec.roomNo}室】（契合度${rec.matchScore}%，${rec.styleTag}），申请调入该寝室`
+}
+
+const isAvailableRecommendation = (rec) => {
+  const room = allRooms.value.find(r => r.id === rec.roomId && r.buildingId === rec.buildingId && r.id !== props.dash.room?.id && r.capacity - r.occupiedCount > 0)
+  return Boolean(room && buildings.value.some(b => b.id === rec.buildingId) && room.beds?.some(b => b.status === 0 && b.bedNo === rec.recommendedBedNo))
 }
 
 const availableRoomsInBuilding = computed(() => {
@@ -606,18 +628,27 @@ const formatRoomDisplay = (roomId, bedNo) => {
 }
 
 const loadDormOptions = async () => {
-  const [bRes, rRes] = await Promise.all([
-    api.get('/dorm/buildings'),
-    api.get('/dorm/rooms')
-  ])
-  buildings.value = bRes.data || []
-  allRooms.value = rRes.data || []
-  syncAdjustSelection()
+  dormOptionsLoading.value = true
+  dormOptionsError.value = false
+  try {
+    const [bRes, rRes] = await Promise.all([
+      api.get('/dorm/buildings'),
+      api.get('/dorm/rooms')
+    ])
+    buildings.value = bRes.data || []
+    allRooms.value = rRes.data || []
+    syncAdjustSelection()
+  } catch (_) {
+    dormOptionsError.value = true
+  } finally {
+    dormOptionsLoading.value = false
+  }
 }
 
 const syncAdjustSelection = () => {
-  if (recommendedRooms.value.length) {
-    applyRecommendedRoom(recommendedRooms.value[0])
+  const recommended = recommendedRooms.value.find(isAvailableRecommendation)
+  if (recommended) {
+    applyRecommendedRoom(recommended)
     return
   }
   if (props.dash.building?.id) {
@@ -701,22 +732,35 @@ const submitRecharge = async () => {
 }
 
 const submitAdjust = async () => {
+  if (submitting.value) return
+  if (!adjustReason.value.trim()) {
+    emit('toast', { msg: '请填写申请原因', type: 'warning' })
+    return
+  }
+  if (adjustForm.applyType === 'ADJUST' && (dormOptionsLoading.value || dormOptionsError.value || !freeBedsInSelectedRoom.value.some(b => b.bedNo === adjustForm.targetBedNo))) {
+    emit('toast', { msg: '请选择可用的目标床位', type: 'warning' })
+    return
+  }
   submitting.value = true
   try {
-    const isCheckout = adjustForm.applyType === 'CHECKOUT'
+    const submittedType = adjustForm.applyType
+    const isCheckout = submittedType === 'CHECKOUT'
     await api.post('/affair/adjust-apply', {
       studentId: props.dash.user?.id || 10,
-      applyType: adjustForm.applyType,
+      applyType: submittedType,
       oldRoomId: props.dash.room?.id || 1,
       oldBedNo: props.dash.bed?.bedNo || 1,
       targetRoomId: isCheckout ? null : adjustForm.targetRoomId,
       targetBedNo: isCheckout ? null : adjustForm.targetBedNo,
-      reason: adjustForm.reason
+      reason: adjustReason.value.trim()
     })
+    adjustReasons[submittedType] = ''
     adjustSheet.value = false
     subTab.value = 'affair'
     emit('toast', { msg: isCheckout ? '退宿申请已提交宿管审批' : '调宿申请已提交宿管审批', type: 'success' })
     emit('refresh')
+  } catch (error) {
+    emit('toast', { msg: error.message || '提交失败，请稍后重试', type: 'error' })
   } finally {
     submitting.value = false
   }
@@ -1098,17 +1142,18 @@ onMounted(() => {
 .type-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 4px;
   background: var(--bg-muted);
   padding: 4px;
-  border-radius: 12px;
-  margin-bottom: 16px;
+  border-radius: 14px;
+  margin-bottom: 20px;
 }
 .type-pill {
   border: 0;
   background: transparent;
-  padding: 8px 0;
-  border-radius: 9px;
+  min-height: 40px;
+  padding: 8px 6px;
+  border-radius: 11px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -1117,51 +1162,68 @@ onMounted(() => {
   background: var(--bg-surface);
   color: var(--accent-primary);
   font-weight: 600;
+  box-shadow: 0 1px 4px rgb(29 29 31 / 8%);
 }
 
 .rec-box {
-  margin-bottom: 14px;
+  margin-bottom: 23px;
 }
+.rec-heading, .adjust-section-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
+.rec-heading span, .adjust-section-heading span { color: var(--text-muted); font-size: 11px; }
 .rec-header {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--accent-primary);
-  margin-bottom: 6px;
+  color: var(--text-primary);
 }
 .rec-list {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 .rec-card {
   width: 100%;
   text-align: left;
   border: 1px solid var(--border-subtle);
-  background: var(--bg-canvas);
-  border-radius: 12px;
-  padding: 10px 12px;
+  background: #f8f8fa;
+  border-radius: 15px;
+  padding: 12px 14px;
   color: var(--text-primary);
 }
 .rec-card.active {
-  border-color: var(--accent-primary);
+  border-color: #8dbaf0;
   background: var(--accent-subtle);
 }
 .rec-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 8px;
   font-size: 13px;
 }
+.rec-top b { min-width: 0; overflow-wrap: anywhere; }
 .rec-score {
-  color: var(--status-success);
+  color: var(--accent-primary);
   font-weight: 600;
   font-size: 12px;
+  white-space: nowrap;
 }
 .rec-sub {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 3px;
+  line-height: 1.5;
+  margin-top: 5px;
 }
+.rec-selected { color: var(--accent-primary); font-weight: 600; white-space: nowrap; }
+.adjust-section-heading { padding-top: 2px; margin-bottom: 13px; }
+.adjust-section-heading b { font-size: 15px; }
+.adjust-status { margin: 0 0 12px; color: var(--text-secondary); font-size: 12px; }
+.retry-options { border: 0; background: transparent; color: var(--accent-primary); padding: 4px; font: inherit; }
+.adjust-field-label { display: block; font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; }
+.adjust-submit { position: static; box-shadow: none; margin-top: 6px; }
 
 .qr-pass-modal {
   display: flex;
@@ -1317,29 +1379,33 @@ onMounted(() => {
 .sec-btn-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
+.adjust-progress-head { flex-wrap: wrap; gap: 10px 12px; }
 .mini-sec-btn {
-  border: 1px solid var(--border-strong);
-  background: var(--bg-surface);
+  min-height: 34px;
+  border: 0;
+  background: var(--bg-muted);
   color: var(--accent-primary);
   font-size: 12px;
   font-weight: 500;
-  padding: 5px 10px;
-  border-radius: 8px;
+  padding: 7px 12px;
+  border-radius: 10px;
   cursor: pointer;
 }
 .adjust-habit-box {
-  background: var(--accent-subtle);
-  border: 1px solid rgba(0, 110, 219, 0.16);
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  background: #f5f7fb;
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 22px;
 }
 .adj-habit-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 .adj-habit-title {
   display: flex;
@@ -1349,20 +1415,20 @@ onMounted(() => {
   color: var(--text-primary);
 }
 .adj-habit-toggle {
-  border: 1px solid var(--accent-primary);
-  background: var(--bg-surface);
+  border: 0;
+  background: transparent;
   color: var(--accent-primary);
   font-size: 11.5px;
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 8px 0 8px 8px;
   border-radius: 99px;
   cursor: pointer;
 }
 .adj-habit-desc {
   font-size: 12px;
   color: var(--text-secondary);
-  line-height: 1.45;
-  margin: 6px 0 0;
+  line-height: 1.5;
+  margin: 3px 0 0;
 }
 .adj-radar-wrap {
   margin-top: 10px;
@@ -1374,6 +1440,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   padding: 8px 10px 0;
   border-top: 1px solid var(--border-subtle);
   margin-top: 6px;

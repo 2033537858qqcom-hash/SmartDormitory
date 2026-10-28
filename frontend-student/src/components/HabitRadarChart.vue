@@ -1,10 +1,9 @@
 <template>
   <div class="habit-radar-container" :class="{ compact, dragging: isDragging }">
     <!-- 交互提示条 -->
-    <div v-if="!readonly" class="drag-hint-pill">
-      <span class="hint-icon">👆</span>
+    <div v-if="!readonly && showHint" class="drag-hint-pill">
       <span class="hint-text">
-        {{ isDragging ? `正在调整【${activeDimLabel}】：${activeDimScore}分 · ${activeDimTip}` : '按住雷达图顶点向外或向内滑动，可直接调分' }}
+        {{ isDragging ? `正在调整${activeDimLabel}：${activeDimScore}分 · ${activeDimTip}` : '拖动图中顶点，或使用下方滑块调整' }}
       </span>
     </div>
 
@@ -186,8 +185,8 @@
 
       <!-- 图例与说明 -->
       <div v-if="showLegend" class="radar-legend">
-        <span><i class="dot primary"></i> 我的习惯偏好（可拖动调整）</span>
-        <span v-if="roomAvgPolygon"><i class="dot slate"></i> 寝室室友平均</span>
+        <span><i class="dot primary"></i> 我的偏好</span>
+        <span v-if="roomAvgPolygon"><i class="dot slate"></i> 寝室平均</span>
       </div>
     </div>
   </div>
@@ -225,6 +224,10 @@ const props = defineProps({
     default: false
   },
   showLegend: {
+    type: Boolean,
+    default: true
+  },
+  showHint: {
     type: Boolean,
     default: true
   }
@@ -518,24 +521,11 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--accent-subtle, rgba(0, 110, 219, 0.08));
-  border: 1px solid var(--border-subtle, rgba(0, 110, 219, 0.18));
-  border-radius: 99px;
-  padding: 4px 12px;
+  padding: 0 8px;
   margin-bottom: 8px;
   font-size: 11.5px;
   font-weight: 500;
-  color: var(--accent-primary, #006edb);
-  animation: hintPulse 2.8s ease-in-out infinite;
-}
-
-@keyframes hintPulse {
-  0%, 100% { transform: scale(1); opacity: 0.95; }
-  50% { transform: scale(1.02); opacity: 1; }
-}
-
-.hint-icon {
-  font-size: 13px;
+  color: var(--text-muted, #76767d);
 }
 
 .r-sub {

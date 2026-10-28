@@ -18,20 +18,23 @@
       <el-button type="danger" plain size="small" @click="loadData">重新加载</el-button>
     </div>
 
-    <!-- 分寝四步流程引导卡片：检查条件 -> 预览方案 -> 确认分配 -> 查看结果 -->
-    <el-card shadow="never" class="surface-card">
-      <div class="section-header">
+    <!-- 分寝主控台卡片 -->
+    <el-card shadow="never" class="surface-card alloc-main-card">
+      <!-- 顶部操作条：左侧标题与沙盘开关，右侧辅助管理工具 -->
+      <div class="alloc-top-bar">
         <div class="section-title-group">
           <h3 class="section-title heading-balance">新生智能分寝</h3>
+          <el-tag size="small" type="primary" effect="plain" class="algo-badge">六维加权欧氏聚类</el-tag>
           <el-popover placement="bottom-start" :width="360" trigger="click">
             <template #reference>
-              <el-button size="small" text type="primary">分寝规则说明</el-button>
+              <el-button size="small" text type="primary" icon="QuestionFilled">分寝规则说明</el-button>
             </template>
             <div class="rule-popover-content">
               <h4>分寝匹配规则说明</h4>
               <ul>
                 <li><b>问卷维度</b>：采集作息时间、睡眠深浅、空调温度、卫生习惯、寝室氛围、异味敏感度 6 项指标（1~5分）。</li>
-                <li><b>匹配方式</b>：按加权距离将作息与生活习惯相近的同性别新生聚入同一寝室，并支持开启同班级优先聚拢约束。</li>
+                <li><b>匹配方式</b>：按加权欧氏距离与余弦相似度将作息与生活习惯相近的同性别新生聚入同一寝室，并支持开启同班级优先聚拢约束。</li>
+                <li><b>半空寝室兼顾</b>：自动提取房间内已有在住室友画像参与候选人贪心吸纳计算。</li>
               </ul>
             </div>
           </el-popover>
@@ -40,11 +43,21 @@
           </el-button>
         </div>
 
-        <div class="toolbar-actions">
+        <div class="aux-actions">
+          <el-button plain size="small" icon="Upload" type="success" @click="importVisible = true">新生 CSV 导入</el-button>
+          <el-button plain size="small" icon="CircleCheck" @click="loadPrecheck">分寝前校验</el-button>
+          <el-button plain size="small" icon="Document" @click="openAllocationLogs">分配记录</el-button>
+          <el-button plain size="small" icon="RefreshLeft" type="warning" :loading="resetting" @click="handleResetDemo">重置演示新生</el-button>
+        </div>
+      </div>
+
+      <!-- 核心分寝操作栏（独立高亮展示，避免拥挤折行） -->
+      <div class="primary-workflow-bar">
+        <div class="workflow-left">
           <span class="field-label">目标楼栋：</span>
           <el-select
             v-model="selectedBuildingId"
-            placeholder="选择目标楼栋"
+            placeholder="请选择目标楼栋"
             class="building-select"
             @change="onBuildingChange"
           >
@@ -55,11 +68,14 @@
               :value="b.id"
             />
           </el-select>
+        </div>
+        <div class="workflow-right">
           <el-button
             :type="canCommit ? 'default' : 'primary'"
             :plain="canCommit"
             icon="View"
             :loading="running"
+            class="action-btn-main"
             @click="handleRun(false)"
           >
             {{ allocResult ? '重新生成预览' : '生成预览方案' }}
@@ -69,47 +85,51 @@
             icon="Check"
             :loading="running"
             :disabled="!canCommit"
+            class="action-btn-main"
             @click="confirmAndCommit"
           >
             确认执行分配
           </el-button>
-          <el-button
-            type="warning"
-            plain
-            icon="RefreshLeft"
-            :loading="resetting"
-            @click="handleResetDemo"
-          >
-            重置演示新生
-          </el-button>
-          <el-button plain @click="loadPrecheck">分寝前校验</el-button>
-          <el-button plain @click="openAllocationLogs">分配记录</el-button>
-          <el-button plain type="success" @click="importVisible = true">新生 CSV 导入</el-button>
         </div>
       </div>
 
       <!-- 算法权重与混合约束沙盘调优面板 -->
-      <div v-if="showSandbox" class="sandbox-panel">
-        <div class="sandbox-top">
-          <div class="sandbox-strategy">
-            <span class="field-label">分簇约束策略：</span>
-            <el-radio-group v-model="strategyMode" size="small" @change="allocResult = null">
-              <el-radio-button label="HABIT_FIRST">纯生活习惯聚类</el-radio-button>
-              <el-radio-button label="CLASS_MIX">同班级优先 + 习惯聚类</el-radio-button>
-            </el-radio-group>
-          </div>
-          <el-button size="small" link type="primary" @click="resetWeights">恢复默认权重</el-button>
-        </div>
-        <div class="weights-grid tabular-nums">
-          <div v-for="(item, idx) in weightConfigs" :key="item.key" class="weight-item">
-            <div class="w-head">
-              <span>{{ item.label }}</span>
-              <b>{{ customWeights[idx] }}%</b>
+      <transition name="el-zoom-in-top">
+        <div v-if="showSandbox" class="sandbox-panel">
+          <div class="sandbox-top">
+            <div class="sandbox-strategy">
+              <span class="field-label">分簇约束策略：</span>
+              <el-radio-group v-model="strategyMode" size="small" @change="allocResult = null">
+                <el-radio-button label="HABIT_FIRST">纯生活习惯聚类</el-radio-button>
+                <el-radio-button label="CLASS_MIX">同班级优先 + 习惯聚类</el-radio-button>
+              </el-radio-group>
             </div>
-            <el-slider v-model="customWeights[idx]" :min="5" :max="60" :step="5" size="small" />
+            <div class="sandbox-presets">
+              <span class="preset-label">快捷预设：</span>
+              <el-button-group size="small">
+                <el-button size="small" text @click="applyWeightPreset('default')">默认推荐</el-button>
+                <el-button size="small" text @click="applyWeightPreset('schedule')">作息敏感</el-button>
+                <el-button size="small" text @click="applyWeightPreset('clean')">卫生整洁</el-button>
+                <el-button size="small" text @click="applyWeightPreset('equal')">均等分配</el-button>
+              </el-button-group>
+              <el-tag :type="totalWeight === 100 ? 'success' : 'warning'" size="small" class="weight-total-tag">
+                权重合计: {{ totalWeight }}% {{ totalWeight === 100 ? '✓' : '(建议100%)' }}
+              </el-tag>
+              <el-button size="small" link type="primary" @click="resetWeights">重置</el-button>
+            </div>
+          </div>
+          <div class="weights-grid tabular-nums">
+            <div v-for="(item, idx) in weightConfigs" :key="item.key" class="weight-card">
+              <div class="w-head">
+                <span class="w-title">{{ item.label }}</span>
+                <b class="w-val">{{ customWeights[idx] }}%</b>
+              </div>
+              <el-slider v-model="customWeights[idx]" :min="5" :max="60" :step="5" size="small" />
+              <div class="w-desc">{{ item.desc }}</div>
+            </div>
           </div>
         </div>
-      </div>
+      </transition>
 
       <!-- 流程步骤条 -->
       <ol class="alloc-steps" aria-label="分寝进度">
@@ -399,17 +419,36 @@ const showSandbox = ref(false)
 const strategyMode = ref('HABIT_FIRST')
 const customWeights = ref([30, 20, 10, 15, 20, 5])
 const weightConfigs = [
-  { key: 'schedule', label: '作息时间权重' },
-  { key: 'sleep', label: '睡眠浅度权重' },
-  { key: 'ac', label: '空调温度权重' },
-  { key: 'clean', label: '卫生标准权重' },
-  { key: 'atmos', label: '寝室氛围权重' },
-  { key: 'odor', label: '异味敏感权重' }
+  { key: 'schedule', label: '作息时间权重', desc: '早睡早起 ↔ 熬夜晚起' },
+  { key: 'sleep', label: '睡眠浅度权重', desc: '沉睡不易醒 ↔ 浅眠易惊醒' },
+  { key: 'ac', label: '空调温度权重', desc: '偏好低温 ↔ 怕冷常温' },
+  { key: 'clean', label: '卫生标准权重', desc: '随性自在 ↔ 每日打扫洁癖' },
+  { key: 'atmos', label: '寝室氛围权重', desc: '安静自习型 ↔ 社交游戏型' },
+  { key: 'odor', label: '异味敏感权重', desc: '不敏感 ↔ 极度敏感无烟' }
 ]
+
+const totalWeight = computed(() =>
+  customWeights.value.reduce((sum, w) => sum + Number(w || 0), 0)
+)
+
+const applyWeightPreset = (preset) => {
+  if (preset === 'default') {
+    customWeights.value = [30, 20, 10, 15, 20, 5]
+  } else if (preset === 'schedule') {
+    customWeights.value = [40, 30, 5, 10, 10, 5]
+  } else if (preset === 'clean') {
+    customWeights.value = [15, 10, 10, 35, 10, 20]
+  } else if (preset === 'equal') {
+    customWeights.value = [17, 17, 17, 17, 16, 16]
+  }
+  allocResult.value = null
+  ElMessage.success('已切换沙盘权重预设')
+}
 
 const resetWeights = () => {
   customWeights.value = [30, 20, 10, 15, 20, 5]
   strategyMode.value = 'HABIT_FIRST'
+  allocResult.value = null
   ElMessage.info('已恢复默认六维权重与策略')
 }
 
@@ -674,13 +713,61 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
   font-weight: 600;
 }
+.alloc-main-card {
+  padding-bottom: 20px;
+}
+.alloc-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.algo-badge {
+  font-weight: 500;
+  border-radius: 6px;
+}
+.aux-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.primary-workflow-bar {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.workflow-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.workflow-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.action-btn-main {
+  min-width: 120px;
+}
 .building-select {
-  width: 200px;
+  width: 220px;
 }
 .sandbox-panel {
-  margin-top: 18px;
-  padding: 18px 20px;
+  margin-top: 16px;
+  padding: 16px 20px;
   background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
 }
 .sandbox-top {
@@ -688,25 +775,70 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border-strong);
 }
 .sandbox-strategy {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+.sandbox-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preset-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.weight-total-tag {
+  font-weight: 600;
+  font-size: 12px;
+}
 .weights-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px 24px;
+  gap: 14px 20px;
 }
-.weight-item .w-head {
+.weight-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+.weight-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(0, 110, 219, 0.08);
+}
+.weight-card .w-head {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-secondary);
+  align-items: center;
   margin-bottom: 2px;
+}
+.w-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.w-val {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+.w-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .alloc-steps {
   list-style: none;

@@ -9,25 +9,29 @@
     <section class="survey-card">
       <div class="s-head">
         <div>
-          <h2 class="s-title">{{ isTransferMode ? '校准调宿画像' : '习惯问卷' }}</h2>
+          <h2 class="s-title">{{ isTransferMode ? '你的生活习惯' : '习惯问卷' }}</h2>
           <p class="s-desc">
-            {{ isTransferMode ? '手指直接按住雷达图顶点滑动，即可快速调整您的作息与偏好' : '滑动雷达图或下方滑块调整作息，系统将据此匹配最契合的室友' }}
+            {{ isTransferMode ? '拖动图中顶点或下方滑块，调整后保存即可更新推荐。' : '调整日常习惯，帮助系统匹配作息相近的室友。' }}
           </p>
+          <p v-if="!dash.habitProfile" class="profile-note">尚未保存习惯，当前显示初始值。</p>
         </div>
       </div>
 
       <!-- 核心交互区：直接呈现实时可滑动调整的六维雷达图 -->
       <div class="radar-preview-box">
         <HabitRadarChart
-          v-model="form"
+          :model-value="form"
+          @update:model-value="updateForm"
           :room-radar="dash.roomRadar"
-          :sub-title="radarSubtitle"
+          :sub-title="inSheet ? '' : radarSubtitle"
+          :show-hint="!inSheet"
           @change="onRadarChange"
         />
       </div>
 
       <!-- 6 项习惯偏好液态滑块（与雷达图双向完全联动） -->
       <div class="slider-group">
+        <div class="slider-heading"><b>六项偏好</b><span>从 1 到 5 调整</span></div>
         <div v-for="dim in dimensions" :key="dim.key" class="slider-item">
           <div class="sl-head">
             <label :for="dim.key" class="sl-label">{{ dim.label }}</label>
@@ -85,13 +89,13 @@ const saving = ref(false)
 const isTransferMode = computed(() => props.mode === 'transfer')
 
 const form = reactive({
-  scheduleScore: 2,
-  sleepDepthScore: 4,
+  scheduleScore: 3,
+  sleepDepthScore: 3,
   acTempScore: 3,
-  cleanlinessScore: 5,
-  atmosphereScore: 2,
-  odorSensitiveScore: 5,
-  hobbyTags: '图书馆自习,早起,羽毛球'
+  cleanlinessScore: 3,
+  atmosphereScore: 3,
+  odorSensitiveScore: 3,
+  hobbyTags: ''
 })
 
 watch(
@@ -103,7 +107,7 @@ watch(
       form.acTempScore = hp.acTempScore || 3
       form.cleanlinessScore = hp.cleanlinessScore || 3
       form.atmosphereScore = hp.atmosphereScore || 3
-      form.odorSensitiveScore = hp.odorSensitiveScore || 5
+      form.odorSensitiveScore = hp.odorSensitiveScore ?? 3
       form.hobbyTags = hp.hobbyTags || ''
     }
   },
@@ -114,9 +118,10 @@ const radarSubtitle = computed(() => {
   if (isTransferMode.value) {
     return '调宿画像实时预览（拖拽顶点可修改偏好）'
   }
-  return props.dash.room
-    ? `室友契合度：${props.dash.roomRadar?.harmonyScore || 95}% (${props.dash.roomRadar?.styleTag || '融洽寝室'})`
-    : '个人生活习惯六维向量预览（可拖动调整）'
+  const radar = props.dash.roomRadar
+  return radar?.harmonyScore != null
+    ? `寝室和谐度：${radar.harmonyScore}%${radar.styleTag ? ` · ${radar.styleTag}` : ''}`
+    : '个人生活习惯画像'
 })
 
 const dimensions = [
@@ -132,7 +137,10 @@ const onRadarChange = () => {
   // 雷达图微调时可以进行轻量触感反馈或状态追踪
 }
 
+const updateForm = (values) => Object.assign(form, values)
+
 const saveHabit = async () => {
+  if (saving.value) return
   saving.value = true
   try {
     await api.post('/smart-alloc/habit-profile', {
@@ -156,7 +164,7 @@ const saveHabit = async () => {
 }
 
 .in-sheet-mode {
-  padding-bottom: 24px;
+  padding-bottom: 6px;
 }
 
 .survey-card {
@@ -167,12 +175,14 @@ const saveHabit = async () => {
   margin-bottom: 16px;
 }
 
+.in-sheet-mode .survey-card { padding: 2px 0 0; margin-bottom: 0; border-radius: 0; }
+
 .s-head {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .s-title {
@@ -185,20 +195,25 @@ const saveHabit = async () => {
 .s-desc {
   font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.55;
+  margin-top: 5px;
 }
+.profile-note { margin-top: 5px; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 
 .radar-preview-box {
   background: var(--bg-canvas);
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  padding: 12px 6px 14px;
-  margin-bottom: 16px;
+  border-radius: 18px;
+  padding: 15px 6px 14px;
+  margin-bottom: 22px;
 }
 
 .slider-group {
   margin-top: 10px;
 }
+.slider-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+.slider-heading b { font-size: 15px; color: var(--text-primary); }
+.slider-heading span { font-size: 11px; color: var(--text-muted); }
 
 .slider-item {
   padding: 14px 0;
@@ -210,6 +225,7 @@ const saveHabit = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   margin-bottom: 6px;
 }
 
@@ -222,6 +238,7 @@ const saveHabit = async () => {
   font-size: 12px;
   color: var(--accent-primary);
   font-weight: 600;
+  text-align: right;
 }
 
 .liquid-range {
