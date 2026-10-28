@@ -37,6 +37,9 @@
         <button type="button" class="act-btn secondary spring-btn" @click="$emit('go-tab', 'affair')">
           <span class="act-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4" /></svg></span><span>去办宿务</span>
         </button>
+        <button v-if="isAllocated" type="button" class="act-btn secondary spring-btn" @click="openHistory">
+          <span class="act-icon">账</span><span>缴费流水</span>
+        </button>
       </div>
     </div>
 
@@ -49,7 +52,7 @@
         </button>
       </div>
 
-      <div v-for="b in dash.bills || []" :key="b.id" class="bill-card">
+      <div v-for="b in dash.bills || []" :key="b.id" class="bill-card" :data-message-key="`UTILITY:${b.id}`">
         <div class="bill-head">
           <span class="month tabular-nums">{{ b.billMonth }} 月度账单</span>
           <span :class="b.payStatus === 1 ? 'paid' : 'unpaid'">
@@ -93,6 +96,15 @@
         {{ submitting ? '正在充值...' : '确认充值（演示模拟扣款）' }}
       </button>
     </BottomSheet>
+    <BottomSheet v-model="historySheet" title="缴费流水（演示模拟）">
+      <p v-if="historyLoading">正在加载流水…</p>
+      <p v-else-if="!history.length">暂无缴费流水</p>
+      <div v-for="item in history" :key="item.txnNo" class="history-row">
+        <b>{{ item.actionType === 'RECHARGE' ? '充值' : '账单核销' }}</b>
+        <small>{{ item.createTime }} · {{ item.txnNo }}</small>
+        <small>电费 {{ formatMoney(item.electricBefore) }} → {{ formatMoney(item.electricAfter) }} · 水费 {{ formatMoney(item.waterBefore) }} → {{ formatMoney(item.waterAfter) }}</small>
+      </div>
+    </BottomSheet>
   </div>
 </template>
 
@@ -118,6 +130,21 @@ const submitting = ref(false)
 const rechargeSheet = ref(false)
 const rechargeTarget = ref('ELECTRIC')
 const rechargeAmount = ref(50)
+const historySheet = ref(false)
+const historyLoading = ref(false)
+const history = ref([])
+
+const openHistory = async () => {
+  historySheet.value = true
+  historyLoading.value = true
+  try {
+    const res = await api.get('/utility/payment-logs', { params: { roomId: props.dash.room.id } })
+    history.value = res.data || []
+  } catch (error) {
+    history.value = []
+    emit('toast', { msg: error.message || '流水加载失败', type: 'error' })
+  } finally { historyLoading.value = false }
+}
 
 const formatMoney = (val) => `¥${Number(val || 0).toFixed(2)}`
 
@@ -183,6 +210,7 @@ const payBill = async (b) => {
 </script>
 
 <style scoped>
+.history-row { display: grid; gap: 5px; padding: 14px 0; border-bottom: 1px solid #eee; }.history-row small { color: #666; overflow-wrap: anywhere; }
 .balance-card { background: var(--bg-surface); color: var(--text-primary); border-radius: var(--radius-card); padding: 23px; margin-bottom: 22px; }
 .b-row {
   display: grid;

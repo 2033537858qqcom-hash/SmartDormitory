@@ -166,6 +166,13 @@ const openMessage = async (m) => {
     await request.post('/messages/read', { id: m.id })
     await loadMessages()
   }
+  if (m.msgType === 'REPAIR' && /^\d+$/.test(String(m.bizId || ''))) {
+    await router.push({ path: '/repair-dispatch', query: { orderId: m.bizId } })
+  } else if (['APPEAL', 'ADJUST', 'VISITOR'].includes(m.msgType)) {
+    await router.push('/civilized-affair/todo')
+  } else if (m.msgType === 'UTILITY') {
+    await router.push('/utility-manage')
+  }
 }
 
 

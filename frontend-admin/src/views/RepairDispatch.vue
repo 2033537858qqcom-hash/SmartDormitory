@@ -231,7 +231,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request from '@/api/request'
@@ -376,6 +376,12 @@ const openDetail = (row) => {
   currentOrder.value = row
   drawerVisible.value = true
 }
+
+watch(() => route.query.orderId, (id) => {
+  if (!id) return
+  const matched = allOrdersList.value.find(order => String(order.id) === String(id))
+  if (matched) openDetail(matched)
+})
 
 const openProcess = (row) => {
   processForm.id = row.id

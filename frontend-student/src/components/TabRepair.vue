@@ -24,7 +24,7 @@
         <button type="button" class="empty-cta spring-btn" @click="openSubmitSheet">发起报修</button>
       </div>
 
-      <div v-for="item in dash.myRepairs || []" :key="item.id" class="order-card">
+      <div v-for="item in dash.myRepairs || []" :key="item.id" class="order-card" :data-message-key="`REPAIR:${item.id}`">
         <div class="o-head">
           <span class="o-no tabular-nums">单号 {{ item.orderNo }}</span>
           <span v-if="item.priority === 'HIGH'" class="prio-high">紧急工单</span>

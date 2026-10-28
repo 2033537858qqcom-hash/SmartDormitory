@@ -116,6 +116,7 @@
 import { ref, computed } from 'vue'
 import BottomSheet from './BottomSheet.vue'
 import api from '../api'
+import { messageTarget } from '../messageTarget'
 
 const props = defineProps({
   dash: { type: Object, default: () => ({}) }
@@ -171,13 +172,15 @@ const handleVisitorClick = () => {
 }
 
 const openMessage = async (m) => {
-  emit('toast', m.content || m.title)
   try {
     if (m.readFlag === 0) {
       await api.post('/messages/read', { id: m.id })
       emit('refresh')
     }
   } catch (_) {}
+  const target = messageTarget(m)
+  if (target) emit('go-tab', target)
+  else emit('toast', m.content || m.title)
 }
 
 const openNoticeDetail = (n) => {

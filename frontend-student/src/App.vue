@@ -146,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import api from './api'
 import { signInStudent } from './session'
 import TabHome from './components/TabHome.vue'
@@ -238,7 +238,7 @@ const selectTab = (key) => {
   }
 }
 
-const handleNavigate = (target) => {
+const handleNavigate = async (target) => {
   if (typeof target === 'object' && target !== null) {
     utilityInitialAction.value = target.action || ''
     currentTab.value = target.tab || 'home'
@@ -248,6 +248,13 @@ const handleNavigate = (target) => {
   }
   if (scrollBodyRef.value) {
     scrollBodyRef.value.scrollTop = 0
+  }
+  if (target && typeof target === 'object' && target.key) {
+    await nextTick()
+    const record = Array.from(scrollBodyRef.value?.querySelectorAll('[data-message-key]') || [])
+      .find(item => item.dataset.messageKey === target.key)
+    if (record) record.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    else showToast({ msg: '相关记录不可用或已不在当前列表', type: 'info' })
   }
 }
 

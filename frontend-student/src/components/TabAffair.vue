@@ -36,6 +36,7 @@
       <button
         v-for="v in dash.myVisitors || []"
         :key="v.id"
+        :data-message-key="`VISITOR:${v.id}`"
         type="button"
         class="pass-card spring-btn"
         @click="openQrDetail(v)"
@@ -74,7 +75,7 @@
       <div v-if="!(dash.myAdjusts && dash.myAdjusts.length)" class="empty-tip">
         <p>暂无调宿或退宿申请记录</p>
       </div>
-      <div v-for="a in dash.myAdjusts || []" :key="a.id" class="adjust-item">
+      <div v-for="a in dash.myAdjusts || []" :key="a.id" class="adjust-item" :data-message-key="`ADJUST:${a.id}`">
         <div class="a-top tabular-nums">
           <b>{{ a.applyType === 'CHECKOUT' ? '申请退宿离校' : `调入目标：${formatRoomDisplay(a.targetRoomId, a.targetBedNo)}` }}</b>
           <span class="a-badge" :class="a.status">
@@ -93,7 +94,7 @@
       <div v-if="!(dash.myDisciplines && dash.myDisciplines.length)" class="empty-tip">
         <p>作息良好，暂无晚归或违纪记录</p>
       </div>
-      <div v-for="d in dash.myDisciplines || []" :key="d.id" class="adjust-item">
+      <div v-for="d in dash.myDisciplines || []" :key="d.id" class="adjust-item" :data-message-key="`APPEAL:${d.id}`">
         <div class="a-top tabular-nums">
           <b>{{ d.recordType === 'LATE_RETURN' ? '晚归记录 / 报备' : '安全违纪记录' }}</b>
           <span v-if="d.status === 2" class="a-badge APPROVED">✓ 申诉已核销 · 免扣分</span>
