@@ -329,9 +329,7 @@ public class SmartAllocationService {
             }
 
             if (commit) {
-                room.setOccupiedCount(room.getOccupiedCount() + chosenStudents.size());
-                room.setHarmonyScore(BigDecimal.valueOf(harmonyScore));
-                roomMapper.updateById(room);
+                recalculateRoomHarmony(room.getId());
             }
 
             Map<String, Object> roomDetail = new LinkedHashMap<>();
@@ -392,13 +390,15 @@ public class SmartAllocationService {
     @Transactional(rollbackFor = Exception.class)
     public double recalculateRoomHarmony(Long roomId) {
         if (roomId == null) return 90.0;
-        DormRoom room = roomMapper.selectById(roomId);
+        DormRoom room = roomMapper.selectOne(new LambdaQueryWrapper<DormRoom>()
+                .eq(DormRoom::getId, roomId).last("FOR UPDATE"));
         if (room == null) return 90.0;
 
         List<DormBed> occupiedBeds = bedMapper.selectList(
                 new LambdaQueryWrapper<DormBed>()
                         .eq(DormBed::getRoomId, roomId)
                         .eq(DormBed::getStatus, 1)
+                        .last("FOR UPDATE")
         );
         List<StudentHabitProfile> profiles = new ArrayList<>();
         for (DormBed bed : occupiedBeds) {
@@ -411,10 +411,9 @@ public class SmartAllocationService {
                 }
             }
         }
-        room.setOccupiedCount(occupiedBeds.size());
         double harmony = occupiedBeds.isEmpty() ? 0.0 : calculateGroupHarmony(profiles);
-        room.setHarmonyScore(BigDecimal.valueOf(harmony));
-        roomMapper.updateById(room);
+        roomMapper.update(null, new LambdaUpdateWrapper<DormRoom>().eq(DormRoom::getId, roomId)
+                .set(DormRoom::getOccupiedCount, occupiedBeds.size()).set(DormRoom::getHarmonyScore, BigDecimal.valueOf(harmony)));
         return harmony;
     }
 
