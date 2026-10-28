@@ -34,4 +34,6 @@ public class RepairOrder {
     private String photoUrls;
     /** SLA 截止时间：高危 4h / 普通 24h / 低优 48h */
     private LocalDateTime dueAt;
+    private LocalDateTime slaReminderSentAt;
+    private LocalDateTime slaEscalatedAt;
 }

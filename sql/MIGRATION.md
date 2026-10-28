@@ -105,3 +105,15 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'counselor01');
 - 微信/支付宝真支付网关、校园卡对接
 - 实体闸机 / 人脸门禁硬件 SDK
 - 完整 uni-app / 微信原生小程序工程迁移
+
+## 报修 SLA 提醒增量
+
+已有库在备份后执行以下语句一次，新库使用初始化脚本时无需重复执行：
+
+```sql
+ALTER TABLE repair_order
+  ADD COLUMN sla_reminder_sent_at DATETIME DEFAULT NULL COMMENT '临近截止提醒时间',
+  ADD COLUMN sla_escalated_at DATETIME DEFAULT NULL COMMENT '超时升级通知时间';
+```
+
+服务默认每五分钟检查一次；到期前一小时通知维修人员，超时后通知维修人员和楼栋宿管（无宿管时通知管理员）。消息与标记在同一事务中保存。

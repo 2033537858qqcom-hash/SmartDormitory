@@ -153,7 +153,9 @@ CREATE TABLE `repair_order` (
     `finish_time` DATETIME DEFAULT NULL COMMENT '完成时间',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '报修时间',
     `photo_urls` TEXT DEFAULT NULL COMMENT '故障图片(JSON数组，本地路径或dataURL演示)',
-    `due_at` DATETIME DEFAULT NULL COMMENT 'SLA截止时间(高危4h/普通24h/低优48h)'
+    `due_at` DATETIME DEFAULT NULL COMMENT 'SLA截止时间(高危4h/普通24h/低优48h)',
+    `sla_reminder_sent_at` DATETIME DEFAULT NULL COMMENT '临近截止提醒时间',
+    `sla_escalated_at` DATETIME DEFAULT NULL COMMENT '超时升级通知时间'
 ) ENGINE=InnoDB COMMENT='智能报修工单表';
 
 -- -------------------------------------------------------------------------
