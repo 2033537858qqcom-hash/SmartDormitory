@@ -63,12 +63,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             if ("GET".equals(method)) {
                 return path.equals("/api/auth/student-dashboard/" + userId)
                         || Set.of("/api/dorm/buildings", "/api/dorm/rooms", "/api/affair/notices",
-                        "/api/messages", "/api/messages/unread-count", "/api/utility/payment-logs").contains(path);
+                        "/api/messages", "/api/messages/unread-count", "/api/utility/payment-logs", "/api/residence/requests").contains(path);
             }
             return "POST".equals(method) && Set.of("/api/smart-alloc/habit-profile", "/api/repair/submit",
                     "/api/repair/rate", "/api/utility/pay-or-recharge",
                     "/api/affair/discipline-appeal", "/api/affair/adjust-apply", "/api/affair/visitor",
-                    "/api/upload/image", "/api/messages/read").contains(path);
+                    "/api/upload/image", "/api/messages/read", "/api/residence/requests").contains(path);
         }
         if ("REPAIRMAN".equals(role)) {
             return ("GET".equals(method) && (path.equals("/api/repair/list")
@@ -83,7 +83,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                     "/api/affair/adjust-list",
                     "/api/affair/discipline", "/api/affair/visitors", "/api/affair/curfew-stats",
                     "/api/affair/notices", "/api/auth/users",
-                    "/api/messages", "/api/messages/unread-count").contains(path);
+                    "/api/messages", "/api/messages/unread-count", "/api/residence/requests").contains(path);
         }
         return "POST".equals(method) && (Set.of("/api/dorm/room", "/api/dorm/assign-bed",
                 "/api/repair/submit", "/api/repair/process", "/api/repair/reassign", "/api/repair/cancel",
@@ -91,7 +91,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 "/api/utility/pay-or-recharge", "/api/affair/curfew-check", "/api/affair/discipline",
                 "/api/affair/discipline-review", "/api/affair/visitor", "/api/affair/visitor-verify",
                 "/api/affair/hygiene", "/api/affair/adjust-review",
-                "/api/upload/image", "/api/messages/read",
+                "/api/upload/image", "/api/messages/read", "/api/residence/review",
                 "/api/auth/import-students").contains(path) || path.matches("/api/affair/visitor-leave/[0-9]+"));
     }
 

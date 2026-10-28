@@ -130,3 +130,19 @@ ALTER TABLE utility_bill
   ADD COLUMN anomaly_updated_by BIGINT DEFAULT NULL,
   ADD COLUMN anomaly_updated_at DATETIME DEFAULT NULL;
 ```
+
+## 入住和假期留宿申请增量
+
+已有库执行：
+
+```sql
+CREATE TABLE IF NOT EXISTS residence_request (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  student_id BIGINT NOT NULL, room_id BIGINT NOT NULL,
+  request_type VARCHAR(20) NOT NULL, from_date DATE DEFAULT NULL, to_date DATE DEFAULT NULL,
+  reason VARCHAR(500) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  reviewer_id BIGINT DEFAULT NULL, review_comment VARCHAR(500) DEFAULT NULL,
+  created_at DATETIME NOT NULL, reviewed_at DATETIME DEFAULT NULL,
+  KEY idx_residence_student (student_id, status), KEY idx_residence_room (room_id, status)
+) ENGINE=InnoDB COMMENT='入住和假期留宿申请';
+```
