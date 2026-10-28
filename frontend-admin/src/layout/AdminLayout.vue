@@ -120,12 +120,12 @@ const pwdForm = reactive({
 const rolePermissions = {
   ADMIN: ['dashboard', 'smart-alloc', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair', 'user-notice'],
   DORM_MANAGER: ['dashboard', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair'],
-  REPAIRMAN: ['repair-dispatch', 'dashboard']
+  REPAIRMAN: ['repair-dispatch']
 }
 
 const canAccess = (menuKey) => {
-  const role = currentUser.value.role || 'ADMIN'
-  const allowed = rolePermissions[role] || rolePermissions.ADMIN
+  const role = currentUser.value.role
+  const allowed = rolePermissions[role] || []
   return allowed.includes(menuKey)
 }
 

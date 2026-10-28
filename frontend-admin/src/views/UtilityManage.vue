@@ -10,7 +10,7 @@
         <div><h2>水电账单与余额联动</h2><p>查看每月阶梯用量、账户余额抵扣与需要核查的能耗异常。</p></div>
         <div class="workspace-actions">
           <el-popover placement="bottom-start" :width="340" trigger="click"><template #reference><el-button text size="small">计费规则</el-button></template><div class="rule-popover-content"><h4>阶梯计价与异常监测</h4><ul><li>电费：每月免额 20 度，20–100 度每度 0.60 元，超出 100 度每度 0.85 元。</li><li>水费：每月免额 4 吨，4–15 吨每吨 3 元，超出 15 吨每吨 4.50 元。</li><li>用量超过楼栋均值 1.5 倍或环比激增时，系统会标记异常；缴纳账单时自动联动抵扣寝室水电余额。</li></ul></div></el-popover>
-          <el-button plain icon="Download" @click="exportUtilityCsv">导出账单</el-button><el-button type="primary" icon="Plus" @click="entryVisible = true">录入抄表</el-button>
+          <el-button v-if="isAdmin" plain icon="Download" @click="exportUtilityCsv">导出账单</el-button><el-button type="primary" icon="Plus" @click="entryVisible = true">录入抄表</el-button>
         </div>
       </div>
       <div class="bill-filters"><el-checkbox v-model="onlyAbnormal" @change="loadBills">仅看能耗异常账单</el-checkbox><span>{{ bills.length }} 条账单</span></div>
@@ -73,6 +73,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request, { downloadExport } from '@/api/request'
+const isAdmin = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}').role === 'ADMIN'
 
 const formatMoney = (val) => '¥' + Number(val || 0).toFixed(2)
 

@@ -27,10 +27,10 @@
             </el-popover>
           </div>
           <div class="toolbar-actions">
-            <el-button type="warning" plain size="small" icon="Present" :loading="rewarding" @click="handleRewardFiveStar">
+            <el-button v-if="isAdmin" type="warning" plain size="small" icon="Present" :loading="rewarding" @click="handleRewardFiveStar">
               发放五星寝室电费补贴
             </el-button>
-            <el-button type="success" plain size="small" icon="Download" @click="exportCivilizedCsv">导出榜单</el-button>
+            <el-button v-if="isAdmin" type="success" plain size="small" icon="Download" @click="exportCivilizedCsv">导出榜单</el-button>
             <el-button type="primary" size="small" icon="Refresh" @click="loadEval">刷新评分</el-button>
           </div>
         </div>
@@ -366,6 +366,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import request, { downloadExport } from '@/api/request'
+const isAdmin = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}').role === 'ADMIN'
 
 const route = useRoute()
 const loading = ref(false)

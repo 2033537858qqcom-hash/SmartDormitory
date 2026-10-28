@@ -39,7 +39,7 @@
             <template #reference><el-button text size="small">派单规则</el-button></template>
             <div class="rule-popover-content"><h4>紧急识别与自动派单</h4><ul><li>标题或描述中出现高危关键词时，工单将标记为紧急。</li><li>系统根据故障分类和维修师傅的待办情况安排工单。</li></ul></div>
           </el-popover>
-          <el-button type="primary" icon="Plus" @click="mockSubmitVisible = true">新增报修</el-button>
+          <el-button v-if="currentUser.role !== 'REPAIRMAN'" type="primary" icon="Plus" @click="mockSubmitVisible = true">新增报修</el-button>
         </div>
       </div>
       <div class="workspace-filters" aria-label="筛选工单状态">
