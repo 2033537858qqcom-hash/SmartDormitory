@@ -8,6 +8,9 @@ import com.dormitory.mapper.SysUserMapper;
 import com.dormitory.entity.SysUser;
 import com.dormitory.entity.DormBed;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +30,7 @@ class AllocationExplanationTest {
 
     @Test
     void allocationRejectsBedsClaimedAfterPreview() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), DormBed.class);
         SysUserMapper users = mock(SysUserMapper.class);
         DormBedMapper beds = mock(DormBedMapper.class);
         SmartAllocationService allocator = new SmartAllocationService(users, null, null, null, beds, null);

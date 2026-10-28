@@ -3,6 +3,7 @@ package com.dormitory.service;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,19 @@ public class SmartAllocationService {
         detail.put("bedId", bedId); detail.put("previousStudentId", previousStudentId); detail.put("studentId", studentId);
         log.setDetailJson(JSONUtil.toJsonStr(detail)); log.setOperatorId(operatorId);
         allocationLogMapper.insert(log);
+    }
+
+    void reserveBed(Long bedId, Long studentId) {
+        SysUser student = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getId, studentId).last("FOR UPDATE"));
+        if (student == null) throw new IllegalStateException("学生不存在，请重新生成方案");
+        DormBed current = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                .eq(DormBed::getStudentId, studentId).eq(DormBed::getStatus, 1).last("LIMIT 1 FOR UPDATE"));
+        if (current != null) throw new IllegalStateException("学生已分配床位，请重新生成方案");
+        int updated = bedMapper.update(null, new LambdaUpdateWrapper<DormBed>()
+                .eq(DormBed::getId, bedId).eq(DormBed::getStatus, 0).isNull(DormBed::getStudentId)
+                .set(DormBed::getStudentId, studentId).set(DormBed::getCheckInDate, LocalDate.now()).set(DormBed::getStatus, 1));
+        if (updated != 1) throw new IllegalStateException("目标床位已变化，请重新生成方案");
     }
 
     /**
@@ -288,10 +302,7 @@ public class SmartAllocationService {
                 DormBed targetBed = emptyBeds.get(i);
 
                 if (commit) {
-                    targetBed.setStudentId(s.getId());
-                    targetBed.setCheckInDate(LocalDate.now());
-                    targetBed.setStatus(1);
-                    bedMapper.updateById(targetBed);
+                    reserveBed(targetBed.getId(), s.getId());
 
                     hp.setIsAllocated(1);
                     if (hp.getId() != null) {
