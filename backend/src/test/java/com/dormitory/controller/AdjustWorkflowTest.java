@@ -70,6 +70,7 @@ class AdjustWorkflowTest {
         when(applies.selectOne(any(Wrapper.class))).thenReturn(application("PENDING"));
         DormRoom room = new DormRoom(); room.setBuildingId(1L);
         when(rooms.selectById(1L)).thenReturn(room);
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(room);
         when(beds.selectOne(any(Wrapper.class))).thenReturn(bed(1, 1, 1, 10L, 1), bed(2, 2, 2, 11L, 1));
         assertNotEquals(200, controller.reviewAdjustApply(Map.of("id", 1, "status", "APPROVED"), admin()).getCode());
         verify(beds, never()).update(any(), any(Wrapper.class));

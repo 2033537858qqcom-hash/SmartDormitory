@@ -687,6 +687,15 @@ public class DormAffairController {
         // 若审批通过，自动联动更新原床位、目标床位状态以及新旧寝室的六维契合度
         if ("APPROVED".equals(status)) {
             if (!Set.of("ADJUST", "CHECKOUT").contains(apply.getApplyType())) return Result.error("无效的申请类型");
+            if (apply.getOldRoomId() == null) return Result.error("原寝室不存在");
+            if ("ADJUST".equals(apply.getApplyType()) && (apply.getTargetRoomId() == null || apply.getTargetBedNo() == null)) return Result.error("请选择目标床位");
+            Set<Long> roomIds = new TreeSet<>();
+            roomIds.add(apply.getOldRoomId());
+            if ("ADJUST".equals(apply.getApplyType())) roomIds.add(apply.getTargetRoomId());
+            for (Long roomId : roomIds) {
+                if (roomMapper.selectOne(new LambdaQueryWrapper<DormRoom>().eq(DormRoom::getId, roomId).last("FOR UPDATE")) == null)
+                    return Result.error("申请寝室不存在");
+            }
             DormBed oldBed = bedMapper.selectOne(
                     new LambdaQueryWrapper<DormBed>()
                             .eq(DormBed::getRoomId, apply.getOldRoomId())
@@ -699,7 +708,6 @@ public class DormAffairController {
             }
             DormBed targetBed = null;
             if ("ADJUST".equals(apply.getApplyType())) {
-                if (apply.getTargetRoomId() == null || apply.getTargetBedNo() == null) return Result.error("请选择目标床位");
                 targetBed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
                         .eq(DormBed::getRoomId, apply.getTargetRoomId())
                         .eq(DormBed::getBedNo, apply.getTargetBedNo()).last("FOR UPDATE"));
