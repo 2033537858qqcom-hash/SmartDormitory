@@ -108,6 +108,8 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'counselor01');
 
 ## 报修 SLA 提醒增量
 
+本次更新的四项增量也整理在 [`20261028-workflow-upgrade.sql`](./20261028-workflow-upgrade.sql) 中。已有库先备份并确认之前的 P0/P1/P2 增量已执行，再选择目标数据库并运行该脚本一次；不要在已执行下面各段增量的库上重复运行。新库使用初始化脚本时无需执行。
+
 已有库在备份后执行以下语句一次，新库使用初始化脚本时无需重复执行：
 
 ```sql

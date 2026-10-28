@@ -83,6 +83,7 @@
             重置演示新生
           </el-button>
           <el-button plain @click="loadPrecheck">分寝前校验</el-button>
+          <el-button plain @click="openAllocationLogs">分配记录</el-button>
           <el-button plain type="success" @click="importVisible = true">新生 CSV 导入</el-button>
         </div>
       </div>
@@ -330,6 +331,15 @@
         <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="logsVisible" title="分寝与人工床位变更记录" width="760px">
+      <el-table v-loading="logsLoading" :data="allocationLogs" empty-text="暂无记录">
+        <el-table-column prop="createTime" label="时间" width="180" />
+        <el-table-column label="类型" width="120"><template #default="{ row }">{{ row.algorithmStrategy === 'MANUAL' ? '人工床位变更' : '智能分寝' }}</template></el-table-column>
+        <el-table-column prop="buildingId" label="楼栋 ID" width="85" />
+        <el-table-column prop="operatorId" label="操作人 ID" width="95" />
+        <el-table-column label="详情" min-width="230"><template #default="{ row }">{{ allocationLogDetail(row) }}</template></el-table-column>
+      </el-table>
+    </el-dialog>
 
   </div>
 </template>
@@ -354,6 +364,21 @@ const selectedBuildingId = ref(1)
 const candidates = ref([])
 const precheckResult = ref(null)
 const importVisible = ref(false)
+const logsVisible = ref(false)
+const logsLoading = ref(false)
+const allocationLogs = ref([])
+const openAllocationLogs = async () => {
+  logsVisible.value = true; logsLoading.value = true
+  try { const result = await request.get('/smart-alloc/logs'); allocationLogs.value = result.data || [] }
+  finally { logsLoading.value = false }
+}
+const allocationLogDetail = row => {
+  if (row.algorithmStrategy !== 'MANUAL') return `批次 ${row.batchNo}，分配 ${row.allocatedStudentCount} 人`
+  try {
+    const detail = JSON.parse(row.detailJson)
+    return `床位 #${detail.bedId}：${detail.previousStudentId ?? '空'} → ${detail.studentId ?? '空'}`
+  } catch (_) { return '记录详情不可用' }
+}
 const importing = ref(false)
 const importCsv = ref('学号,姓名,性别,学院,专业,班级,年级\n20261001,王小明,男,计算机学院,软件工程,软工2601,2026\n20261002,李小红,女,计算机学院,软件工程,软工2602,2026')
 
@@ -531,7 +556,7 @@ const confirmAndCommit = async () => {
     return
   }
   await ElMessageBox.confirm(
-    `即将把【${currentBuilding.value?.buildingName || '所选楼栋'}】预览方案中的 ${allocResult.value?.allocatedStudentCount || 0} 位新生正式写入床位表，是否确认分配？`,
+    `系统将按当前数据重新计算并分配【${currentBuilding.value?.buildingName || '所选楼栋'}】的床位；若学生或床位数据变化，结果可能不同于预览。是否继续？`,
     '确认执行分寝',
     {
       confirmButtonText: '确认分配',

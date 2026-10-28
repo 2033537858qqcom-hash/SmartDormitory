@@ -4,7 +4,7 @@
 
 | 模块目录 | 工程职责 | 核心技术栈 | 运行端口 |
 | :--- | :--- | :--- | :--- |
-| [`sql/smart_dormitory.sql`](./sql/smart_dormitory.sql) | MySQL 8.0 数据库脚本 | 13 张核心表 + 仿真业务测试数据 | `3306` |
+| [`sql/smart_dormitory.sql`](./sql/smart_dormitory.sql) | MySQL 8.0 数据库脚本 | 宿舍业务表 + 仿真测试数据 | `3306` |
 | [`backend/`](./backend) | Java 后端核心服务 | Spring Boot 3.2 + MyBatis-Plus + JDK 17 | `7000` |
 | [`frontend-admin/`](./frontend-admin) | PC Web 综合管理端 | Vue 3 + Vite + Element Plus + ECharts 5 | `5173` |
 | [`frontend-student/`](./frontend-student) | 学生端 **Vite H5**（仅小程序形态 UI） | Vue 3（**非**微信小程序 / **非** Uni-app） | `5174` |
@@ -37,6 +37,8 @@
 - **多角色差异化工作台**：针对后勤主任 (`ADMIN`)、楼栋宿管 (`DORM_MANAGER`)、维修工程师 (`REPAIRMAN`)、辅导员只读 (`COUNSELOR`) 动态裁剪导航菜单与专属工作台。服务端已限制角色入口，并已对学生写接口做会话身份绑定、对宿管按 `manager_id` 做楼栋数据范围过滤；仍仅供本地演示，请勿公开部署真实数据。
 - **报修 SLA**：创建工单时按优先级写入截止时间（高危 4h / 普通 24h / 低优 48h），列表展示「已超时」徽章。
 - **水电缴费为演示模拟**：充值/缴费生成 `DEMO-` 流水号与余额快照，界面标注非微信支付；未对接真实支付网关或闸机硬件。
+- **业务处理与追踪**：调宿审批核验并锁定床位，退宿需记录钥匙、设施和清理交接；学生可提交入住登记、假期留宿申请并查看审核结果。水电模拟操作支持请求重试去重与流水查询，能耗异常可记录排查状态并关联唯一报修工单。
+- **报修提醒与方案说明**：工单临近截止时向维修人员发送站内提醒，超时后通知维修人员及宿管；分寝预览展示组内习惯差异和未分配原因，支持导出报告及查看人工床位变更记录。
 
 ---
 
@@ -45,6 +47,8 @@
 ### 1. 导入数据库
 1. 确保本地 MySQL 8.0 已启动，执行 [`sql/smart_dormitory.sql`](./sql/smart_dormitory.sql)（会自动创建 `smart_dormitory` 库及全部初始数据）。
 2. 检查 [`backend/src/main/resources/application.yml`](./backend/src/main/resources/application.yml) 中的数据库账号密码（默认为 `root` / `123456`）。
+
+已有数据的数据库不要重新导入初始化脚本：该脚本包含 `DROP DATABASE`。请先备份，再根据 [`sql/MIGRATION.md`](./sql/MIGRATION.md) 中对应增量更新结构。新增的 SLA、能耗异常、住宿申请与退宿交接字段须在启动新版后端前完成迁移。
 
 ### 2. 启动全部服务
 - Windows：双击 [`start-all.bat`](./start-all.bat)（相对路径，后端端口 **7000**）
@@ -91,4 +95,5 @@ cd frontend-student && npm install && npm run dev
 ## 六、 持续集成
 推送或 PR 时由 [`.github/workflows/verify.yml`](./.github/workflows/verify.yml) 运行：
 - 后端：`mvn -q test`（JDK 17）
-- 学生端：`node --test src/session.test.js`
+- MySQL：使用独立测试库检查并发调宿和缴费重试
+- 学生端和管理端：Node 测试及生产构建
