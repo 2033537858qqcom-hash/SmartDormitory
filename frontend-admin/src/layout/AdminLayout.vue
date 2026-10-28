@@ -38,11 +38,26 @@
             <el-icon><Trophy /></el-icon>
             <span>综合宿务</span>
           </template>
-          <el-menu-item index="/civilized-affair/todo">待办首页</el-menu-item>
-          <el-menu-item index="/civilized-affair/eval">文明评比</el-menu-item>
-          <el-menu-item index="/civilized-affair/hygiene">卫生检查</el-menu-item>
-          <el-menu-item index="/civilized-affair/adjust">调宿审批</el-menu-item>
-          <el-menu-item index="/civilized-affair/visitor">门禁访客</el-menu-item>
+          <el-menu-item index="/civilized-affair/todo">
+            <el-icon class="sub-icon"><Finished /></el-icon>
+            <template #title>待办首页</template>
+          </el-menu-item>
+          <el-menu-item index="/civilized-affair/eval">
+            <el-icon class="sub-icon"><Medal /></el-icon>
+            <template #title>文明评比</template>
+          </el-menu-item>
+          <el-menu-item index="/civilized-affair/hygiene">
+            <el-icon class="sub-icon"><CircleCheck /></el-icon>
+            <template #title>卫生检查</template>
+          </el-menu-item>
+          <el-menu-item index="/civilized-affair/adjust">
+            <el-icon class="sub-icon"><Switch /></el-icon>
+            <template #title>调宿审批</template>
+          </el-menu-item>
+          <el-menu-item index="/civilized-affair/visitor">
+            <el-icon class="sub-icon"><Lock /></el-icon>
+            <template #title>门禁访客</template>
+          </el-menu-item>
         </el-sub-menu>
         <el-menu-item v-if="canAccess('user-notice')" index="/user-notice" aria-label="人员与公告">
           <el-icon><UserFilled /></el-icon>
@@ -279,11 +294,93 @@ onBeforeUnmount(() => {
 .brand-text .title { font-size: 17px; font-weight: 600; letter-spacing: -.6px; }
 .brand-text .sub { margin-top: 3px; font-size: 10px; color: var(--text-muted); letter-spacing: 1.3px; }
 .nav-caption { padding: 0 25px 10px; font-size: 11px; color: var(--text-muted); }
-.side-menu { flex: 1; border: 0; background: transparent; padding: 0 12px; --el-menu-bg-color: transparent; --el-menu-text-color: #65656b; --el-menu-hover-bg-color: rgb(255 255 255 / 50%); --el-menu-active-color: var(--text-primary); }
-.side-menu :deep(.el-menu-item) { height: 43px; margin-bottom: 5px; border-radius: 10px; font-size: 14px; padding: 0 13px !important; gap: 3px; }
-.side-menu :deep(.el-menu-item.is-active) { background: var(--bg-surface); box-shadow: 0 1px 4px rgb(29 29 31 / 3%); font-weight: 600; }
-.side-menu :deep(.el-icon) { font-size: 18px; }
-.side-menu.el-menu--collapse { width: 72px; padding: 0 12px; }
+.side-menu {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0 12px;
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: #65656b;
+  --el-menu-hover-bg-color: rgb(255 255 255 / 55%);
+  --el-menu-active-color: var(--text-primary);
+}
+.side-menu :deep(.el-menu-item),
+.side-menu :deep(.el-sub-menu__title) {
+  height: 42px;
+  line-height: 42px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  font-size: 14px;
+  padding: 0 14px !important;
+  gap: 8px;
+  text-decoration: none !important;
+  transition: all 0.16s ease;
+}
+.side-menu :deep(.el-menu-item:hover),
+.side-menu :deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-primary);
+  text-decoration: none !important;
+}
+.side-menu :deep(.el-menu-item.is-active) {
+  background: var(--bg-surface);
+  box-shadow: 0 1px 4px rgb(29 29 31 / 4%);
+  color: var(--accent-primary) !important;
+  font-weight: 600;
+  text-decoration: none !important;
+}
+.side-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+.side-menu :deep(.el-menu-item *),
+.side-menu :deep(.el-sub-menu__title *) {
+  text-decoration: none !important;
+}
+.side-menu :deep(.el-icon) {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* 综合宿务等二级折叠菜单的精致内嵌容器与树状导向线 */
+.side-menu :deep(.el-sub-menu .el-menu) {
+  background: rgba(0, 0, 0, 0.025);
+  border-radius: 10px;
+  padding: 4px 6px;
+  margin: 2px 0 6px 8px;
+  border-left: 2px solid rgba(0, 0, 0, 0.08);
+}
+.side-menu :deep(.el-sub-menu .el-menu-item) {
+  height: 38px;
+  line-height: 38px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  padding: 0 12px 0 16px !important;
+  gap: 8px;
+  color: #65656b;
+  text-decoration: none !important;
+}
+.side-menu :deep(.el-sub-menu .el-menu-item:hover) {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-primary);
+  text-decoration: none !important;
+}
+.side-menu :deep(.el-sub-menu .el-menu-item.is-active) {
+  background: #ffffff;
+  color: var(--accent-primary) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(29, 29, 31, 0.05);
+  text-decoration: none !important;
+}
+.side-menu :deep(.sub-icon) {
+  font-size: 15px !important;
+  opacity: 0.75;
+}
+.side-menu.el-menu--collapse {
+  width: 72px;
+  padding: 0 12px;
+}
 .sidebar-footer { padding: 18px 20px 22px; }
 .account-summary { display: flex; align-items: center; gap: 10px; }
 .account-summary b { display: block; font-size: 13px; }
