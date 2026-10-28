@@ -33,11 +33,22 @@
           <div class="bill-amount"><span>账单总额</span><strong>{{ formatMoney(bill.totalCost) }}</strong><small>人均 {{ formatMoney(bill.perCapitaCost) }}</small></div>
           <div class="bill-action"><span :class="bill.payStatus === 1 ? 'settled' : 'unsettled'">{{ bill.payStatus === 1 ? '已缴清' : '待缴纳' }}</span><el-button v-if="bill.payStatus === 0" type="primary" plain size="small" :loading="payingId === bill.id" @click="handlePayBill(bill)">扣余额核销</el-button><span v-else class="settled-note">已核销</span></div>
           <details v-if="bill.abnormalFlag === 1" class="bill-warning"><summary>查看异常原因</summary><p>{{ bill.abnormalReason }}</p>
-            <el-button type="warning" plain size="small" style="margin-top:8px" :loading="convertingId===bill.id" @click="convertAnomaly(bill)">转报修工单排查</el-button>
+            <p>排查状态：{{ anomalyLabel(bill.anomalyStatus) }}<span v-if="bill.anomalyNote"> · {{ bill.anomalyNote }}</span></p>
+            <el-button v-if="!bill.anomalyRepairId && bill.anomalyStatus !== 'RESOLVED'" type="warning" plain size="small" style="margin-top:8px" :loading="convertingId===bill.id" @click="convertAnomaly(bill)">转报修工单排查</el-button>
+            <el-button v-if="bill.anomalyRepairId" link type="primary" @click="$router.push({ path: '/repair-dispatch', query: { orderId: bill.anomalyRepairId } })">查看关联工单</el-button>
+            <el-button plain size="small" @click="openAnomaly(bill)">更新排查记录</el-button>
           </details>
         </li>
       </ul>
     </section>
+
+    <el-dialog v-model="anomalyVisible" title="更新能耗异常排查" width="460px">
+      <el-form label-width="90px">
+        <el-form-item label="排查状态"><el-select v-model="anomalyForm.status"><el-option label="待核查" value="PENDING" /><el-option label="排查中" value="INVESTIGATING" /><el-option label="已解决" value="RESOLVED" /></el-select></el-form-item>
+        <el-form-item label="处理记录"><el-input v-model="anomalyForm.note" type="textarea" :rows="3" maxlength="500" placeholder="记录排查原因和处理结果；解决时必填" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="anomalyVisible = false">取消</el-button><el-button type="primary" :loading="anomalySaving" @click="saveAnomaly">保存</el-button></template>
+    </el-dialog>
 
     <!-- 抄表录入弹窗 -->
     <el-dialog v-model="entryVisible" title="月度水电抄表录入" width="440px">
@@ -127,6 +138,24 @@ const batchMode = ref('grid')
 const batchCsv = ref('roomId,electricUsed,waterUsed\n2,180,12')
 const batchMap = reactive({})
 const convertingId = ref(null)
+const anomalyVisible = ref(false)
+const anomalySaving = ref(false)
+const anomalyForm = reactive({ billId: null, status: 'PENDING', note: '' })
+const anomalyLabel = status => ({ PENDING: '待核查', INVESTIGATING: '排查中', RESOLVED: '已解决' }[status] || '待核查')
+const openAnomaly = bill => {
+  Object.assign(anomalyForm, { billId: bill.id, status: bill.anomalyStatus || 'PENDING', note: bill.anomalyNote || '' })
+  anomalyVisible.value = true
+}
+const saveAnomaly = async () => {
+  if (anomalyForm.status === 'RESOLVED' && !anomalyForm.note.trim()) return ElMessage.warning('请填写处理结果')
+  anomalySaving.value = true
+  try {
+    await request.post('/utility/anomaly-status', anomalyForm)
+    ElMessage.success('排查记录已保存')
+    anomalyVisible.value = false
+    await loadBills()
+  } finally { anomalySaving.value = false }
+}
 const thresholdTip = ref('')
 
 
@@ -227,6 +256,7 @@ const convertAnomaly = async (bill) => {
   try {
     const res = await request.post('/utility/anomaly-to-repair', { billId: bill.id })
     ElMessage.success(res.message || '已转报修')
+    await loadBills()
   } finally {
     convertingId.value = null
   }
