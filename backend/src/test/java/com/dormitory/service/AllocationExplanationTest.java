@@ -7,6 +7,8 @@ import com.dormitory.mapper.DormBedMapper;
 import com.dormitory.mapper.SysUserMapper;
 import com.dormitory.entity.SysUser;
 import com.dormitory.entity.DormBed;
+import com.dormitory.entity.DormRoom;
+import com.dormitory.mapper.DormRoomMapper;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
@@ -38,5 +40,19 @@ class AllocationExplanationTest {
         when(users.selectOne(any(Wrapper.class))).thenReturn(student);
         when(beds.update(any(), any(Wrapper.class))).thenReturn(0);
         assertThrows(IllegalStateException.class, () -> allocator.reserveBed(5L, 10L));
+    }
+
+    @Test
+    void harmonyRecalculationDoesNotOverwriteRoomAccountBalances() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), DormRoom.class);
+        DormRoomMapper rooms = mock(DormRoomMapper.class);
+        DormBedMapper beds = mock(DormBedMapper.class);
+        SmartAllocationService allocator = new SmartAllocationService(null, null, null, rooms, beds, null);
+        DormRoom room = new DormRoom(); room.setId(1L);
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(room);
+        when(beds.selectList(any(Wrapper.class))).thenReturn(List.of());
+        allocator.recalculateRoomHarmony(1L);
+        verify(rooms).update(isNull(), any(Wrapper.class));
+        verify(rooms, never()).updateById(any(DormRoom.class));
     }
 }
