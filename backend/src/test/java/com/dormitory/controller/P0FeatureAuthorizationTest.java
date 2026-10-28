@@ -147,6 +147,19 @@ class P0FeatureAuthorizationTest {
         Result<String> res = dormController.assignOrReleaseBed(Map.of("bedId", 5, "studentId", 88), admin());
         assertEquals(200, res.getCode());
         verify(bedMapper).updateById(any(DormBed.class));
+        verify(smartAllocationService).recordManualChange(1L, 5L, null, 88L, 1L);
+    }
+
+    @Test
+    void manualAssignmentCannotOverwriteOccupiedBed() {
+        DormBed bed = new DormBed(); bed.setId(5L); bed.setRoomId(10L); bed.setStatus(1); bed.setStudentId(10L);
+        DormRoom room = new DormRoom(); room.setId(10L); room.setBuildingId(1L);
+        when(bedMapper.selectById(5L)).thenReturn(bed);
+        when(roomMapper.selectById(10L)).thenReturn(room);
+        var result = dormController.assignOrReleaseBed(Map.of("bedId", 5, "studentId", 88), admin());
+        assertNotEquals(200, result.getCode());
+        assertTrue(result.getMessage().contains("已占用"));
+        verify(bedMapper, never()).updateById(any(DormBed.class));
     }
 
     @Test
