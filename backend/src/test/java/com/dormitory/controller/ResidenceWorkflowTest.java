@@ -58,7 +58,8 @@ class ResidenceWorkflowTest {
     void alreadyReviewedRequestCannotBeReviewedAgain() {
         ResidenceRequest request = new ResidenceRequest(); request.setStatus("APPROVED");
         when(requests.selectOne(any(Wrapper.class))).thenReturn(request);
-        assertNotEquals(200, controller.review(Map.of("id", 1, "status", "APPROVED"), student()).getCode());
+        MockHttpServletRequest manager = student(); manager.setAttribute("currentUserRole", "DORM_MANAGER");
+        assertNotEquals(200, controller.review(Map.of("id", 1, "status", "APPROVED"), manager).getCode());
         verify(requests, never()).updateById(any(ResidenceRequest.class));
     }
 }
