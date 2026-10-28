@@ -64,4 +64,40 @@ class AuthInterceptorTest {
         assertNull(sessions.getUserId(second));
         assertEquals(8L, sessions.getUserId(other));
     }
+
+    @Test
+    void studentsCannotAccessAccountAdministrationExportsOrAnotherStudentDashboard() throws Exception {
+        when(users.selectById(7L)).thenReturn(user);
+        String token = sessions.create(7L);
+        for (String path : new String[]{"/api/auth/users", "/api/export/students", "/api/auth/student-dashboard/8", "/api/unrecognized"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
+            request.addHeader("Authorization", token);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            assertFalse(interceptor.preHandle(request, response, new Object()), path);
+            assertEquals(403, response.getStatus(), path);
+        }
+        MockHttpServletRequest own = new MockHttpServletRequest("GET", "/api/auth/student-dashboard/7");
+        own.addHeader("Authorization", token);
+        assertTrue(interceptor.preHandle(own, new MockHttpServletResponse(), new Object()));
+    }
+
+    @Test
+    void nonAdministratorsCannotResetPasswordsOrRunAllocation() throws Exception {
+        when(users.selectById(7L)).thenReturn(user);
+        String token = sessions.create(7L);
+        for (String role : new String[]{"STUDENT", "REPAIRMAN", "DORM_MANAGER"}) {
+            user.setRole(role);
+            for (String path : new String[]{"/api/auth/reset-password/1", "/api/smart-alloc/run"}) {
+                MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+                request.addHeader("Authorization", token);
+                MockHttpServletResponse response = new MockHttpServletResponse();
+                assertFalse(interceptor.preHandle(request, response, new Object()), role + " " + path);
+                assertEquals(403, response.getStatus());
+            }
+        }
+        user.setRole("ADMIN");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/smart-alloc/run");
+        request.addHeader("Authorization", token);
+        assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
+    }
 }
