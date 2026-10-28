@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.PassCodeUtil;
 import com.dormitory.common.Result;
@@ -629,7 +630,13 @@ public class DormAffairController {
     @PostMapping("/adjust-apply")
     public Result<DormAdjustApply> submitAdjustApply(@RequestBody DormAdjustApply apply, HttpServletRequest request) {
         if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
-            apply.setStudentId((Long) request.getAttribute("currentUserId"));
+            Long studentId = (Long) request.getAttribute("currentUserId");
+            DormBed current = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                    .eq(DormBed::getStudentId, studentId).eq(DormBed::getStatus, 1).last("LIMIT 1"));
+            if (current == null) return Result.error("未找到当前在住床位，无法提交申请");
+            apply.setStudentId(studentId);
+            apply.setOldRoomId(current.getRoomId());
+            apply.setOldBedNo(current.getBedNo());
         }
         if (apply.getApplyType() == null || apply.getApplyType().isEmpty()) {
             apply.setApplyType("ADJUST");
@@ -650,8 +657,11 @@ public class DormAffairController {
         String status = body.get("status").toString();
         String comment = body.get("reviewComment") != null ? body.get("reviewComment").toString() : "";
 
-        DormAdjustApply apply = adjustApplyMapper.selectById(id);
+        if (!Set.of("APPROVED", "REJECTED").contains(status)) return Result.error("无效的审批结果");
+        DormAdjustApply apply = adjustApplyMapper.selectOne(new LambdaQueryWrapper<DormAdjustApply>()
+                .eq(DormAdjustApply::getId, id).last("FOR UPDATE"));
         if (apply == null) return Result.error("申请记录不存在");
+        if (!"PENDING".equals(apply.getStatus())) return Result.error("申请已处理，请勿重复审批");
         if (apply.getOldRoomId() != null) {
             DormRoom oldRoom = roomMapper.selectById(apply.getOldRoomId());
             Result<?> denied = buildingScope.forbiddenIfOutOfScope(
@@ -663,25 +673,39 @@ public class DormAffairController {
             }
         }
 
-        apply.setStatus(status);
-        apply.setReviewComment(comment);
-        apply.setReviewTime(LocalDateTime.now());
-        adjustApplyMapper.updateById(apply);
-
         // 若审批通过，自动联动更新原床位、目标床位状态以及新旧寝室的六维契合度
         if ("APPROVED".equals(status)) {
+            if (!Set.of("ADJUST", "CHECKOUT").contains(apply.getApplyType())) return Result.error("无效的申请类型");
             DormBed oldBed = bedMapper.selectOne(
                     new LambdaQueryWrapper<DormBed>()
                             .eq(DormBed::getRoomId, apply.getOldRoomId())
                             .eq(DormBed::getBedNo, apply.getOldBedNo())
+                            .last("FOR UPDATE")
             );
-            if (oldBed != null) {
-                oldBed.setStudentId(null);
-                oldBed.setCheckInDate(null);
-                oldBed.setStatus(0);
-                bedMapper.updateById(oldBed);
+            if (oldBed == null || !Objects.equals(oldBed.getStudentId(), apply.getStudentId())
+                    || !Integer.valueOf(1).equals(oldBed.getStatus())) {
+                return Result.error("原床位已变化，请重新提交申请");
             }
-
+            DormBed targetBed = null;
+            if ("ADJUST".equals(apply.getApplyType())) {
+                if (apply.getTargetRoomId() == null || apply.getTargetBedNo() == null) return Result.error("请选择目标床位");
+                targetBed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                        .eq(DormBed::getRoomId, apply.getTargetRoomId())
+                        .eq(DormBed::getBedNo, apply.getTargetBedNo()).last("FOR UPDATE"));
+                if (targetBed == null || !Integer.valueOf(0).equals(targetBed.getStatus()) || targetBed.getStudentId() != null) {
+                    return Result.error("目标床位不可用，请重新选择");
+                }
+                DormRoom targetRoom = roomMapper.selectById(apply.getTargetRoomId());
+                DormBuilding targetBuilding = targetRoom == null ? null : buildingMapper.selectById(targetRoom.getBuildingId());
+                SysUser student = userMapper.selectById(apply.getStudentId());
+                if (targetRoom == null || targetBuilding == null || student == null) return Result.error("目标房间或学生不存在");
+                if (targetBuilding.getGenderType() != null && student.getGender() != null
+                        && !Objects.equals(targetBuilding.getGenderType(), student.getGender())) return Result.error("目标楼栋与学生性别不匹配");
+            }
+            int released = bedMapper.update(null, new LambdaUpdateWrapper<DormBed>()
+                    .eq(DormBed::getId, oldBed.getId()).eq(DormBed::getStudentId, apply.getStudentId()).eq(DormBed::getStatus, 1)
+                    .set(DormBed::getStudentId, null).set(DormBed::getCheckInDate, null).set(DormBed::getStatus, 0));
+            if (released != 1) throw new IllegalStateException("原床位已变化，请重试");
             if ("CHECKOUT".equals(apply.getApplyType())) {
                 StudentHabitProfile hp = habitProfileMapper.selectOne(
                         new LambdaQueryWrapper<StudentHabitProfile>().eq(StudentHabitProfile::getStudentId, apply.getStudentId())
@@ -690,18 +714,11 @@ public class DormAffairController {
                     hp.setIsAllocated(0);
                     habitProfileMapper.updateById(hp);
                 }
-            } else if ("ADJUST".equals(apply.getApplyType()) && apply.getTargetRoomId() != null && apply.getTargetBedNo() != null) {
-                DormBed targetBed = bedMapper.selectOne(
-                        new LambdaQueryWrapper<DormBed>()
-                                .eq(DormBed::getRoomId, apply.getTargetRoomId())
-                                .eq(DormBed::getBedNo, apply.getTargetBedNo())
-                );
-                if (targetBed != null) {
-                    targetBed.setStudentId(apply.getStudentId());
-                    targetBed.setCheckInDate(LocalDate.now());
-                    targetBed.setStatus(1);
-                    bedMapper.updateById(targetBed);
-                }
+            } else {
+                int assigned = bedMapper.update(null, new LambdaUpdateWrapper<DormBed>()
+                        .eq(DormBed::getId, targetBed.getId()).eq(DormBed::getStatus, 0).isNull(DormBed::getStudentId)
+                        .set(DormBed::getStudentId, apply.getStudentId()).set(DormBed::getCheckInDate, LocalDate.now()).set(DormBed::getStatus, 1));
+                if (assigned != 1) throw new IllegalStateException("目标床位已被占用，请重试");
             }
 
             // 重新计算原寝室与目标寝室的入住人数与室友契合度
@@ -710,6 +727,11 @@ public class DormAffairController {
                 smartAllocationService.recalculateRoomHarmony(apply.getTargetRoomId());
             }
         }
+        apply.setStatus(status);
+        apply.setReviewComment(comment);
+        apply.setReviewerId((Long) request.getAttribute("currentUserId"));
+        apply.setReviewTime(LocalDateTime.now());
+        adjustApplyMapper.updateById(apply);
         if (apply.getStudentId() != null) {
             String title = "APPROVED".equals(status) ? "调宿/退宿申请已批准" : "调宿/退宿申请已驳回";
             messageService.push(apply.getStudentId(), title,
