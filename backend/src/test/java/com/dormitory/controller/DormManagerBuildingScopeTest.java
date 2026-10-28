@@ -111,6 +111,15 @@ class DormManagerBuildingScopeTest {
     }
 
     @Test
+    void meterEntryChecksRealRoomBuildingNotClientSuppliedBuilding() {
+        DormRoom room = new DormRoom(); room.setId(7L); room.setBuildingId(2L);
+        when(roomMapper.selectById(7L)).thenReturn(room);
+        UtilityBill bill = new UtilityBill(); bill.setRoomId(7L); bill.setBuildingId(1L);
+        assertEquals(403, utilityController.saveMeterReading(bill, manager()).getCode());
+        verify(smartUtilityService, never()).createOrUpdateMeterBill(any());
+    }
+
+    @Test
     void managerRepairListFiltersByBuildingScope() {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), RepairOrder.class);
         doAnswer(invocation -> {
