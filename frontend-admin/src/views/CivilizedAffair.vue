@@ -365,7 +365,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
-import request from '@/api/request'
+import request, { downloadExport } from '@/api/request'
 
 const route = useRoute()
 const loading = ref(false)
@@ -643,7 +643,7 @@ const leaveVisitor = async (id) => {
 }
 
 const exportCivilizedCsv = () => {
-  window.open('/api/export/civilized-rooms', '_blank')
+  downloadExport('civilized-rooms', '文明寝室.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
 onMounted(() => {

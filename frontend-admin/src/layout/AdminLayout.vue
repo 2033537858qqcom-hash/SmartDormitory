@@ -54,19 +54,6 @@
           <span class="breadcrumb-parent">{{ roleLabel }}</span><span class="breadcrumb-slash">/</span><span>{{ $route.meta.title }}</span>
         </div>
         <div class="header-right">
-          <div class="role-quick-switcher" role="group" aria-label="演示角色视角切换">
-            <span class="switcher-caption">切换角色视角：</span>
-            <button
-              v-for="r in demoRoles"
-              :key="r.username"
-              type="button"
-              class="role-pill"
-              :class="{ active: currentUser.username === r.username }"
-              @click="quickSwitchRole(r.username)"
-            >
-              {{ r.label }}
-            </button>
-          </div>
           <el-dropdown trigger="click" placement="bottom-end">
             <button type="button" class="account-menu" aria-label="个人账号菜单"><span class="header-user-name">{{ displayName }}</span><span class="account-avatar small">{{ displayName.slice(0, 1) }}</span></button>
             <template #dropdown><el-dropdown-menu><el-dropdown-item @click="pwdVisible = true">修改密码</el-dropdown-item><el-dropdown-item divided @click="logout">退出登录</el-dropdown-item></el-dropdown-menu></template>
@@ -130,12 +117,6 @@ const pwdForm = reactive({
   newPassword: ''
 })
 
-const demoRoles = [
-  { username: 'admin', label: '后勤主任 (全权限)' },
-  { username: 'dm01', label: '宿管员 (紫荆1号楼)' },
-  { username: 'worker01', label: '维修电工 (接单视图)' }
-]
-
 const rolePermissions = {
   ADMIN: ['dashboard', 'smart-alloc', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair', 'user-notice'],
   DORM_MANAGER: ['dashboard', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair'],
@@ -173,30 +154,6 @@ const roleBadgeText = computed(() => {
   return `${displayName.value} · 全局管理权限`
 })
 
-const quickSwitchRole = async (username) => {
-  if (currentUser.value.username === username) return
-  try {
-    const res = await request.post('/auth/login', { username, password: '123456' })
-    const user = res.data.user
-    localStorage.setItem('dorm_admin_user', JSON.stringify(user))
-    localStorage.setItem('dorm_admin_token', res.data.token || '')
-    if (res.data.managedBuilding) {
-      localStorage.setItem('dorm_managed_building', JSON.stringify(res.data.managedBuilding))
-    } else {
-      localStorage.removeItem('dorm_managed_building')
-    }
-    currentUser.value = user
-    ElMessage.success(`已切换至【${user.realName}】角色工作空间`)
-    if (user.role === 'REPAIRMAN') {
-      router.push('/repair-dispatch')
-    } else if (user.role === 'DORM_MANAGER' && (route.path === '/smart-alloc' || route.path === '/user-notice')) {
-      router.push('/dorm-visual')
-    }
-  } catch (e) {
-    ElMessage.error('切换角色失败')
-  }
-}
-
 const submitChangePwd = async () => {
   if (!pwdForm.oldPassword || !pwdForm.newPassword) {
     ElMessage.warning('请填写原密码与新密码')
@@ -208,10 +165,14 @@ const submitChangePwd = async () => {
       userId: currentUser.value.id,
       ...pwdForm
     })
-    ElMessage.success('密码修改成功')
+    ElMessage.success('密码修改成功，请重新登录')
     pwdVisible.value = false
     pwdForm.oldPassword = ''
     pwdForm.newPassword = ''
+    localStorage.removeItem('dorm_admin_user')
+    localStorage.removeItem('dorm_admin_token')
+    localStorage.removeItem('dorm_managed_building')
+    router.push('/login')
   } finally {
     pwdSubmitting.value = false
   }
@@ -223,6 +184,7 @@ const logout = async () => {
     cancelButtonText: '取消',
     type: 'warning'
   })
+  try { await request.post('/auth/logout') } catch (_) { /* local logout also works offline */ }
   localStorage.removeItem('dorm_admin_user')
   localStorage.removeItem('dorm_admin_token')
   localStorage.removeItem('dorm_managed_building')

@@ -64,7 +64,7 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const userStr = localStorage.getItem('dorm_admin_user')
-  if (to.path !== '/login' && !userStr) {
+  if (to.path !== '/login' && (!userStr || !localStorage.getItem('dorm_admin_token'))) {
     next('/login')
   } else {
     next()

@@ -310,7 +310,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'v
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
-import request from '@/api/request'
+import request, { downloadExport } from '@/api/request'
 
 const route = useRoute()
 const loading = ref(false)
@@ -568,7 +568,7 @@ const saveProfile = async () => {
 }
 
 const exportStudents = () => {
-  window.open('/api/export/students', '_blank')
+  downloadExport('students', '学生住宿.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
 onMounted(() => {

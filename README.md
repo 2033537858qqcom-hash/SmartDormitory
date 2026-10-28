@@ -5,7 +5,7 @@
 | 模块目录 | 工程职责 | 核心技术栈 | 运行端口 |
 | :--- | :--- | :--- | :--- |
 | [`sql/smart_dormitory.sql`](file:///d:/SmartDormitory/sql/smart_dormitory.sql) | MySQL 8.0 数据库脚本 | 13 张核心表 + 仿真业务测试数据 | `3306` |
-| [`backend/`](file:///d:/SmartDormitory/backend) | Java 后端核心服务 | Spring Boot 3.2 + MyBatis-Plus + JDK 17 | `8080` |
+| [`backend/`](file:///d:/SmartDormitory/backend) | Java 后端核心服务 | Spring Boot 3.2 + MyBatis-Plus + JDK 17 | `7000` |
 | [`frontend-admin/`](file:///d:/SmartDormitory/frontend-admin) | PC Web 综合管理端 | Vue 3 + Vite + Element Plus + ECharts 5 | `5173` |
 | [`frontend-student/`](file:///d:/SmartDormitory/frontend-student) | 微信小程序 / H5 学生端 | Uni-app (Vue 3) + 微信胶囊真机交互壳 | `5174` |
 
@@ -34,7 +34,7 @@
 ### 5. 23:00 夜间门禁智能稽核、访客电子绿码与 RBAC 差异化工作台
 - **23:00 门禁考勤模拟稽核**：自动比对在寝人数与提前提交的 `[学生报备]` 晚归名单，支持一键触发夜间门禁扫描并仅对“未报备晚归”学生自动生成警示记录。
 - **访客动态电子通行绿码**：学生端登记亲友来访后自动生成带 `VP-xxxxxx` 核验码的动态 SVG 绿码凭证（支持全屏亮码），管理端实时监测在楼时长与超时滞留预警。
-- **RBAC 多角色差异化工作台**：针对后勤主任 (`ADMIN`)、楼栋宿管 (`DORM_MANAGER`)、维修工程师 (`REPAIRMAN`) 动态裁剪导航菜单与专属工作台，并在顶部栏提供**答辩演示角色一键切换器**。
+- **多角色差异化工作台**：针对后勤主任 (`ADMIN`)、楼栋宿管 (`DORM_MANAGER`)、维修工程师 (`REPAIRMAN`) 动态裁剪导航菜单与专属工作台。服务端角色及数据范围授权尚未完成，当前仅供演示使用。
 
 ---
 
@@ -48,7 +48,7 @@
 直接双击运行根目录下的 [`start-all.bat`](file:///d:/SmartDormitory/start-all.bat)，或分别在终端执行：
 
 ```powershell
-# 1. 启动后端 (8080)
+# 1. 启动后端 (7000)
 cd d:\SmartDormitory\backend
 mvn spring-boot:run
 
@@ -67,9 +67,10 @@ npm run dev
 
 ## 四、 演示测试账号一览（密码统一为 `123456`）
 
-- **Web 管理端 (`http://localhost:5173`)**（登录或进入系统后均可在右上角一键切换角色）：
+- **Web 管理端 (`http://localhost:5173`)**：
   - 系统管理员（后勤主任）：`admin` / `123456`
   - 楼栋宿管员：`dm01` / `123456`
   - 维修工程师（电工）：`worker01` / `123456`
-- **微信小程序/H5 学生端 (`http://localhost:5174`)**：
-  - 页面顶部自带**答辩演示一键切换栏**，可在 `陈嘉豪(紫荆301·五星学霸寝)`、`刘子墨(紫荆302·能耗预警寝)`、`陆景行(2026级·待智能分寝新生)`、`苏婉清(丁香201·女生标杆寝)` 之间秒级切换！
+- **学生 H5 端 (`http://localhost:5174`)**：使用学号登录，例如 `20230101`（陈嘉豪）、`20230105`（刘子墨）、`20260101`（陆景行）或 `20230201`（苏婉清）。
+
+登录后使用服务端内存会话，有效期 8 小时；后端重启会使所有会话失效。旧的明文或 MD5 密码在成功登录时升级为 BCrypt。演示数据库仍使用默认密码，且服务端角色授权和学生、楼栋数据范围隔离尚未实现，请勿用于真实数据或公开部署。

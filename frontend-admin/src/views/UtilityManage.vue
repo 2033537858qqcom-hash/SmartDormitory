@@ -72,7 +72,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import request from '@/api/request'
+import request, { downloadExport } from '@/api/request'
 
 const formatMoney = (val) => '¥' + Number(val || 0).toFixed(2)
 
@@ -133,7 +133,7 @@ const handlePayBill = async (row) => {
 }
 
 const exportUtilityCsv = () => {
-  window.open('/api/export/utility-bills', '_blank')
+  downloadExport('utility-bills', '水电账单.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
 onMounted(() => {

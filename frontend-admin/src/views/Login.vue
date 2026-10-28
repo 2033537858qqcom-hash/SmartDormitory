@@ -17,13 +17,6 @@
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" size="large" prefix-icon="Lock" />
         </el-form-item>
 
-        <div class="quick-roles">
-          <span class="label">演示账号快捷切换：</span>
-          <el-tag class="role-chip interactive-lift" type="primary" effect="plain" @click="fillAccount('admin')">后勤主任 (admin)</el-tag>
-          <el-tag class="role-chip interactive-lift" type="info" effect="plain" @click="fillAccount('dm01')">宿管员 (dm01)</el-tag>
-          <el-tag class="role-chip interactive-lift" type="info" effect="plain" @click="fillAccount('worker01')">电工师傅 (worker01)</el-tag>
-        </div>
-
         <p v-if="errorMsg" class="inline-error" role="alert">{{ errorMsg }}</p>
 
         <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="handleLogin">
@@ -44,15 +37,9 @@ const router = useRouter()
 const loading = ref(false)
 const errorMsg = ref('')
 const form = reactive({
-  username: 'admin',
-  password: '123456'
+  username: '',
+  password: ''
 })
-
-const fillAccount = (username) => {
-  form.username = username
-  form.password = '123456'
-  errorMsg.value = ''
-}
 
 const handleLogin = async () => {
   errorMsg.value = ''
@@ -64,6 +51,10 @@ const handleLogin = async () => {
   try {
     const res = await request.post('/auth/login', form)
     const user = res.data.user
+    if (!['ADMIN', 'DORM_MANAGER', 'REPAIRMAN'].includes(user.role)) {
+      errorMsg.value = '请使用管理人员账号登录'
+      return
+    }
     localStorage.setItem('dorm_admin_user', JSON.stringify(user))
     localStorage.setItem('dorm_admin_token', res.data.token || '')
     if (res.data.managedBuilding) {

@@ -171,7 +171,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/api/request'
+import request, { downloadExport } from '@/api/request'
 
 const loading = ref(false)
 const loadError = ref(false)
@@ -345,7 +345,7 @@ const handleDeleteNotice = async (row) => {
 }
 
 const exportStudents = () => {
-  window.open('/api/export/students', '_blank')
+  downloadExport('students', '学生住宿.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
 onMounted(() => {

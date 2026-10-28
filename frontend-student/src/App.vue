@@ -1,23 +1,16 @@
 <template>
-  <div class="mp-stage">
-    <!-- 顶部演示学生视角切换栏 -->
-    <div class="demo-switcher" role="region" aria-label="演示学生视角切换">
-      <label class="demo-select-label">演示视角
-        <select aria-label="选择演示学生" :value="currentStudentId" @change="switchStudent(Number($event.target.value))">
-          <option v-for="stu in demoStudents" :key="stu.id" :value="stu.id">{{ stu.label }}</option>
-        </select>
-      </label>
-      <span class="demo-title">切换学生视角：</span>
-      <button
-        v-for="stu in demoStudents"
-        :key="stu.id"
-        class="switch-chip spring-btn tabular-nums"
-        :class="{ active: currentStudentId === stu.id }"
-        @click="switchStudent(stu.id)"
-      >
-        {{ stu.label }}
-      </button>
-    </div>
+  <div v-if="!currentStudentId" class="login-stage">
+    <form class="student-login" @submit.prevent="login">
+      <h1>智慧宿舍</h1>
+      <p>请使用学生账号登录</p>
+      <label>学号 <input v-model.trim="loginForm.username" autocomplete="username" required /></label>
+      <label>密码 <input v-model="loginForm.password" type="password" autocomplete="current-password" required /></label>
+      <p v-if="loginError" class="login-error" role="alert">{{ loginError }}</p>
+      <button type="submit" :disabled="loginLoading">{{ loginLoading ? '登录中…' : '登录' }}</button>
+    </form>
+  </div>
+  <div v-else class="mp-stage">
+    <button class="student-logout" type="button" @click="logout">退出登录</button>
 
     <!-- 微信小程序/H5 自适应高度容器（根据可视高度铺满，底部导航始终在首屏内） -->
     <div class="phone-frame">
@@ -146,17 +139,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import api from './api'
+import { signInStudent } from './session'
 import TabHome from './components/TabHome.vue'
 import TabHabitRadar from './components/TabHabitRadar.vue'
 import TabRepair from './components/TabRepair.vue'
 import TabUtility from './components/TabUtility.vue'
-
-const demoStudents = [
-  { id: 10, label: '陈嘉豪 (已入住·301)' },
-  { id: 14, label: '刘子墨 (已入住·302)' },
-  { id: 21, label: '陆景行 (待分寝新生)' },
-  { id: 17, label: '苏婉清 (女生·201)' }
-]
 
 const tabs = [
   {
@@ -187,7 +174,10 @@ const tabs = [
 ]
 
 const currentDate = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'Asia/Shanghai' }).format(new Date())
-const currentStudentId = ref(10)
+const currentStudentId = ref(localStorage.getItem('dorm_student_token') ? Number(localStorage.getItem('dorm_student_id')) || null : null)
+const loginForm = reactive({ username: '', password: '' })
+const loginError = ref('')
+const loginLoading = ref(false)
 const currentTab = ref('home')
 const utilityInitialAction = ref('')
 const loading = ref(true)
@@ -256,14 +246,44 @@ const loadDashboard = async () => {
   }
 }
 
-const switchStudent = (id) => {
-  currentStudentId.value = id
-  loading.value = true
-  loadDashboard()
+const clearSession = () => {
+  localStorage.removeItem('dorm_student_token')
+  localStorage.removeItem('dorm_student_id')
+  currentStudentId.value = null
+  dash.value = {}
+}
+
+const login = async () => {
+  loginLoading.value = true
+  loginError.value = ''
+  try {
+    currentStudentId.value = await signInStudent(api, localStorage, loginForm.username, loginForm.password)
+    loginForm.password = ''
+    loading.value = true
+    await loadDashboard()
+  } catch (error) {
+    loginError.value = error.response?.data?.message || error.message || '登录失败'
+  } finally {
+    loginLoading.value = false
+  }
+}
+
+const logout = async () => {
+  try { await api.post('/auth/logout') } catch (_) { /* local logout also works offline */ }
+  clearSession()
+}
+
+const sessionExpired = () => {
+  clearSession()
+  loginError.value = '登录已失效，请重新登录'
 }
 
 onMounted(() => {
+  window.addEventListener('student-session-expired', sessionExpired)
+  if (currentStudentId.value) {
+  loading.value = true
   loadDashboard()
+  }
   if (window.IntersectionObserver && sentinelRef.value && scrollBodyRef.value) {
     sentinelObserver = new IntersectionObserver(
       (entries) => {
@@ -276,6 +296,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('student-session-expired', sessionExpired)
   if (sentinelObserver) {
     sentinelObserver.disconnect()
   }
@@ -283,6 +304,12 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
+.login-stage { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg-canvas); }
+.student-login { width: min(100%, 360px); padding: 32px; border-radius: 24px; background: white; box-shadow: 0 12px 40px rgb(29 29 31 / 8%); }
+.student-login h1 { font-size: 25px; margin: 0 0 8px; }.student-login p { color: #6e6e73; margin-bottom: 22px; }
+.student-login label { display: grid; gap: 7px; margin: 16px 0; font-size: 14px; }.student-login input { padding: 12px; border: 1px solid #c9c9ce; border-radius: 9px; font: inherit; }
+.student-login button { width: 100%; border: 0; border-radius: 10px; padding: 12px; color: white; background: #176bd6; font: inherit; cursor: pointer; }.student-login .login-error { color: #b42318; margin: 10px 0; }
+.student-logout { align-self: flex-end; margin: 0 0 8px; border: 0; background: transparent; color: #555; cursor: pointer; }
 .mp-stage { height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 20px 18px; overflow: hidden; }
 .demo-switcher { display: flex; align-items: center; gap: 5px; margin-bottom: 12px; max-width: 100%; flex-shrink: 0; padding: 4px; background: #e4e4e9; border-radius: 12px; overflow-x: auto; scrollbar-width: none; }
 .demo-select-label { display: none; }
