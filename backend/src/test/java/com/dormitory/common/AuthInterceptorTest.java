@@ -114,4 +114,19 @@ class AuthInterceptorTest {
         appeal.addHeader("Authorization", token);
         assertTrue(interceptor.preHandle(appeal, new MockHttpServletResponse(), new Object()));
     }
+
+    @Test
+    void residenceRequestsRespectRolePermissions() throws Exception {
+        when(users.selectById(7L)).thenReturn(user);
+        String token = sessions.create(7L);
+        MockHttpServletRequest submit = new MockHttpServletRequest("POST", "/api/residence/requests");
+        submit.addHeader("Authorization", token);
+        assertTrue(interceptor.preHandle(submit, new MockHttpServletResponse(), new Object()));
+        MockHttpServletRequest review = new MockHttpServletRequest("POST", "/api/residence/review");
+        review.addHeader("Authorization", token);
+        assertFalse(interceptor.preHandle(review, new MockHttpServletResponse(), new Object()));
+        user.setRole("DORM_MANAGER");
+        assertTrue(interceptor.preHandle(review, new MockHttpServletResponse(), new Object()));
+        assertFalse(interceptor.preHandle(submit, new MockHttpServletResponse(), new Object()));
+    }
 }
