@@ -55,7 +55,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                         || Set.of("/api/dorm/buildings", "/api/dorm/rooms", "/api/affair/notices").contains(path);
             }
             return "POST".equals(method) && Set.of("/api/smart-alloc/habit-profile", "/api/repair/submit",
-                    "/api/repair/rate", "/api/utility/pay-or-recharge", "/api/affair/discipline",
+                    "/api/repair/rate", "/api/utility/pay-or-recharge",
                     "/api/affair/discipline-appeal", "/api/affair/adjust-apply", "/api/affair/visitor").contains(path);
         }
         if ("REPAIRMAN".equals(role)) {

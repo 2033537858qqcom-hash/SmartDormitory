@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
@@ -8,6 +9,8 @@ import com.dormitory.service.SmartAllocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,12 +28,18 @@ public class DormManageController {
     private final SysUserMapper userMapper;
     private final StudentHabitProfileMapper habitProfileMapper;
     private final SmartAllocationService smartAllocationService;
+    private final BuildingScopeService buildingScope;
 
     @GetMapping("/buildings")
-    public Result<List<Map<String, Object>>> listBuildings() {
-        List<DormBuilding> buildings = buildingMapper.selectList(
-                new LambdaQueryWrapper<DormBuilding>().orderByAsc(DormBuilding::getBuildingCode)
-        );
+    public Result<List<Map<String, Object>>> listBuildings(HttpServletRequest request) {
+        LambdaQueryWrapper<DormBuilding> bq = new LambdaQueryWrapper<DormBuilding>().orderByAsc(DormBuilding::getBuildingCode);
+        Set<Long> scope = buildingScope.resolve(request);
+        // 学生端可读全校楼栋列表（申请调宿等）；宿管仅见管辖楼栋
+        if (scope != null) {
+            if (scope.isEmpty()) return Result.success(List.of());
+            bq.in(DormBuilding::getId, scope);
+        }
+        List<DormBuilding> buildings = buildingMapper.selectList(bq);
         List<DormRoom> allRooms = roomMapper.selectList(null);
         Map<Long, SysUser> userMap = userMapper.selectList(null).stream()
                 .collect(Collectors.toMap(SysUser::getId, u -> u));
@@ -74,8 +83,19 @@ public class DormManageController {
     }
 
     @GetMapping("/rooms")
-    public Result<List<Map<String, Object>>> listRooms(@RequestParam(required = false) Long buildingId) {
+    public Result<List<Map<String, Object>>> listRooms(@RequestParam(required = false) Long buildingId,
+                                                       HttpServletRequest request) {
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null) {
+            if (scope.isEmpty()) return Result.success(List.of());
+            if (buildingId != null && !scope.contains(buildingId)) {
+                return Result.error(403, "只能查看管辖楼栋的房间");
+            }
+        }
         LambdaQueryWrapper<DormRoom> wrapper = new LambdaQueryWrapper<>();
+        if (scope != null) {
+            wrapper.in(DormRoom::getBuildingId, scope);
+        }
         if (buildingId != null) {
             wrapper.eq(DormRoom::getBuildingId, buildingId);
         }
@@ -139,7 +159,13 @@ public class DormManageController {
 
     @PostMapping("/room")
     @Transactional(rollbackFor = Exception.class)
-    public Result<DormRoom> createOrUpdateRoom(@RequestBody DormRoom room) {
+    public Result<DormRoom> createOrUpdateRoom(@RequestBody DormRoom room, HttpServletRequest request) {
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<DormRoom> typed = (Result<DormRoom>) denied;
+            return typed;
+        }
         if (room.getId() == null) {
             if (room.getCapacity() == null) room.setCapacity(4);
             if (room.getOccupiedCount() == null) room.setOccupiedCount(0);
@@ -167,7 +193,7 @@ public class DormManageController {
 
     @PostMapping("/assign-bed")
     @Transactional(rollbackFor = Exception.class)
-    public Result<String> assignOrReleaseBed(@RequestBody Map<String, Object> body) {
+    public Result<String> assignOrReleaseBed(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long bedId = Long.valueOf(body.get("bedId").toString());
         Long studentId = body.get("studentId") != null ? Long.valueOf(body.get("studentId").toString()) : null;
 
@@ -176,6 +202,13 @@ public class DormManageController {
             return Result.error("床位不存在");
         }
         DormRoom room = roomMapper.selectById(bed.getRoomId());
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(
+                buildingScope.resolve(request), room != null ? room.getBuildingId() : null);
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<String> typed = (Result<String>) denied;
+            return typed;
+        }
 
         if (studentId == null) {
             // 退宿释放床位

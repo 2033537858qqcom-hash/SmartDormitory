@@ -10,6 +10,8 @@ import com.dormitory.mapper.RepairOrderMapper;
 import com.dormitory.mapper.SysUserMapper;
 import com.dormitory.mapper.DormRoomMapper;
 import com.dormitory.mapper.DormBuildingMapper;
+import com.dormitory.mapper.DormBedMapper;
+import com.dormitory.common.BuildingScopeService;
 import com.dormitory.service.SmartRepairService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,8 @@ class RepairAuthorizationTest {
     @Mock SysUserMapper users;
     @Mock DormRoomMapper rooms;
     @Mock DormBuildingMapper buildings;
+    @Mock DormBedMapper beds;
+    @Mock BuildingScopeService buildingScope;
     @Mock SmartRepairService service;
     @InjectMocks RepairOrderController controller;
 

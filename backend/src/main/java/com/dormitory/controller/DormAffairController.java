@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
@@ -9,6 +10,8 @@ import com.dormitory.service.SmartEvaluationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -34,10 +37,18 @@ public class DormAffairController {
     private final DormBedMapper bedMapper;
     private final SysUserMapper userMapper;
     private final StudentHabitProfileMapper habitProfileMapper;
+    private final BuildingScopeService buildingScope;
 
     @GetMapping("/evaluation")
-    public Result<List<Map<String, Object>>> getCivilizedEvaluation() {
-        return Result.success(smartEvaluationService.evaluateAllRooms());
+    public Result<List<Map<String, Object>>> getCivilizedEvaluation(HttpServletRequest request) {
+        List<Map<String, Object>> all = smartEvaluationService.evaluateAllRooms();
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope == null) return Result.success(all);
+        if (scope.isEmpty()) return Result.success(List.of());
+        return Result.success(all.stream().filter(m -> {
+            Object bid = m.get("buildingId");
+            return bid != null && scope.contains(Long.valueOf(bid.toString()));
+        }).collect(Collectors.toList()));
     }
 
     @PostMapping("/reward-civilized")
@@ -49,10 +60,15 @@ public class DormAffairController {
     }
 
     @GetMapping("/hygiene")
-    public Result<List<Map<String, Object>>> listHygiene() {
-        List<HygieneInspection> list = hygieneMapper.selectList(
-                new LambdaQueryWrapper<HygieneInspection>().orderByDesc(HygieneInspection::getCheckDate)
-        );
+    public Result<List<Map<String, Object>>> listHygiene(HttpServletRequest request) {
+        LambdaQueryWrapper<HygieneInspection> hq = new LambdaQueryWrapper<HygieneInspection>()
+                .orderByDesc(HygieneInspection::getCheckDate);
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null) {
+            if (scope.isEmpty()) return Result.success(List.of());
+            hq.in(HygieneInspection::getBuildingId, scope);
+        }
+        List<HygieneInspection> list = hygieneMapper.selectList(hq);
         Map<Long, DormRoom> roomMap = roomMapper.selectList(null).stream().collect(Collectors.toMap(DormRoom::getId, r -> r));
         Map<Long, DormBuilding> buildingMap = buildingMapper.selectList(null).stream().collect(Collectors.toMap(DormBuilding::getId, b -> b));
 
@@ -81,10 +97,16 @@ public class DormAffairController {
     }
 
     @PostMapping("/hygiene")
-    public Result<HygieneInspection> saveHygiene(@RequestBody HygieneInspection h) {
+    public Result<HygieneInspection> saveHygiene(@RequestBody HygieneInspection h, HttpServletRequest request) {
         DormRoom room = roomMapper.selectById(h.getRoomId());
         if (room != null) {
             h.setBuildingId(room.getBuildingId());
+        }
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), h.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<HygieneInspection> typed = (Result<HygieneInspection>) denied;
+            return typed;
         }
         int total = (h.getFloorScore() != null ? h.getFloorScore() : 25)
                 + (h.getBedScore() != null ? h.getBedScore() : 25)
@@ -104,11 +126,20 @@ public class DormAffairController {
     }
 
     @GetMapping("/discipline")
-    public Result<List<Map<String, Object>>> listDiscipline(@RequestParam(required = false) Long studentId) {
+    public Result<List<Map<String, Object>>> listDiscipline(@RequestParam(required = false) Long studentId,
+                                                            HttpServletRequest request) {
         LambdaQueryWrapper<DisciplineRecord> wrapper = new LambdaQueryWrapper<>();
         if (studentId != null) wrapper.eq(DisciplineRecord::getStudentId, studentId);
         wrapper.orderByDesc(DisciplineRecord::getOccurTime);
         List<DisciplineRecord> list = disciplineMapper.selectList(wrapper);
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null) {
+            if (scope.isEmpty()) return Result.success(List.of());
+            Set<Long> roomIds = roomMapper.selectList(
+                    new LambdaQueryWrapper<DormRoom>().in(DormRoom::getBuildingId, scope)
+            ).stream().map(DormRoom::getId).collect(Collectors.toSet());
+            list = list.stream().filter(d -> d.getRoomId() != null && roomIds.contains(d.getRoomId())).collect(Collectors.toList());
+        }
 
         Map<Long, SysUser> userMap = userMapper.selectList(null).stream().collect(Collectors.toMap(SysUser::getId, u -> u));
         Map<Long, DormRoom> roomMap = roomMapper.selectList(null).stream().collect(Collectors.toMap(DormRoom::getId, r -> r));
@@ -137,7 +168,10 @@ public class DormAffairController {
     }
 
     @PostMapping("/discipline")
-    public Result<DisciplineRecord> saveDiscipline(@RequestBody DisciplineRecord d) {
+    public Result<DisciplineRecord> saveDiscipline(@RequestBody DisciplineRecord d, HttpServletRequest request) {
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            return Result.error(403, "学生无权登记违纪记录");
+        }
         if (d.getOccurTime() == null) d.setOccurTime(LocalDateTime.now());
         if (d.getStatus() == null) d.setStatus(1);
         if (d.getRoomId() == null && d.getStudentId() != null) {
@@ -150,6 +184,16 @@ public class DormAffairController {
                 d.setRoomId(bed.getRoomId());
             }
         }
+        if (d.getRoomId() != null) {
+            DormRoom scopedRoom = roomMapper.selectById(d.getRoomId());
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(
+                    buildingScope.resolve(request), scopedRoom != null ? scopedRoom.getBuildingId() : null);
+            if (denied != null) {
+                @SuppressWarnings("unchecked")
+                Result<DisciplineRecord> typed = (Result<DisciplineRecord>) denied;
+                return typed;
+            }
+        }
         disciplineMapper.insert(d);
         smartEvaluationService.evaluateAllRooms();
         return Result.success("违纪/晚归记录已登记并同步更新寝室量化分", d);
@@ -159,12 +203,16 @@ public class DormAffairController {
      * 学生在线提交违纪/晚归申诉（状态置为 3-申诉待审）
      */
     @PostMapping("/discipline-appeal")
-    public Result<DisciplineRecord> appealDiscipline(@RequestBody Map<String, Object> body) {
+    public Result<DisciplineRecord> appealDiscipline(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long id = Long.valueOf(body.get("id").toString());
         String appealReason = body.get("appealReason") != null ? body.get("appealReason").toString().trim() : "因科研/急事晚归，申请核销扣分";
         DisciplineRecord d = disciplineMapper.selectById(id);
         if (d == null) {
             return Result.error("未找到该条记录");
+        }
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))
+                && !Objects.equals(d.getStudentId(), request.getAttribute("currentUserId"))) {
+            return Result.error(403, "只能申诉本人的违纪记录");
         }
         String baseDesc = d.getDescription() != null ? d.getDescription().split(" \\| \\[")[0] : "";
         d.setDescription(baseDesc + " | [学生申诉] " + appealReason);
@@ -178,7 +226,7 @@ public class DormAffairController {
      */
     @PostMapping("/discipline-review")
     @Transactional(rollbackFor = Exception.class)
-    public Result<DisciplineRecord> reviewDisciplineAppeal(@RequestBody Map<String, Object> body) {
+    public Result<DisciplineRecord> reviewDisciplineAppeal(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long id = Long.valueOf(body.get("id").toString());
         boolean approved = body.get("approved") == null || Boolean.parseBoolean(body.get("approved").toString());
         String reviewNote = body.get("reviewNote") != null ? body.get("reviewNote").toString().trim()
@@ -187,6 +235,16 @@ public class DormAffairController {
         DisciplineRecord d = disciplineMapper.selectById(id);
         if (d == null) {
             return Result.error("未找到该条记录");
+        }
+        if (d.getRoomId() != null) {
+            DormRoom rr = roomMapper.selectById(d.getRoomId());
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(
+                    buildingScope.resolve(request), rr != null ? rr.getBuildingId() : null);
+            if (denied != null) {
+                @SuppressWarnings("unchecked")
+                Result<DisciplineRecord> typed = (Result<DisciplineRecord>) denied;
+                return typed;
+            }
         }
         String desc = d.getDescription() != null ? d.getDescription() : "";
         if (approved) {
@@ -290,11 +348,20 @@ public class DormAffairController {
     }
 
     @GetMapping("/adjust-list")
-    public Result<List<Map<String, Object>>> listAdjustApplies(@RequestParam(required = false) Long studentId) {
+    public Result<List<Map<String, Object>>> listAdjustApplies(@RequestParam(required = false) Long studentId,
+                                                               HttpServletRequest request) {
         LambdaQueryWrapper<DormAdjustApply> wrapper = new LambdaQueryWrapper<>();
         if (studentId != null) wrapper.eq(DormAdjustApply::getStudentId, studentId);
         wrapper.orderByDesc(DormAdjustApply::getCreateTime);
         List<DormAdjustApply> list = adjustApplyMapper.selectList(wrapper);
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null) {
+            if (scope.isEmpty()) return Result.success(List.of());
+            Set<Long> roomIds = roomMapper.selectList(
+                    new LambdaQueryWrapper<DormRoom>().in(DormRoom::getBuildingId, scope)
+            ).stream().map(DormRoom::getId).collect(Collectors.toSet());
+            list = list.stream().filter(a -> a.getOldRoomId() != null && roomIds.contains(a.getOldRoomId())).collect(Collectors.toList());
+        }
 
         Map<Long, SysUser> userMap = userMapper.selectList(null).stream().collect(Collectors.toMap(SysUser::getId, u -> u));
         Map<Long, DormRoom> roomMap = roomMapper.selectList(null).stream().collect(Collectors.toMap(DormRoom::getId, r -> r));
@@ -349,7 +416,10 @@ public class DormAffairController {
     }
 
     @PostMapping("/adjust-apply")
-    public Result<DormAdjustApply> submitAdjustApply(@RequestBody DormAdjustApply apply) {
+    public Result<DormAdjustApply> submitAdjustApply(@RequestBody DormAdjustApply apply, HttpServletRequest request) {
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            apply.setStudentId((Long) request.getAttribute("currentUserId"));
+        }
         if (apply.getApplyType() == null || apply.getApplyType().isEmpty()) {
             apply.setApplyType("ADJUST");
         }
@@ -364,13 +434,23 @@ public class DormAffairController {
 
     @PostMapping("/adjust-review")
     @Transactional(rollbackFor = Exception.class)
-    public Result<DormAdjustApply> reviewAdjustApply(@RequestBody Map<String, Object> body) {
+    public Result<DormAdjustApply> reviewAdjustApply(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long id = Long.valueOf(body.get("id").toString());
         String status = body.get("status").toString();
         String comment = body.get("reviewComment") != null ? body.get("reviewComment").toString() : "";
 
         DormAdjustApply apply = adjustApplyMapper.selectById(id);
         if (apply == null) return Result.error("申请记录不存在");
+        if (apply.getOldRoomId() != null) {
+            DormRoom oldRoom = roomMapper.selectById(apply.getOldRoomId());
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(
+                    buildingScope.resolve(request), oldRoom != null ? oldRoom.getBuildingId() : null);
+            if (denied != null) {
+                @SuppressWarnings("unchecked")
+                Result<DormAdjustApply> typed = (Result<DormAdjustApply>) denied;
+                return typed;
+            }
+        }
 
         apply.setStatus(status);
         apply.setReviewComment(comment);
@@ -423,10 +503,15 @@ public class DormAffairController {
     }
 
     @GetMapping("/visitors")
-    public Result<List<Map<String, Object>>> listVisitors() {
-        List<VisitorRecord> list = visitorMapper.selectList(
-                new LambdaQueryWrapper<VisitorRecord>().orderByDesc(VisitorRecord::getEnterTime)
-        );
+    public Result<List<Map<String, Object>>> listVisitors(HttpServletRequest request) {
+        LambdaQueryWrapper<VisitorRecord> vq = new LambdaQueryWrapper<VisitorRecord>()
+                .orderByDesc(VisitorRecord::getEnterTime);
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null) {
+            if (scope.isEmpty()) return Result.success(List.of());
+            vq.in(VisitorRecord::getBuildingId, scope);
+        }
+        List<VisitorRecord> list = visitorMapper.selectList(vq);
         Map<Long, SysUser> userMap = userMapper.selectList(null).stream().collect(Collectors.toMap(SysUser::getId, u -> u));
         Map<Long, DormBuilding> buildingMap = buildingMapper.selectList(null).stream().collect(Collectors.toMap(DormBuilding::getId, b -> b));
 
@@ -467,7 +552,32 @@ public class DormAffairController {
     }
 
     @PostMapping("/visitor")
-    public Result<VisitorRecord> createVisitor(@RequestBody VisitorRecord v) {
+    public Result<VisitorRecord> createVisitor(@RequestBody VisitorRecord v, HttpServletRequest request) {
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            v.setVisitStudentId((Long) request.getAttribute("currentUserId"));
+            DormBed bed = bedMapper.selectOne(
+                    new LambdaQueryWrapper<DormBed>()
+                            .eq(DormBed::getStudentId, v.getVisitStudentId())
+                            .eq(DormBed::getStatus, 1)
+                            .last("LIMIT 1")
+            );
+            if (bed != null) {
+                DormRoom room = roomMapper.selectById(bed.getRoomId());
+                if (room != null) {
+                    v.setBuildingId(room.getBuildingId());
+                    if (v.getRoomNo() == null || v.getRoomNo().isEmpty()) {
+                        v.setRoomNo(room.getRoomNo());
+                    }
+                }
+            }
+        } else {
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), v.getBuildingId());
+            if (denied != null) {
+                @SuppressWarnings("unchecked")
+                Result<VisitorRecord> typed = (Result<VisitorRecord>) denied;
+                return typed;
+            }
+        }
         v.setEnterTime(LocalDateTime.now());
         v.setStatus(0);
         visitorMapper.insert(v);
@@ -475,9 +585,15 @@ public class DormAffairController {
     }
 
     @PostMapping("/visitor-leave/{id}")
-    public Result<VisitorRecord> leaveVisitor(@PathVariable Long id) {
+    public Result<VisitorRecord> leaveVisitor(@PathVariable Long id, HttpServletRequest request) {
         VisitorRecord v = visitorMapper.selectById(id);
         if (v != null) {
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), v.getBuildingId());
+            if (denied != null) {
+                @SuppressWarnings("unchecked")
+                Result<VisitorRecord> typed = (Result<VisitorRecord>) denied;
+                return typed;
+            }
             v.setLeaveTime(LocalDateTime.now());
             v.setStatus(1);
             visitorMapper.updateById(v);
