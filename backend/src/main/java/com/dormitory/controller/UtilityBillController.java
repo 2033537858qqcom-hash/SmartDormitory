@@ -159,6 +159,25 @@ public class UtilityBillController {
         return Result.success(smartUtilityService.thresholdRules());
     }
 
+    @GetMapping("/payment-logs")
+    public Result<List<UtilityPaymentLog>> paymentHistory(@RequestParam Long roomId, HttpServletRequest request) {
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            DormBed bed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                    .eq(DormBed::getStudentId, request.getAttribute("currentUserId"))
+                    .eq(DormBed::getRoomId, roomId).eq(DormBed::getStatus, 1).last("LIMIT 1"));
+            if (bed == null) return Result.error(403, "只能查看自己寝室的缴费流水");
+        } else {
+            DormRoom room = roomMapper.selectById(roomId);
+            if (room == null) return Result.error("寝室不存在");
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
+            if (denied != null) return Result.error(403, denied.getMessage());
+        }
+        List<UtilityPaymentLog> history = paymentLogMapper.selectList(new LambdaQueryWrapper<UtilityPaymentLog>()
+                .eq(UtilityPaymentLog::getRoomId, roomId).orderByDesc(UtilityPaymentLog::getCreateTime).last("LIMIT 100"));
+        history.forEach(log -> log.setRemark(null));
+        return Result.success(history);
+    }
+
     @PostMapping("/meter-batch")
     public Result<Map<String, Object>> batchMeter(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String billMonth = body.get("billMonth") != null ? body.get("billMonth").toString() : null;

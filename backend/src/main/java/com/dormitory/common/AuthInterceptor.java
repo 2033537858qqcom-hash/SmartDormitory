@@ -63,7 +63,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             if ("GET".equals(method)) {
                 return path.equals("/api/auth/student-dashboard/" + userId)
                         || Set.of("/api/dorm/buildings", "/api/dorm/rooms", "/api/affair/notices",
-                        "/api/messages", "/api/messages/unread-count").contains(path);
+                        "/api/messages", "/api/messages/unread-count", "/api/utility/payment-logs").contains(path);
             }
             return "POST".equals(method) && Set.of("/api/smart-alloc/habit-profile", "/api/repair/submit",
                     "/api/repair/rate", "/api/utility/pay-or-recharge",
@@ -79,7 +79,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if ("GET".equals(method)) {
             return Set.of("/api/dashboard/overview", "/api/dorm/buildings", "/api/dorm/rooms",
                     "/api/smart-alloc/candidates", "/api/smart-alloc/precheck", "/api/repair/list", "/api/utility/bills",
-                    "/api/utility/threshold-rules", "/api/affair/evaluation", "/api/affair/hygiene", "/api/affair/hygiene-trend",
+                    "/api/utility/threshold-rules", "/api/utility/payment-logs", "/api/affair/evaluation", "/api/affair/hygiene", "/api/affair/hygiene-trend",
                     "/api/affair/adjust-list",
                     "/api/affair/discipline", "/api/affair/visitors", "/api/affair/curfew-stats",
                     "/api/affair/notices", "/api/auth/users",
