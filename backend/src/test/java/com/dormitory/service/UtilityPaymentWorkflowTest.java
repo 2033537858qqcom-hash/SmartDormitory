@@ -56,4 +56,19 @@ class UtilityPaymentWorkflowTest {
         assertEquals(new BigDecimal("40.00"), result.get("electricAfter"));
         verify(logs).insert(argThat((UtilityPaymentLog log) -> "DEMO-payment_request_005".equals(log.getTxnNo()) && new BigDecimal("10.00").compareTo(log.getElectricDelta()) == 0));
     }
+
+    @Test
+    void retriesReturnOriginalTransactionWithoutChargingAgain() {
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(room());
+        when(rooms.updateById(any(DormRoom.class))).thenReturn(1);
+        java.util.concurrent.atomic.AtomicReference<UtilityPaymentLog> saved = new java.util.concurrent.atomic.AtomicReference<>();
+        when(logs.selectOne(any(Wrapper.class))).thenAnswer(invocation -> saved.get());
+        doAnswer(invocation -> { saved.set(invocation.getArgument(0)); return 1; }).when(logs).insert(any(UtilityPaymentLog.class));
+        var first = service.processPayment(1L, null, new BigDecimal("10"), BigDecimal.ZERO, 7L, "payment_request_006");
+        var retry = service.processPayment(1L, null, new BigDecimal("10.00"), BigDecimal.ZERO, 7L, "payment_request_006");
+        assertEquals(first.get("txnNo"), retry.get("txnNo"));
+        verify(rooms, times(1)).updateById(any(DormRoom.class));
+        verify(logs, times(1)).insert(any(UtilityPaymentLog.class));
+        assertThrows(IllegalArgumentException.class, () -> service.processPayment(1L, null, new BigDecimal("20"), BigDecimal.ZERO, 7L, "payment_request_006"));
+    }
 }
