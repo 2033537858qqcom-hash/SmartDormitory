@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
@@ -207,11 +208,12 @@ public class DormManageController {
         Long bedId = Long.valueOf(body.get("bedId").toString());
         Long studentId = body.get("studentId") != null ? Long.valueOf(body.get("studentId").toString()) : null;
 
-        DormBed bed = bedMapper.selectById(bedId);
+        DormBed bed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>().eq(DormBed::getId, bedId).last("FOR UPDATE"));
         if (bed == null) {
             return Result.error("床位不存在");
         }
         DormRoom room = roomMapper.selectById(bed.getRoomId());
+        if (room == null) return Result.error("寝室不存在");
         Result<?> denied = buildingScope.forbiddenIfOutOfScope(
                 buildingScope.resolve(request), room != null ? room.getBuildingId() : null);
         if (denied != null) {
@@ -223,10 +225,8 @@ public class DormManageController {
         if (studentId == null) {
             // 退宿释放床位
             Long oldStudentId = bed.getStudentId();
-            bed.setStudentId(null);
-            bed.setCheckInDate(null);
-            bed.setStatus(0);
-            bedMapper.updateById(bed);
+            bedMapper.update(null, new LambdaUpdateWrapper<DormBed>().eq(DormBed::getId, bedId)
+                    .set(DormBed::getStudentId, null).set(DormBed::getCheckInDate, null).set(DormBed::getStatus, 0));
 
             if (oldStudentId != null) {
                 StudentHabitProfile hp = habitProfileMapper.selectOne(
@@ -237,9 +237,11 @@ public class DormManageController {
                     habitProfileMapper.updateById(hp);
                 }
             }
+            smartAllocationService.recordManualChange(room.getBuildingId(), bedId, oldStudentId, null, (Long) request.getAttribute("currentUserId"));
         } else {
+            if (!Integer.valueOf(0).equals(bed.getStatus()) || bed.getStudentId() != null) return Result.error("目标床位已占用或不可用");
             // 办理入住：校验学生性别与楼栋性别限制一致
-            SysUser student = userMapper.selectById(studentId);
+            SysUser student = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getId, studentId).last("FOR UPDATE"));
             if (student == null) {
                 return Result.error("学生不存在");
             }
@@ -256,16 +258,21 @@ public class DormManageController {
                     new LambdaQueryWrapper<DormBed>()
                             .eq(DormBed::getStudentId, studentId)
                             .eq(DormBed::getStatus, 1)
+                            .last("FOR UPDATE")
             );
+            for (DormBed old : oldBeds) {
+                DormRoom oldRoom = roomMapper.selectById(old.getRoomId());
+                Result<?> oldDenied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), oldRoom != null ? oldRoom.getBuildingId() : null);
+                if (oldDenied != null) return Result.error(403, oldDenied.getMessage());
+            }
             for (DormBed ob : oldBeds) {
                 if (!Objects.equals(ob.getId(), bedId)) {
-                    ob.setStudentId(null);
-                    ob.setCheckInDate(null);
-                    ob.setStatus(0);
-                    bedMapper.updateById(ob);
+                    bedMapper.update(null, new LambdaUpdateWrapper<DormBed>().eq(DormBed::getId, ob.getId())
+                            .set(DormBed::getStudentId, null).set(DormBed::getCheckInDate, null).set(DormBed::getStatus, 0));
                     DormRoom oldRoom = roomMapper.selectById(ob.getRoomId());
                     if (oldRoom != null) {
                         smartAllocationService.recalculateRoomHarmony(oldRoom.getId());
+                        smartAllocationService.recordManualChange(oldRoom.getBuildingId(), ob.getId(), studentId, null, (Long) request.getAttribute("currentUserId"));
                     }
                 }
             }
@@ -273,6 +280,7 @@ public class DormManageController {
             bed.setCheckInDate(LocalDate.now());
             bed.setStatus(1);
             bedMapper.updateById(bed);
+            smartAllocationService.recordManualChange(room.getBuildingId(), bedId, null, studentId, (Long) request.getAttribute("currentUserId"));
 
             StudentHabitProfile hp = habitProfileMapper.selectOne(
                     new LambdaQueryWrapper<StudentHabitProfile>().eq(StudentHabitProfile::getStudentId, studentId)

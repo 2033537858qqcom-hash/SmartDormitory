@@ -33,6 +33,20 @@ public class SmartAllocationService {
     // 默认六维特征权重：作息时间(0.30)、睡眠质量(0.20)、空调偏好(0.10)、卫生习惯(0.15)、氛围偏好(0.20)、异味敏感度(0.05)
     private static final double[] DEFAULT_WEIGHTS = {0.30, 0.20, 0.10, 0.15, 0.20, 0.05};
 
+    public void recordManualChange(Long buildingId, Long bedId, Long previousStudentId, Long studentId, Long operatorId) {
+        DormAllocationLog log = new DormAllocationLog();
+        log.setBatchNo("MANUAL-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
+        log.setBuildingId(buildingId);
+        log.setAllocatedStudentCount(studentId == null ? 0 : 1);
+        log.setAllocatedRoomCount(1);
+        log.setAvgHarmonyScore(BigDecimal.ZERO);
+        log.setAlgorithmStrategy("MANUAL");
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("bedId", bedId); detail.put("previousStudentId", previousStudentId); detail.put("studentId", studentId);
+        log.setDetailJson(JSONUtil.toJsonStr(detail)); log.setOperatorId(operatorId);
+        allocationLogMapper.insert(log);
+    }
+
     /**
      * 计算两名学生六维生活习惯向量之间的契合度得分 [0, 100]
      */

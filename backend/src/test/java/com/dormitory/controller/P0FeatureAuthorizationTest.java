@@ -105,10 +105,10 @@ class P0FeatureAuthorizationTest {
         girl.setGender(2); // 女
         girl.setRealName("测试女同学");
 
-        when(bedMapper.selectById(5L)).thenReturn(bed);
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(bed);
         when(roomMapper.selectById(10L)).thenReturn(room);
         when(buildingMapper.selectById(1L)).thenReturn(building);
-        when(userMapper.selectById(99L)).thenReturn(girl);
+        when(userMapper.selectOne(any(Wrapper.class))).thenReturn(girl);
         when(buildingScope.resolve(any())).thenReturn(null);
         when(buildingScope.forbiddenIfOutOfScope(isNull(), eq(1L))).thenReturn(null);
 
@@ -135,10 +135,10 @@ class P0FeatureAuthorizationTest {
         SysUser boy = new SysUser();
         boy.setId(88L);
         boy.setGender(1);
-        when(bedMapper.selectById(5L)).thenReturn(bed);
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(bed);
         when(roomMapper.selectById(10L)).thenReturn(room);
         when(buildingMapper.selectById(1L)).thenReturn(building);
-        when(userMapper.selectById(88L)).thenReturn(boy);
+        when(userMapper.selectOne(any(Wrapper.class))).thenReturn(boy);
         when(bedMapper.selectList(any(Wrapper.class))).thenReturn(List.of());
         when(habitProfileMapper.selectOne(any())).thenReturn(null);
         when(buildingScope.resolve(any())).thenReturn(null);
@@ -154,7 +154,7 @@ class P0FeatureAuthorizationTest {
     void manualAssignmentCannotOverwriteOccupiedBed() {
         DormBed bed = new DormBed(); bed.setId(5L); bed.setRoomId(10L); bed.setStatus(1); bed.setStudentId(10L);
         DormRoom room = new DormRoom(); room.setId(10L); room.setBuildingId(1L);
-        when(bedMapper.selectById(5L)).thenReturn(bed);
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(bed);
         when(roomMapper.selectById(10L)).thenReturn(room);
         var result = dormController.assignOrReleaseBed(Map.of("bedId", 5, "studentId", 88), admin());
         assertNotEquals(200, result.getCode());
