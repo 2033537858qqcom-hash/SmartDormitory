@@ -73,10 +73,10 @@ public class SmartUtilityService {
      */
     @Transactional(rollbackFor = Exception.class)
     public UtilityBill createOrUpdateMeterBill(UtilityBill bill) {
-        DormRoom room = roomMapper.selectById(bill.getRoomId());
-        if (room != null) {
-            bill.setBuildingId(room.getBuildingId());
-        }
+        DormRoom room = roomMapper.selectOne(new LambdaQueryWrapper<DormRoom>()
+                .eq(DormRoom::getId, bill.getRoomId()).last("FOR UPDATE"));
+        if (room == null) throw new IllegalArgumentException("寝室不存在");
+        bill.setBuildingId(room.getBuildingId());
 
         BigDecimal elecCost = calculateTieredElectricCost(bill.getElectricUsed());
         BigDecimal waterCost = calculateTieredWaterCost(bill.getWaterUsed());
@@ -116,9 +116,8 @@ public class SmartUtilityService {
             bill.setAbnormalReason(null);
         }
 
-        if (bill.getPayStatus() == null) {
-            bill.setPayStatus(0);
-        }
+        bill.setPayStatus(0);
+        bill.setPayTime(null);
         bill.setCreateTime(LocalDateTime.now());
 
         UtilityBill existing = utilityBillMapper.selectOne(
@@ -127,47 +126,13 @@ public class SmartUtilityService {
                         .eq(UtilityBill::getRoomId, bill.getRoomId())
         );
         if (existing != null) {
+            if (Integer.valueOf(1).equals(existing.getPayStatus())) throw new IllegalArgumentException("已缴账单不可重新抄表覆盖");
             bill.setId(existing.getId());
             utilityBillMapper.updateById(bill);
         } else {
             utilityBillMapper.insert(bill);
         }
         return bill;
-    }
-
-    /**
-     * 学生在线缴纳水电账单（联动抵扣寝室水电账户余额）或充值水电余额
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public DormRoom payBillOrRecharge(Long roomId, Long billId, BigDecimal electricRecharge, BigDecimal waterRecharge) {
-        DormRoom room = roomMapper.selectById(roomId);
-        if (room == null) {
-            throw new RuntimeException("未找到对应寝室");
-        }
-        if (electricRecharge != null && electricRecharge.compareTo(BigDecimal.ZERO) > 0) {
-            room.setElectricBalance(room.getElectricBalance().add(electricRecharge));
-        }
-        if (waterRecharge != null && waterRecharge.compareTo(BigDecimal.ZERO) > 0) {
-            room.setWaterBalance(room.getWaterBalance().add(waterRecharge));
-        }
-        if (billId != null) {
-            UtilityBill bill = utilityBillMapper.selectById(billId);
-            if (bill != null && bill.getPayStatus() == 0) {
-                BigDecimal eCost = bill.getElectricCost() != null ? bill.getElectricCost() : BigDecimal.ZERO;
-                BigDecimal wCost = bill.getWaterCost() != null ? bill.getWaterCost() : BigDecimal.ZERO;
-                // 优先从寝室电费、水费余额账户中抵扣，不足部分视为在线直缴补齐
-                BigDecimal nextElec = room.getElectricBalance().subtract(eCost);
-                BigDecimal nextWater = room.getWaterBalance().subtract(wCost);
-                room.setElectricBalance(nextElec.compareTo(BigDecimal.ZERO) > 0 ? nextElec : BigDecimal.ZERO);
-                room.setWaterBalance(nextWater.compareTo(BigDecimal.ZERO) > 0 ? nextWater : BigDecimal.ZERO);
-
-                bill.setPayStatus(1);
-                bill.setPayTime(LocalDateTime.now());
-                utilityBillMapper.updateById(bill);
-            }
-        }
-        roomMapper.updateById(room);
-        return room;
     }
 
     /** 演示支付：同一请求号可安全重试，余额、账单和流水在同一事务内提交。 */

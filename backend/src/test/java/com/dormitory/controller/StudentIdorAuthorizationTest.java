@@ -118,7 +118,7 @@ class StudentIdorAuthorizationTest {
         when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(null);
         assertEquals(403, utilityController.payOrRecharge(
                 Map.of("roomId", 2, "electricRecharge", 10), student(10L)).getCode());
-        verify(smartUtilityService, never()).payBillOrRecharge(anyLong(), any(), any(), any());
+        verify(smartUtilityService, never()).processPayment(anyLong(), any(), any(), any(), any(), any());
     }
 
     @Test

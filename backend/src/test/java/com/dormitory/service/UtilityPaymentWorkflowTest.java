@@ -74,6 +74,7 @@ class UtilityPaymentWorkflowTest {
 
     @Test
     void meterEntryCannotOverwritePaidBill() {
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(room());
         UtilityBill existing = new UtilityBill(); existing.setId(8L); existing.setRoomId(1L); existing.setPayStatus(1);
         when(bills.selectOne(any(Wrapper.class))).thenReturn(existing);
         UtilityBill reading = new UtilityBill(); reading.setRoomId(1L); reading.setBillMonth("2026-10");

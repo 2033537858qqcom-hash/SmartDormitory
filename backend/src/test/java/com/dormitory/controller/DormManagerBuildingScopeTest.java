@@ -107,7 +107,7 @@ class DormManagerBuildingScopeTest {
         when(roomMapper.selectById(7L)).thenReturn(room);
         assertEquals(403, utilityController.payOrRecharge(
                 java.util.Map.of("roomId", 7, "electricRecharge", 20), manager()).getCode());
-        verify(smartUtilityService, never()).payBillOrRecharge(anyLong(), any(), any(), any());
+        verify(smartUtilityService, never()).processPayment(anyLong(), any(), any(), any(), any(), any());
     }
 
     @Test
