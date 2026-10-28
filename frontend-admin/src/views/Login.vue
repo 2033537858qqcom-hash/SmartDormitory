@@ -1,46 +1,54 @@
 <template>
   <div class="login-page">
     <div class="login-shell">
-      <!-- 左侧：精美校园与宿舍实景封面大图展示区 -->
+      <!-- 左侧：Apple 风格现代校园实景画卷 -->
       <aside class="login-cover-pane" aria-label="宿里智慧校园画卷">
         <div class="cover-image-layer" />
         <div class="cover-overlay">
-          <div class="cover-top-brand">
+          <!-- 顶部品牌 -->
+          <div class="cover-brand-header">
             <img class="cover-logo" src="/suli-icon-v2.png" alt="宿里 Logo" />
-            <div class="cover-brand-meta">
-              <span class="cover-brand-name">宿里 · 智慧宿舍</span>
-              <span class="cover-brand-tag">数字后勤工作空间</span>
+            <div class="cover-brand-text">
+              <span class="brand-title">宿里 · 智慧宿舍</span>
+              <span class="brand-subtitle">数字后勤协同系统</span>
             </div>
           </div>
 
-          <div class="cover-hero-content">
-            <div class="cover-pill">
-              <span class="pill-dot"></span>
-              <span>智慧高校后勤协同平台 · 宿里 v2.0</span>
+          <!-- 主体标语与特性 -->
+          <div class="cover-center-content">
+            <div class="apple-capsule-badge">
+              智慧高校数字化后勤平台 · 宿里 2.0
             </div>
-            <h1 class="cover-title">让宿舍生活更简单<br />更有温度</h1>
-            <p class="cover-desc">
-              深度贯通房态全景图谱、AI 多维生活习惯协同分配、绿色水电能耗管控、文明寝室量化评分与一站式调宿审批协同。
+            <h1 class="cover-headline">让宿舍生活更简单<br />更有温度</h1>
+            <p class="cover-subtext">
+              深度贯通房态全景图谱、多维生活习惯协同分配、绿色水电能耗管控、文明寝室量化评分与一站式调宿审批协同。
             </p>
 
-            <div class="cover-feature-grid">
-              <div class="feature-card">
-                <div class="feature-icon">✨</div>
-                <div class="feature-text">
+            <!-- 磨砂玻璃特性卡片（纯矢量图标，无表情符号） -->
+            <div class="cover-feature-row">
+              <div class="glass-feature-card">
+                <div class="feature-icon-circle">
+                  <el-icon :size="16"><DataAnalysis /></el-icon>
+                </div>
+                <div class="feature-info">
                   <strong>智能分配</strong>
-                  <span>四维习惯协同匹配</span>
+                  <span>多维习惯协同匹配</span>
                 </div>
               </div>
-              <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <div class="feature-text">
+              <div class="glass-feature-card">
+                <div class="feature-icon-circle">
+                  <el-icon :size="16"><Odometer /></el-icon>
+                </div>
+                <div class="feature-info">
                   <strong>绿色能耗</strong>
-                  <span>水电账单自动结算</span>
+                  <span>水电账单自动核算</span>
                 </div>
               </div>
-              <div class="feature-card">
-                <div class="feature-icon">🛡️</div>
-                <div class="feature-text">
+              <div class="glass-feature-card">
+                <div class="feature-icon-circle">
+                  <el-icon :size="16"><Lock /></el-icon>
+                </div>
+                <div class="feature-info">
                   <strong>安全门禁</strong>
                   <span>访客通行动态核验</span>
                 </div>
@@ -48,42 +56,43 @@
             </div>
           </div>
 
-          <div class="cover-footer">
+          <!-- 底部版权/摄影标注 -->
+          <div class="cover-bottom-bar">
             <span>实景封面：现代智慧大学示范园区</span>
-            <span>© 宿里 · 智慧校园后勤中心</span>
+            <span>© 宿里 · 智慧后勤中心</span>
           </div>
         </div>
       </aside>
 
-      <!-- 右侧：Apple 极简风格管理登录面板 -->
+      <!-- 右侧：Apple 极简原生交互登录面板 -->
       <main class="login-form-pane">
-        <div class="form-container">
-          <div class="login-header">
-            <img class="logo-badge" src="/suli-icon-v2.png" alt="宿里 Logo" />
-            <h2 class="heading-balance">欢迎登录管理后台</h2>
-            <p class="body-pretty">请输入您的工号或管理账号，开始今天的高效宿务工作</p>
+        <div class="form-wrapper">
+          <div class="login-intro">
+            <div class="intro-eyebrow">管理中心</div>
+            <h2 class="intro-title">登录宿里管理后台</h2>
+            <p class="intro-desc">使用您的工号或管理员账号安全登录</p>
           </div>
 
-          <!-- 演示账号快捷填充 -->
-          <div class="quick-demo-accounts">
-            <div class="demo-label">演示账号一键填入：</div>
-            <div class="demo-chips">
+          <!-- Apple 原生分段选择器 (Segmented Control) 快速切换演示账号 -->
+          <div class="segmented-wrapper">
+            <div class="segmented-caption">快速体验角色：</div>
+            <div class="apple-segmented" role="tablist" aria-label="演示角色切换">
               <button
                 v-for="acc in demoAccounts"
                 :key="acc.username"
                 type="button"
-                class="demo-chip"
+                class="segmented-tab"
                 :class="{ active: form.username === acc.username }"
                 :title="acc.desc"
                 @click="fillDemo(acc)"
               >
-                <span class="chip-title">{{ acc.title }}</span>
-                <span class="chip-code">{{ acc.username }}</span>
+                <span class="tab-label">{{ acc.title }}</span>
+                <span class="tab-code">{{ acc.username }}</span>
               </button>
             </div>
           </div>
 
-          <el-form :model="form" label-position="top" @submit.prevent="handleLogin">
+          <el-form :model="form" label-position="top" class="apple-login-form" @submit.prevent="handleLogin">
             <el-form-item label="登录账号">
               <el-input
                 v-model="form.username"
@@ -105,8 +114,8 @@
             </el-form-item>
 
             <transition name="el-zoom-in-top">
-              <div v-if="errorMsg" class="inline-error" role="alert">
-                <el-icon class="error-icon"><CircleCloseFilled /></el-icon>
+              <div v-if="errorMsg" class="apple-alert-error" role="alert">
+                <el-icon><CircleCloseFilled /></el-icon>
                 <span>{{ errorMsg }}</span>
               </div>
             </transition>
@@ -114,17 +123,17 @@
             <el-button
               type="primary"
               size="large"
-              class="login-btn"
+              class="apple-submit-btn"
               :loading="loading"
               @click="handleLogin"
             >
-              {{ loading ? '登录验证中...' : '进入管理工作空间' }}
+              {{ loading ? '正在验证身份...' : '进入管理工作空间' }}
             </el-button>
           </el-form>
 
-          <div class="form-footer">
-            <span class="footer-note">内部管理系统 · 请妥善保管权限账号</span>
-            <a class="student-entry-link" href="http://localhost:5174" target="_blank" rel="noopener">
+          <div class="login-footer">
+            <span class="footer-hint">高校内部专有后勤系统 · 严禁违规越权访问</span>
+            <a class="student-link" href="http://localhost:5174" target="_blank" rel="noopener">
               打开学生端 Vite H5 <el-icon><TopRight /></el-icon>
             </a>
           </div>
@@ -150,9 +159,9 @@ const form = reactive({
 })
 
 const demoAccounts = [
-  { username: 'admin', password: '123456', title: '系统管理员', desc: '后勤主任' },
-  { username: 'dm01', password: '123456', title: '楼栋宿管员', desc: '紫荆1号楼' },
-  { username: 'worker01', password: '123456', title: '维修工程师', desc: '水电维修' },
+  { username: 'admin', password: '123456', title: '管理员', desc: '后勤系统主管' },
+  { username: 'dm01', password: '123456', title: '宿管员', desc: '紫荆1号楼' },
+  { username: 'worker01', password: '123456', title: '维修工', desc: '水电专职' },
   { username: 'counselor01', password: '123456', title: '辅导员', desc: '只读权限' }
 ]
 
@@ -201,26 +210,28 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   padding: 32px 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .login-shell {
   width: 100%;
-  max-width: 1180px;
-  min-height: 680px;
+  max-width: 1140px;
+  min-height: 660px;
   background: #ffffff;
-  border-radius: 24px;
+  border-radius: 28px;
   overflow: hidden;
   display: flex;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* 左侧封面大图展示区 */
+/* ================= 左侧封面展示区 ================= */
 .login-cover-pane {
-  flex: 1.15;
+  flex: 1.18;
   position: relative;
-  min-height: 680px;
-  background-color: #0f172a;
+  min-height: 660px;
+  background-color: #0b1120;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -233,156 +244,168 @@ const handleLogin = async () => {
   background-size: cover;
   background-position: center;
   transform: scale(1.02);
-  transition: transform 6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .login-shell:hover .cover-image-layer {
-  transform: scale(1.06);
+  transform: scale(1.05);
 }
 
 .cover-overlay {
   position: relative;
   z-index: 2;
-  inset: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 42px 48px;
+  padding: 44px 48px;
   background: linear-gradient(
     145deg,
-    rgba(15, 23, 42, 0.55) 0%,
-    rgba(15, 23, 42, 0.85) 100%
+    rgba(11, 17, 32, 0.45) 0%,
+    rgba(11, 17, 32, 0.8) 100%
   );
   backdrop-filter: blur(2px);
   color: #ffffff;
 }
 
-.cover-top-brand {
+.cover-brand-header {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 .cover-logo {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
-.cover-brand-meta {
+.cover-brand-text {
   display: flex;
   flex-direction: column;
 }
 
-.cover-brand-name {
-  font-size: 16px;
+.brand-title {
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.3px;
   color: #ffffff;
 }
 
-.cover-brand-tag {
+.brand-subtitle {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.3px;
 }
 
-.cover-hero-content {
+.cover-center-content {
   margin: auto 0;
-  padding: 24px 0;
+  padding: 20px 0;
 }
 
-.cover-pill {
+.apple-capsule-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
+  padding: 5px 13px;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 20px;
+  letter-spacing: 0.2px;
 }
 
-.pill-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #34c759;
-  box-shadow: 0 0 8px #34c759;
-}
-
-.cover-title {
-  font-size: 38px;
+.cover-headline {
+  font-size: 36px;
   font-weight: 700;
   line-height: 1.25;
-  letter-spacing: -1px;
+  letter-spacing: -0.8px;
   color: #ffffff;
   margin-bottom: 14px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
-.cover-desc {
-  font-size: 14px;
+.cover-subtext {
+  font-size: 13.5px;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.82);
-  max-width: 460px;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 440px;
   margin-bottom: 28px;
 }
 
-.cover-feature-grid {
+/* 磨砂玻璃特性卡片 */
+.cover-feature-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
-.feature-card {
+.glass-feature-card {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
-.feature-icon {
-  font-size: 18px;
+.glass-feature-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
-.feature-text {
+.feature-icon-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+
+.feature-info {
   display: flex;
   flex-direction: column;
 }
 
-.feature-text strong {
-  font-size: 12.5px;
+.feature-info strong {
+  font-size: 12px;
   color: #ffffff;
   font-weight: 600;
+  line-height: 1.3;
 }
 
-.feature-text span {
-  font-size: 10.5px;
+.feature-info span {
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.65);
   margin-top: 1px;
+  line-height: 1.2;
 }
 
-.cover-footer {
+.cover-bottom-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 18px;
+  padding-top: 16px;
 }
 
-/* 右侧表单操作区 */
+/* ================= 右侧表单操作区 ================= */
 .login-form-pane {
   flex: 1;
   display: flex;
@@ -392,140 +415,180 @@ const handleLogin = async () => {
   background: #ffffff;
 }
 
-.form-container {
+.form-wrapper {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
 }
 
-.login-header {
-  text-align: left;
+.login-intro {
   margin-bottom: 24px;
 }
 
-.logo-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 11px;
-  display: inline-block;
-  object-fit: cover;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.login-header h2 {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-  letter-spacing: -0.5px;
-}
-
-.login-header p {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-/* 快速账号填充 */
-.quick-demo-accounts {
-  margin-bottom: 20px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #f8f8fa;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-}
-
-.demo-label {
+.intro-eyebrow {
   font-size: 11.5px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: #0071e3;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+}
+
+.intro-title {
+  font-size: 25px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.6px;
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+
+.intro-desc {
+  font-size: 13px;
+  color: #86868b;
+  line-height: 1.45;
+}
+
+/* Apple 原生分段控制器 (Segmented Control) */
+.segmented-wrapper {
+  margin-bottom: 22px;
+}
+
+.segmented-caption {
+  font-size: 11.5px;
+  color: #86868b;
+  margin-bottom: 6px;
   font-weight: 500;
 }
 
-.demo-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.apple-segmented {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 3px;
+  background: rgba(118, 118, 128, 0.08);
+  border-radius: 11px;
 }
 
-.demo-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border-radius: 7px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #ffffff;
-  color: var(--text-secondary);
-  font-size: 11.5px;
+.segmented-tab {
+  border: 0;
+  background: transparent;
+  padding: 6px 2px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.16s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none !important;
 }
 
-.demo-chip:hover {
-  background: #f0f0f3;
-  color: var(--text-primary);
-  border-color: rgba(0, 0, 0, 0.15);
+.segmented-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
 }
 
-.demo-chip.active {
-  background: rgba(0, 113, 227, 0.08);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+.segmented-tab.active {
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.tab-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d1d1f;
+  line-height: 1.3;
+}
+
+.segmented-tab.active .tab-label {
+  color: #0071e3;
   font-weight: 600;
 }
 
-.chip-title {
-  font-weight: 500;
-}
-
-.chip-code {
+.tab-code {
   font-size: 10px;
-  opacity: 0.7;
+  color: #86868b;
 }
 
-.inline-error {
+.segmented-tab.active .tab-code {
+  color: rgba(0, 113, 227, 0.8);
+}
+
+/* 表单组件定制 */
+.apple-login-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.apple-login-form :deep(.el-form-item__label) {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1d1d1f;
+  padding-bottom: 6px;
+}
+
+.apple-login-form :deep(.el-input__wrapper) {
+  height: 44px;
+  background: #fbfbfd;
+  border-radius: 11px;
+  border: 1px solid #d2d2d7;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.18s ease;
+}
+
+.apple-login-form :deep(.el-input__wrapper:hover) {
+  border-color: #86868b;
+  background: #ffffff;
+}
+
+.apple-login-form :deep(.el-input__wrapper.is-focus) {
+  background: #ffffff;
+  border-color: #0071e3;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15) !important;
+}
+
+.apple-login-form :deep(.el-input__inner) {
+  font-size: 13.5px;
+  color: #1d1d1f;
+}
+
+.apple-alert-error {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12.5px;
-  color: var(--status-danger);
-  background: var(--status-danger-bg);
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.08);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 9px;
   margin-bottom: 14px;
   border: 1px solid rgba(255, 59, 48, 0.15);
 }
 
-.error-icon {
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.login-btn {
+.apple-submit-btn {
   width: 100%;
   height: 44px;
   font-size: 14.5px;
-  font-weight: 600;
-  border-radius: 10px;
+  font-weight: 500;
+  border-radius: 11px;
+  background: #0071e3;
+  border: 0;
   margin-top: 4px;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
-  transition: all 0.16s ease;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.24);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.login-btn:hover {
+.apple-submit-btn:hover {
+  background: #0077ed;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.34);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 113, 227, 0.32);
 }
 
-.login-btn:active {
-  transform: scale(0.98);
+.apple-submit-btn:active {
+  transform: scale(0.985);
 }
 
-.form-footer {
+.login-footer {
   margin-top: 24px;
-  padding-top: 16px;
+  padding-top: 18px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
@@ -533,37 +596,37 @@ const handleLogin = async () => {
   align-items: center;
 }
 
-.footer-note {
+.footer-hint {
   font-size: 11px;
-  color: var(--text-muted);
+  color: #86868b;
 }
 
-.student-entry-link {
+.student-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--accent-primary);
+  color: #0071e3;
   text-decoration: none !important;
   font-weight: 500;
   transition: opacity 0.16s ease;
 }
 
-.student-entry-link:hover {
+.student-link:hover {
   opacity: 0.8;
   text-decoration: none !important;
 }
 
-/* 响应式适配 */
+/* 响应式断点 */
 @media (max-width: 1024px) {
   .login-shell {
     flex-direction: column;
-    max-width: 500px;
+    max-width: 480px;
     min-height: auto;
   }
 
   .login-cover-pane {
-    min-height: 240px;
+    min-height: 220px;
     flex: none;
   }
 
@@ -571,18 +634,18 @@ const handleLogin = async () => {
     padding: 24px;
   }
 
-  .cover-hero-content {
-    margin: 12px 0 0;
+  .cover-center-content {
+    margin: 10px 0 0;
     padding: 0;
   }
 
-  .cover-title {
-    font-size: 24px;
+  .cover-headline {
+    font-size: 23px;
   }
 
-  .cover-desc,
-  .cover-feature-grid,
-  .cover-footer {
+  .cover-subtext,
+  .cover-feature-row,
+  .cover-bottom-bar {
     display: none;
   }
 
