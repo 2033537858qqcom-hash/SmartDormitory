@@ -30,4 +30,6 @@ public class RepairOrder {
     private String ratingComment;
     private LocalDateTime finishTime;
     private LocalDateTime createTime;
+    /** JSON 数组：本地上传路径或 dataURL（演示用） */
+    private String photoUrls;
 }

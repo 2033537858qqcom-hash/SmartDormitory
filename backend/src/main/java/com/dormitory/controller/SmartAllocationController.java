@@ -135,4 +135,66 @@ public class SmartAllocationController {
                 new LambdaQueryWrapper<DormAllocationLog>().orderByDesc(DormAllocationLog::getCreateTime)
         ));
     }
+
+    /** 分寝前校验：未填画像、性别与空床不匹配、空床不足 */
+    @GetMapping("/precheck")
+    public Result<Map<String, Object>> precheck(@RequestParam(required = false) Long buildingId) {
+        List<SysUser> students = userMapper.selectList(
+                new LambdaQueryWrapper<SysUser>().eq(SysUser::getRole, "STUDENT"));
+        Map<Long, StudentHabitProfile> profileMap = habitProfileMapper.selectList(null).stream()
+                .collect(Collectors.toMap(StudentHabitProfile::getStudentId, x -> x, (a, b) -> a));
+        Set<Long> occupied = bedMapper.selectList(new LambdaQueryWrapper<DormBed>().eq(DormBed::getStatus, 1))
+                .stream().map(DormBed::getStudentId).filter(Objects::nonNull).collect(Collectors.toSet());
+
+        List<Map<String, Object>> missingProfile = new ArrayList<>();
+        List<Map<String, Object>> unallocated = new ArrayList<>();
+        int maleWaiting = 0, femaleWaiting = 0;
+        for (SysUser s : students) {
+            if (occupied.contains(s.getId())) continue;
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentId", s.getId());
+            row.put("studentNo", s.getUsername());
+            row.put("realName", s.getRealName());
+            row.put("gender", s.getGender());
+            unallocated.add(row);
+            if (Integer.valueOf(2).equals(s.getGender())) femaleWaiting++;
+            else maleWaiting++;
+            if (!profileMap.containsKey(s.getId())) {
+                missingProfile.add(row);
+            }
+        }
+
+        LambdaQueryWrapper<DormRoom> rq = new LambdaQueryWrapper<>();
+        if (buildingId != null) rq.eq(DormRoom::getBuildingId, buildingId);
+        List<DormRoom> rooms = roomMapper.selectList(rq);
+        Map<Long, DormBuilding> bmap = buildingMapper.selectList(null).stream()
+                .collect(Collectors.toMap(DormBuilding::getId, b -> b));
+        int maleEmpty = 0, femaleEmpty = 0;
+        for (DormRoom r : rooms) {
+            DormBuilding b = bmap.get(r.getBuildingId());
+            int cap = r.getCapacity() != null ? r.getCapacity() : 4;
+            int occ = r.getOccupiedCount() != null ? r.getOccupiedCount() : 0;
+            int empty = Math.max(0, cap - occ);
+            if (b != null && Integer.valueOf(2).equals(b.getGenderType())) femaleEmpty += empty;
+            else maleEmpty += empty;
+        }
+        List<String> warnings = new ArrayList<>();
+        if (!missingProfile.isEmpty()) warnings.add("有 " + missingProfile.size() + " 名未分配学生尚未填写习惯画像");
+        if (maleWaiting > maleEmpty) warnings.add("男生待分 " + maleWaiting + " 人，空床仅 " + maleEmpty);
+        if (femaleWaiting > femaleEmpty) warnings.add("女生待分 " + femaleWaiting + " 人，空床仅 " + femaleEmpty);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("unallocatedCount", unallocated.size());
+        res.put("missingProfileCount", missingProfile.size());
+        res.put("missingProfiles", missingProfile);
+        res.put("maleWaiting", maleWaiting);
+        res.put("femaleWaiting", femaleWaiting);
+        res.put("maleEmptyBeds", maleEmpty);
+        res.put("femaleEmptyBeds", femaleEmpty);
+        res.put("ready", warnings.isEmpty() && !unallocated.isEmpty());
+        res.put("warnings", warnings);
+        res.put("buildingId", buildingId);
+        return Result.success(res);
+    }
+
 }

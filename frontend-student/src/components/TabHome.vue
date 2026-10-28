@@ -80,8 +80,18 @@
         </div>
       </div>
     </section>
+    <section v-if="(dash.messages || []).length" class="section-box">
+      <div class="sec-head"><h2>我的消息</h2><span>{{ dash.unreadMessageCount || 0 }} 未读</span></div>
+      <div class="group-surface notice-group">
+        <button v-for="m in dash.messages || []" :key="'msg-'+m.id" type="button" class="notice-row spring-btn" :class="{ unread: m.readFlag === 0 }" @click="openMessage(m)">
+          <span class="notice-copy"><b>{{ m.title }}</b><small>{{ m.content }}</small></span>
+          <span class="group-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </section>
+
     <section class="section-box">
-      <div class="sec-head"><h2>校园通知</h2><span>{{ (dash.notices || []).length }} 则消息</span></div>
+      <div class="sec-head"><h2>校园通知</h2><span>{{ (dash.notices || []).length }} 则公告</span></div>
       <div class="group-surface notice-group">
         <p v-if="!(dash.notices || []).length" class="empty-notices">暂时没有新的校园通知。</p>
         <button v-for="n in dash.notices || []" :key="n.id" type="button" class="notice-row spring-btn" @click="openNoticeDetail(n)"><span class="notice-copy"><b>{{ n.title }}</b><small>{{ n.publisherName }} · {{ formatDateTime(n.createTime).slice(0, 10) }}</small></span><span class="group-chevron" aria-hidden="true">›</span></button>
@@ -105,6 +115,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import BottomSheet from './BottomSheet.vue'
+import api from '../api'
 
 const props = defineProps({
   dash: { type: Object, default: () => ({}) }
@@ -159,6 +170,16 @@ const handleVisitorClick = () => {
   emit('go-tab', { tab: 'affair', action: 'visitor' })
 }
 
+const openMessage = async (m) => {
+  emit('toast', m.content || m.title)
+  try {
+    if (m.readFlag === 0) {
+      await api.post('/messages/read', { id: m.id })
+      emit('refresh')
+    }
+  } catch (_) {}
+}
+
 const openNoticeDetail = (n) => {
   activeNotice.value = n
   noticeSheetVisible.value = true
@@ -209,4 +230,5 @@ const openNoticeDetail = (n) => {
 .nd-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }.nd-content { font-size: 15px; line-height: 1.9; color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }.nd-close-btn { margin-top: 25px; width: 100%; padding: 13px; color: white; border: 0; border-radius: 12px; background: var(--accent-primary); }
 @media (max-width: 360px) { .residence-card, .unalloc-card { padding: 19px 17px; }.room-heading { gap: 10px; }.room-heading h2 { font-size: 19px; }.balance-item strong { font-size: 24px; }.q-item { font-size: 11px; }.progress-steps { gap: 5px; }.progress-steps>div { gap: 4px; } }
 .pending-rate-banner { width: 100%; margin: -8px 0 22px; padding: 12px 14px; border: 0; border-radius: 14px; background: #fff7e8; color: #9a6700; font-size: 13px; text-align: left; font-weight: 500; }
+.notice-row.unread b { color: var(--accent-primary); }
 </style>

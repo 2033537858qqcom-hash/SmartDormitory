@@ -1,11 +1,14 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.ArrayList;
 import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import com.dormitory.service.SmartUtilityService;
+import com.dormitory.service.SmartRepairService;
+import com.dormitory.service.UserMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,10 +24,12 @@ public class UtilityBillController {
 
     private final UtilityBillMapper utilityBillMapper;
     private final SmartUtilityService smartUtilityService;
+    private final SmartRepairService smartRepairService;
     private final DormRoomMapper roomMapper;
     private final DormBuildingMapper buildingMapper;
     private final DormBedMapper bedMapper;
     private final BuildingScopeService buildingScope;
+    private final UserMessageService messageService;
 
     @GetMapping("/bills")
     public Result<List<Map<String, Object>>> listBills(@RequestParam(required = false) Long buildingId,
@@ -141,5 +146,102 @@ public class UtilityBillController {
 
         DormRoom updatedRoom = smartUtilityService.payBillOrRecharge(roomId, billId, electricRecharge, waterRecharge);
         return Result.success("缴费/充值成功，寝室水电账户已实时更新！", updatedRoom);
+    }
+
+    @GetMapping("/threshold-rules")
+    public Result<Map<String, Object>> thresholdRules() {
+        return Result.success(smartUtilityService.thresholdRules());
+    }
+
+    @PostMapping("/meter-batch")
+    public Result<Map<String, Object>> batchMeter(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        String billMonth = body.get("billMonth") != null ? body.get("billMonth").toString() : null;
+        if (billMonth == null || billMonth.isBlank()) {
+            return Result.error("请指定账单月份，如 2026-10");
+        }
+        Object entriesObj = body.get("entries");
+        if (!(entriesObj instanceof List<?> entries) || entries.isEmpty()) {
+            return Result.error("请提供至少一条抄表记录");
+        }
+        Set<Long> scope = buildingScope.resolve(request);
+        List<UtilityBill> saved = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int abnormal = 0;
+        for (Object raw : entries) {
+            if (!(raw instanceof Map<?, ?> em)) {
+                errors.add("条目格式无效");
+                continue;
+            }
+            try {
+                Long roomId = Long.valueOf(em.get("roomId").toString());
+                DormRoom room = roomMapper.selectById(roomId);
+                if (room == null) {
+                    errors.add("房间不存在:" + roomId);
+                    continue;
+                }
+                Result<?> denied = buildingScope.forbiddenIfOutOfScope(scope, room.getBuildingId());
+                if (denied != null) {
+                    errors.add("无权限房间:" + roomId);
+                    continue;
+                }
+                UtilityBill bill = new UtilityBill();
+                bill.setBillMonth(billMonth);
+                bill.setRoomId(roomId);
+                bill.setBuildingId(room.getBuildingId());
+                bill.setElectricUsed(new BigDecimal(em.get("electricUsed").toString()));
+                bill.setWaterUsed(new BigDecimal(em.get("waterUsed").toString()));
+                UtilityBill out = smartUtilityService.createOrUpdateMeterBill(bill);
+                saved.add(out);
+                if (out.getAbnormalFlag() != null && out.getAbnormalFlag() == 1) abnormal++;
+            } catch (Exception ex) {
+                errors.add(ex.getMessage() != null ? ex.getMessage() : "条目失败");
+            }
+        }
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("savedCount", saved.size());
+        res.put("abnormalCount", abnormal);
+        res.put("errors", errors);
+        res.put("bills", saved);
+        return Result.success("批量抄表完成：成功 " + saved.size() + " 条，异常 " + abnormal + " 条", res);
+    }
+
+    @PostMapping("/anomaly-to-repair")
+    public Result<RepairOrder> anomalyToRepair(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        Long billId = Long.valueOf(body.get("billId").toString());
+        UtilityBill bill = utilityBillMapper.selectById(billId);
+        if (bill == null) return Result.error("账单不存在");
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), bill.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<RepairOrder> typed = (Result<RepairOrder>) denied;
+            return typed;
+        }
+        if (bill.getAbnormalFlag() == null || bill.getAbnormalFlag() != 1) {
+            return Result.error("该账单未标记异常，无需转报修");
+        }
+        DormRoom room = roomMapper.selectById(bill.getRoomId());
+        // 取寝室任一在住学生作为报修人
+        DormBed bed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                .eq(DormBed::getRoomId, bill.getRoomId())
+                .eq(DormBed::getStatus, 1)
+                .last("LIMIT 1"));
+        if (bed == null || bed.getStudentId() == null) {
+            return Result.error("该寝室暂无在住学生，无法创建报修工单");
+        }
+        String reason = bill.getAbnormalReason() != null ? bill.getAbnormalReason() : "能耗异常";
+        boolean water = reason.contains("用水") || reason.contains("漏水");
+        RepairOrder order = new RepairOrder();
+        order.setStudentId(bed.getStudentId());
+        order.setBuildingId(bill.getBuildingId());
+        order.setRoomId(bill.getRoomId());
+        order.setRepairType(water ? "WATER" : "ELECTRIC");
+        order.setTitle(water ? "水电异常排查（疑似漏水）" : "水电异常排查（疑似大功率/长开）");
+        order.setDescription("由" + bill.getBillMonth() + "月异常账单自动转单：" + reason
+                + "（房间 " + (room != null ? room.getRoomNo() : bill.getRoomId()) + "）");
+        RepairOrder saved = smartRepairService.createAndSmartDispatch(order);
+        messageService.push(bed.getStudentId(), "异常能耗已转报修",
+                "系统已根据水电异常为您创建排查工单「" + saved.getTitle() + "」",
+                "UTILITY", String.valueOf(saved.getId()));
+        return Result.success("已生成异常排查报修工单", saved);
     }
 }

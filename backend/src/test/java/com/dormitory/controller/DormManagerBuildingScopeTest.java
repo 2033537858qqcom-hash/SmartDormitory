@@ -12,6 +12,7 @@ import com.dormitory.mapper.*;
 import com.dormitory.service.SmartAllocationService;
 import com.dormitory.service.SmartRepairService;
 import com.dormitory.service.SmartUtilityService;
+import com.dormitory.service.UserMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,7 @@ class DormManagerBuildingScopeTest {
     @Mock SmartUtilityService smartUtilityService;
     @Mock RepairOrderMapper repairOrderMapper;
     @Mock SmartRepairService smartRepairService;
+    @Mock UserMessageService messageService;
 
     DormManageController dormController;
     UtilityBillController utilityController;
@@ -48,10 +50,9 @@ class DormManagerBuildingScopeTest {
     void init() {
         dormController = new DormManageController(
                 buildingMapper, roomMapper, bedMapper, userMapper, habitProfileMapper, smartAllocationService, buildingScope);
-        utilityController = new UtilityBillController(
-                utilityBillMapper, smartUtilityService, roomMapper, buildingMapper, bedMapper, buildingScope);
+        utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
         repairController = new RepairOrderController(
-                repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope);
+                repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
         lenient().when(buildingScope.resolve(any())).thenReturn(Set.of(1L));
         lenient().when(buildingScope.forbiddenIfOutOfScope(eq(Set.of(1L)), eq(1L))).thenReturn(null);
         lenient().when(buildingScope.forbiddenIfOutOfScope(eq(Set.of(1L)), eq(2L)))

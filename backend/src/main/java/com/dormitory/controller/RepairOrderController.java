@@ -6,6 +6,7 @@ import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import com.dormitory.service.SmartRepairService;
+import com.dormitory.service.UserMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class RepairOrderController {
     private final DormBuildingMapper buildingMapper;
     private final DormBedMapper bedMapper;
     private final BuildingScopeService buildingScope;
+    private final UserMessageService messageService;
 
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> listOrders(@RequestParam(required = false) Long studentId,
@@ -86,6 +88,7 @@ public class RepairOrderController {
             item.put("ratingComment", o.getRatingComment());
             item.put("finishTime", o.getFinishTime());
             item.put("createTime", o.getCreateTime());
+            item.put("photoUrls", o.getPhotoUrls());
             result.add(item);
         }
         return Result.success(result);
@@ -151,6 +154,15 @@ public class RepairOrderController {
             order.setFinishTime(LocalDateTime.now());
         }
         repairOrderMapper.updateById(order);
+        if ("COMPLETED".equals(status) && order.getStudentId() != null) {
+            messageService.push(order.getStudentId(), "报修已完成",
+                    "工单「" + order.getTitle() + "」已完工，请前往评价",
+                    "REPAIR", String.valueOf(order.getId()));
+        } else if ("PROCESSING".equals(status) && order.getStudentId() != null) {
+            messageService.push(order.getStudentId(), "师傅已接单上门",
+                    "工单「" + order.getTitle() + "」正在处理中",
+                    "REPAIR", String.valueOf(order.getId()));
+        }
         return Result.success("工单状态已更新", order);
     }
 

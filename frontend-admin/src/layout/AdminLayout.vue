@@ -33,10 +33,17 @@
           <el-icon><Odometer /></el-icon>
           <template #title>水电管理</template>
         </el-menu-item>
-        <el-menu-item v-if="canAccess('civilized-affair')" index="/civilized-affair" aria-label="综合宿务">
-          <el-icon><Trophy /></el-icon>
-          <template #title>综合宿务</template>
-        </el-menu-item>
+        <el-sub-menu v-if="canAccess('civilized-affair')" index="civilized-affair-group" aria-label="综合宿务">
+          <template #title>
+            <el-icon><Trophy /></el-icon>
+            <span>综合宿务</span>
+          </template>
+          <el-menu-item index="/civilized-affair/todo">待办首页</el-menu-item>
+          <el-menu-item index="/civilized-affair/eval">文明评比</el-menu-item>
+          <el-menu-item index="/civilized-affair/hygiene">卫生检查</el-menu-item>
+          <el-menu-item index="/civilized-affair/adjust">调宿审批</el-menu-item>
+          <el-menu-item index="/civilized-affair/visitor">门禁访客</el-menu-item>
+        </el-sub-menu>
         <el-menu-item v-if="canAccess('user-notice')" index="/user-notice" aria-label="人员与公告">
           <el-icon><UserFilled /></el-icon>
           <template #title>人员与公告</template>
@@ -54,6 +61,22 @@
           <span class="breadcrumb-parent">{{ roleLabel }}</span><span class="breadcrumb-slash">/</span><span>{{ $route.meta.title }}</span>
         </div>
         <div class="header-right">
+          <el-popover v-if="canAccess('dashboard') || canAccess('civilized-affair')" placement="bottom-end" :width="340" trigger="click" @show="loadMessages">
+            <template #reference>
+              <button type="button" class="msg-bell" aria-label="站内消息">
+                <el-icon :size="18"><Bell /></el-icon>
+                <span v-if="msgUnread > 0" class="msg-dot">{{ msgUnread > 99 ? '99+' : msgUnread }}</span>
+              </button>
+            </template>
+            <div class="msg-panel">
+              <div class="msg-panel-head"><strong>站内消息</strong><el-button link type="primary" size="small" @click="markAllRead">全部已读</el-button></div>
+              <p v-if="!messages.length" class="msg-empty">暂无消息</p>
+              <button v-for="m in messages" :key="m.id" type="button" class="msg-item" :class="{ unread: m.readFlag === 0 }" @click="openMessage(m)">
+                <b>{{ m.title }}</b>
+                <small>{{ m.content }}</small>
+              </button>
+            </div>
+          </el-popover>
           <el-dropdown trigger="click" placement="bottom-end">
             <button type="button" class="account-menu" aria-label="个人账号菜单"><span class="header-user-name">{{ displayName }}</span><span class="account-avatar small">{{ displayName.slice(0, 1) }}</span></button>
             <template #dropdown><el-dropdown-menu><el-dropdown-item @click="pwdVisible = true">修改密码</el-dropdown-item><el-dropdown-item divided @click="logout">退出登录</el-dropdown-item></el-dropdown-menu></template>
@@ -90,6 +113,7 @@
 
 <script setup>
 import { computed, ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+// Bell icon is auto-imported by unplugin in this project when used in template
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/api/request'
@@ -104,9 +128,14 @@ const descriptions = {
   '/repair-dispatch': '及时响应每一次报修，让日常生活顺畅运转。',
   '/utility-manage': '查看月度用量与账单，关注需要核查的变化。',
   '/civilized-affair': '卫生检查、住宿申请、门禁考勤与来访登记，集中办理。',
+  '/civilized-affair/todo': '待审调宿、申诉与超时访客，一门岗核验入口。',
+  '/civilized-affair/eval': '文明寝室评分与五星补贴。',
+  '/civilized-affair/hygiene': '四项内务卫生检查台账。',
+  '/civilized-affair/adjust': '调宿与退宿审批。',
+  '/civilized-affair/visitor': '门禁稽核、申诉与门岗输码核验。',
   '/user-notice': '管理人员信息，传递校园里的重要消息。'
 }
-const pageDescription = computed(() => descriptions[route.path] || '智慧宿舍 · 后勤管理中心')
+const pageDescription = computed(() => descriptions[route.path] || descriptions['/civilized-affair'] || '智慧宿舍 · 后勤管理中心')
 const currentUser = ref(JSON.parse(localStorage.getItem('dorm_admin_user') || '{}'))
 const displayName = computed(() => (currentUser.value.realName || currentUser.value.username || '管理人员').split(/[（(]/)[0])
 const isCollapsed = ref(window.innerWidth < 1180)
@@ -116,6 +145,29 @@ const pwdForm = reactive({
   oldPassword: '',
   newPassword: ''
 })
+const messages = ref([])
+const msgUnread = ref(0)
+const loadMessages = async () => {
+  try {
+    const [listRes, countRes] = await Promise.all([
+      request.get('/messages', { params: { limit: 20 } }),
+      request.get('/messages/unread-count')
+    ])
+    messages.value = listRes.data || []
+    msgUnread.value = countRes.data?.count || 0
+  } catch (_) { /* ignore */ }
+}
+const markAllRead = async () => {
+  await request.post('/messages/read', {})
+  await loadMessages()
+}
+const openMessage = async (m) => {
+  if (m.readFlag === 0) {
+    await request.post('/messages/read', { id: m.id })
+    await loadMessages()
+  }
+}
+
 
 const rolePermissions = {
   ADMIN: ['dashboard', 'smart-alloc', 'dorm-visual', 'repair-dispatch', 'utility-manage', 'civilized-affair', 'user-notice'],
@@ -193,6 +245,7 @@ const logout = async () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  loadMessages()
 })
 
 onBeforeUnmount(() => {
@@ -244,4 +297,13 @@ onBeforeUnmount(() => {
 @supports (backdrop-filter: blur(16px)) { .top-header { backdrop-filter: blur(16px); } }
 @media (max-width: 900px) { .top-header { padding: 0 22px; } .main-content { padding: 12px 22px 30px; } .switcher-caption { display: none; } }
 @media (max-width: 600px) { .top-header { height: 54px; padding: 0 15px; } .main-content { padding: 12px 15px 25px; } .breadcrumb-parent, .breadcrumb-slash, .header-user-name, .role-quick-switcher { display: none; } .page-title { font-size: 28px; } .page-intro { margin-bottom: 23px; } .sidebar-footer { padding: 18px; } }
+
+.msg-bell { position: relative; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; padding: 6px; border-radius: 10px; }
+.msg-dot { position: absolute; top: -2px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: #ff3b30; color: #fff; font-size: 10px; line-height: 16px; }
+.msg-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.msg-empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+.msg-item { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; padding: 10px 0; cursor: pointer; }
+.msg-item b { display: block; font-size: 13px; }
+.msg-item small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.msg-item.unread b { color: var(--accent-primary); }
 </style>

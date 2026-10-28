@@ -1,5 +1,18 @@
 <template>
   <div v-loading="loading" class="page-stack">
+    <section v-if="precheckResult" class="surface-card precheck-panel">
+      <div class="workspace-heading">
+        <div>
+          <h2>分寝前校验清单</h2>
+          <p>未填画像 {{ precheckResult.missingProfileCount }} · 待分 {{ precheckResult.unallocatedCount }} · 男空床 {{ precheckResult.maleEmptyBeds }} / 女空床 {{ precheckResult.femaleEmptyBeds }}</p>
+        </div>
+        <el-tag :type="precheckResult.ready ? 'success' : 'warning'">{{ precheckResult.ready ? '可执行分寝' : '存在风险项' }}</el-tag>
+      </div>
+      <ul v-if="(precheckResult.warnings || []).length" class="precheck-warns">
+        <li v-for="(w, i) in precheckResult.warnings" :key="i">{{ w }}</li>
+      </ul>
+    </section>
+
     <div v-if="loadError" class="error-banner" role="alert">
       <span>分寝数据加载失败，请重试。</span>
       <el-button type="danger" plain size="small" @click="loadData">重新加载</el-button>
@@ -69,6 +82,8 @@
           >
             重置演示新生
           </el-button>
+          <el-button plain @click="loadPrecheck">分寝前校验</el-button>
+          <el-button plain type="success" @click="importVisible = true">新生 CSV 导入</el-button>
         </div>
       </div>
 
@@ -302,6 +317,15 @@
         <el-button type="primary" :loading="savingProfile" @click="saveProfile">保存修改</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="importVisible" title="新生 CSV 批量导入" width="560px">
+      <p class="field-tip">表头支持：学号,姓名,性别,学院,专业,班级,年级（或 username,realName,gender,college,major,className,grade）。默认密码 123456，导入后进入待填习惯问卷队列。</p>
+      <el-input v-model="importCsv" type="textarea" :rows="10" placeholder="学号,姓名,性别,学院,专业,班级,年级" />
+      <template #footer>
+        <el-button @click="importVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -322,6 +346,11 @@ const buildings = ref([])
 const rooms = ref([])
 const selectedBuildingId = ref(1)
 const candidates = ref([])
+const precheckResult = ref(null)
+const importVisible = ref(false)
+const importing = ref(false)
+const importCsv = ref('学号,姓名,性别,学院,专业,班级,年级\n20261001,王小明,男,计算机学院,软件工程,软工2601,2026\n20261002,李小红,女,计算机学院,软件工程,软工2602,2026')
+
 const filterStatus = ref(route.query.filter || 'ALL')
 const running = ref(false)
 const allocResult = ref(null)
@@ -571,6 +600,25 @@ const exportStudents = () => {
   downloadExport('students', '学生住宿.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
+const loadPrecheck = async () => {
+  const res = await request.get('/smart-alloc/precheck', { params: { buildingId: selectedBuildingId.value || undefined } })
+  precheckResult.value = res.data || null
+  ElMessage.success('校验完成')
+}
+
+const submitImport = async () => {
+  importing.value = true
+  try {
+    const res = await request.post('/auth/import-students', { csv: importCsv.value })
+    ElMessage.success(res.message || '导入完成')
+    importVisible.value = false
+    await loadData()
+    await loadPrecheck()
+  } finally {
+    importing.value = false
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -711,4 +759,7 @@ onBeforeUnmount(() => {
   .alloc-steps { gap: 16px; }
   .building-select { max-width: 100%; }
 }
+
+.precheck-panel { padding: 18px 22px; margin-bottom: 14px; }
+.precheck-warns { margin: 10px 0 0; padding-left: 18px; color: var(--status-warning); font-size: 13px; line-height: 1.7; }
 </style>

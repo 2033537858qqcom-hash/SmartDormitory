@@ -98,6 +98,14 @@
         <textarea id="repair-desc" v-model="form.description" class="area" rows="3" placeholder="请描述具体故障情况..."></textarea>
       </div>
 
+      <div class="form-row">
+        <label>故障照片（最多3张，演示本地上传）</label>
+        <input type="file" accept="image/*" multiple @change="onPickPhotos" />
+        <div v-if="photoUrls.length" class="photo-preview">
+          <img v-for="(u, i) in photoUrls" :key="i" :src="resolveUrl(u)" alt="故障图" />
+        </div>
+      </div>
+
       <p v-if="errorMsg" class="inline-error" role="alert">{{ errorMsg }}</p>
 
       <div v-if="isHighRiskPreview" class="ai-preview high">
@@ -209,6 +217,36 @@ const form = reactive({
   title: '书桌插座跳闸断电',
   description: '插上电源适配器时插座跳闸，请电工师傅排查'
 })
+const photoUrls = ref([])
+const resolveUrl = (u) => {
+  if (!u) return ''
+  if (u.startsWith('http') || u.startsWith('data:') || u.startsWith('blob:')) return u
+  return (import.meta.env.VITE_API_BASE || 'http://localhost:7000') + u
+}
+const onPickPhotos = async (e) => {
+  const files = Array.from(e.target.files || []).slice(0, 3)
+  const urls = []
+  for (const f of files) {
+    try {
+      const fd = new FormData()
+      fd.append('file', f)
+      fd.append('biz', 'repair')
+      const res = await api.post('/upload/image', fd)
+      if (res.data?.url) urls.push(res.data.url)
+    } catch (_) {
+      // fallback: local dataURL for demo if upload fails
+      const dataUrl = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.readAsDataURL(f)
+      })
+      urls.push(dataUrl)
+    }
+  }
+  photoUrls.value = urls.slice(0, 3)
+  e.target.value = ''
+}
+
 
 const highWords = ['跳闸', '短路', '火花', '焦糊', '冒烟', '爆管', '漏水严重', '门锁打不开', '断电']
 const isHighRiskPreview = computed(() => {
@@ -242,8 +280,10 @@ const submitRepair = async () => {
       studentId: props.dash.user?.id || 10,
       buildingId: props.dash.building?.id || 1,
       roomId: props.dash.room?.id || 1,
-      ...form
+      ...form,
+      photoUrls: photoUrls.value.length ? JSON.stringify(photoUrls.value) : null
     })
+    photoUrls.value = []
     sheetOpen.value = false
     emit('toast', '报修已提交，已为您指派师傅')
     emit('refresh')
@@ -514,4 +554,7 @@ const submitRate = async () => {
 .progress-timeline li.current { color: var(--accent-primary); background: var(--accent-subtle); font-weight: 600; }
 .rate-reminder { margin-top: 10px; font-size: 12px; color: #9a6700; background: #fff7e8; border-radius: 10px; padding: 8px 10px; }
 .pending-rate-top { margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: #fff7e8; color: #9a6700; font-size: 13px; font-weight: 500; }
+
+.photo-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.photo-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-subtle); }
 </style>

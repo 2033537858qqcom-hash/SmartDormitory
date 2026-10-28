@@ -6,6 +6,32 @@
     </div>
 
     <el-tabs v-model="activeTab" type="border-card" class="surface-card">
+      <!-- Tab 0: 宿管待办首页 -->
+      <el-tab-pane :label="`待办 (${todoCount})`" name="todo">
+        <div class="affair-intro">
+          <h3>今日宿务待办</h3>
+          <p>优先处理待审调宿、待审申诉与超时访客，再进入各专项台账。</p>
+        </div>
+        <div class="todo-grid">
+          <button type="button" class="todo-card" @click="activeTab = 'adjust'">
+            <strong>{{ pendingAdjustCount }}</strong>
+            <span>待审调宿/退宿</span>
+          </button>
+          <button type="button" class="todo-card" @click="activeTab = 'visitor'">
+            <strong>{{ pendingAppealCount }}</strong>
+            <span>待审违纪申诉</span>
+          </button>
+          <button type="button" class="todo-card warn" @click="activeTab = 'visitor'">
+            <strong>{{ overstayVisitorCount }}</strong>
+            <span>超时未签离访客</span>
+          </button>
+          <button type="button" class="todo-card" @click="goGate">
+            <strong>门岗</strong>
+            <span>输码核验通行</span>
+          </button>
+        </div>
+      </el-tab-pane>
+
       <!-- Tab 1: 文明寝室评比与奖励发放 -->
       <el-tab-pane label="文明寝室评比" name="eval">
         <div class="section-header">
@@ -144,6 +170,32 @@
             <el-button size="small" icon="User" @click="visitorDialogVisible = true">
               登记外来访客
             </el-button>
+          </div>
+        </div>
+
+        <div class="gate-verify-panel">
+          <div class="gate-heading">
+            <div>
+              <h3>门岗通行码核验</h3>
+              <p>输入学生亮码页或访客绿码上的 VP-xxxxxx，核验通过显示绿通，并可一键签离。</p>
+            </div>
+          </div>
+          <div class="gate-form">
+            <el-input v-model="gateCode" size="large" clearable placeholder="输入通行码 VP-xxxxxx" class="gate-input" @keyup.enter="verifyGate(false)">
+              <template #prepend>门岗</template>
+            </el-input>
+            <el-button type="primary" size="large" :loading="gateLoading" @click="verifyGate(false)">核验</el-button>
+            <el-button size="large" :disabled="!gateResult || !gateResult.passOk" :loading="gateLoading" @click="verifyGate(true)">核验并签离</el-button>
+          </div>
+          <div v-if="gateResult" class="gate-pass-card" :class="{ ok: gateResult.passOk, warn: gateResult.overstayFlag === 1, done: gateResult.status === 1 }">
+            <div class="gate-pass-badge">{{ gateResult.passOk ? '通行通过' : (gateResult.status === 1 ? '已签离' : '需人工复核') }}</div>
+            <div class="gate-pass-code tabular-nums">{{ gateResult.passCode }}</div>
+            <dl>
+              <div><dt>访客</dt><dd>{{ gateResult.visitorName }}（{{ gateResult.relation || '亲友' }}）</dd></div>
+              <div><dt>被访学生</dt><dd>{{ gateResult.visitStudentName || '-' }}</dd></div>
+              <div><dt>楼栋房间</dt><dd>{{ gateResult.buildingName }} {{ gateResult.roomNo }}室</dd></div>
+              <div><dt>在访时长</dt><dd>{{ gateResult.stayMinutes }} 分钟<span v-if="gateResult.overstayFlag === 1" class="text-warn"> · 已超时</span></dd></div>
+            </dl>
           </div>
         </div>
 
@@ -391,26 +443,41 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import request, { downloadExport } from '@/api/request'
 const isAdmin = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}').role === 'ADMIN'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const loadError = ref(false)
 const submitting = ref(false)
 const rewarding = ref(false)
 const auditingCurfew = ref(false)
 
-const activeTab = ref(route.query.tab || 'eval')
+const sectionMap = { todo: 'todo', eval: 'eval', hygiene: 'hygiene', adjust: 'adjust', visitor: 'visitor', gate: 'visitor' }
+const activeTab = ref(sectionMap[route.params.section] || route.query.tab || 'todo')
+watch(activeTab, (tab) => {
+  const sec = tab === 'visitor' ? 'visitor' : tab
+  if (route.params.section !== sec) {
+    router.replace({ name: 'CivilizedAffair', params: { section: sec } })
+  }
+})
+watch(() => route.params.section, (sec) => {
+  const mapped = sectionMap[sec] || 'todo'
+  if (activeTab.value !== mapped) activeTab.value = mapped
+})
 const evalList = ref([])
 const hygieneList = ref([])
 const adjustList = ref([])
 const disciplineList = ref([])
 const visitorList = ref([])
+const gateCode = ref('')
+const gateLoading = ref(false)
+const gateResult = ref(null)
 const rooms = ref([])
 const allocatedStudents = ref([])
 const curfewStats = ref({})
@@ -691,6 +758,32 @@ const reviewAdjust = async (row, status) => {
   loadAll()
 }
 
+const goGate = () => {
+  activeTab.value = 'visitor'
+  nextTick(() => {
+    const el = document.querySelector('.gate-verify-panel')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+const verifyGate = async (checkOut = false) => {
+  if (!gateCode.value.trim()) {
+    ElMessage.warning('请输入通行码')
+    return
+  }
+  gateLoading.value = true
+  try {
+    const res = await request.post('/affair/visitor-verify', { passCode: gateCode.value.trim(), checkOut })
+    gateResult.value = res.data || null
+    ElMessage.success(res.message || '核验完成')
+    if (checkOut) await loadAll()
+  } catch (e) {
+    gateResult.value = null
+  } finally {
+    gateLoading.value = false
+  }
+}
+
 const leaveVisitor = async (id) => {
   await request.post(`/affair/visitor-leave/${id}`)
   ElMessage.success('已核验签离')
@@ -912,4 +1005,28 @@ onMounted(() => {
   .score-identity, .hygiene-identity, .score-breakdown, .hygiene-breakdown, .hygiene-remark { grid-column: 1 / -1; }
   .score-result, .score-honor { align-self: start; }
 }
+
+.todo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.todo-card { border: 1px solid var(--border-subtle); background: var(--bg-canvas); border-radius: 14px; padding: 18px 16px; text-align: left; cursor: pointer; }
+.todo-card strong { display: block; font-size: 28px; letter-spacing: -.6px; }
+.todo-card span { display: block; margin-top: 6px; color: var(--text-muted); font-size: 12px; }
+.todo-card.warn strong { color: var(--status-danger); }
+.gate-verify-panel { margin: 8px 0 18px; padding: 16px 16px 14px; border-radius: 14px; background: linear-gradient(180deg, #f3fbf5, #f7f7f8); border: 1px solid #d7efdd; }
+.gate-heading h3 { font-size: 16px; font-weight: 600; }
+.gate-heading p { margin-top: 4px; color: var(--text-muted); font-size: 12px; }
+.gate-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.gate-input { flex: 1; min-width: 220px; }
+.gate-pass-card { margin-top: 14px; padding: 16px; border-radius: 16px; background: #fff; border: 2px solid #cfead6; }
+.gate-pass-card.ok { border-color: #34c759; box-shadow: 0 0 0 4px rgb(52 199 89 / 12%); }
+.gate-pass-card.warn { border-color: #ff9f0a; }
+.gate-pass-card.done { border-color: #c7c7cc; opacity: .92; }
+.gate-pass-badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; background: #34c759; color: #fff; font-size: 12px; font-weight: 600; }
+.gate-pass-card.warn .gate-pass-badge { background: #ff9f0a; }
+.gate-pass-card.done .gate-pass-badge { background: #8e8e93; }
+.gate-pass-code { margin: 10px 0 12px; font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+.gate-pass-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0; }
+.gate-pass-card dt { font-size: 11px; color: var(--text-muted); }
+.gate-pass-card dd { margin: 2px 0 0; font-size: 13px; }
+.text-warn { color: var(--status-warning); }
+@media (max-width: 900px) { .todo-grid { grid-template-columns: 1fr 1fr; } .gate-pass-card dl { grid-template-columns: 1fr; } }
 </style>

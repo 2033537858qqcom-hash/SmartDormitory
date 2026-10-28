@@ -49,9 +49,14 @@ const routes = [
       },
       {
         path: 'civilized-affair',
+        redirect: '/civilized-affair/todo'
+      },
+      {
+        path: 'civilized-affair/:section',
         name: 'CivilizedAffair',
         meta: { title: '综合宿务', roles: ['ADMIN', 'DORM_MANAGER'] },
-        component: () => import('@/views/CivilizedAffair.vue')
+        component: () => import('@/views/CivilizedAffair.vue'),
+        props: true
       },
       {
         path: 'user-notice',
