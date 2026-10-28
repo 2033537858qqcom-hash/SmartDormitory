@@ -14,7 +14,7 @@ USE `smart_dormitory`;
 CREATE TABLE `sys_user` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
     `username` VARCHAR(50) NOT NULL UNIQUE COMMENT '登录账号(学号/工号)',
-    `password` VARCHAR(100) NOT NULL DEFAULT '123456' COMMENT '登录密码',
+    `password` VARCHAR(100) NOT NULL DEFAULT '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i' COMMENT '登录密码(BCrypt)',
     `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
     `role` VARCHAR(20) NOT NULL COMMENT '角色: ADMIN, DORM_MANAGER, REPAIRMAN, STUDENT',
     `gender` TINYINT DEFAULT 1 COMMENT '性别: 1-男, 2-女',
@@ -249,43 +249,43 @@ CREATE TABLE `sys_notice` (
 -- 初始化仿真业务数据（确保答辩演示效果饱满、图表丰富）
 -- =========================================================================
 
--- 1. 插入管理员、宿管员、维修工账号 (密码统一为 123456)
+-- 1. 插入管理员、宿管员、维修工账号 (演示明文口令 123456，库内存 BCrypt)
 INSERT INTO `sys_user` (`id`, `username`, `password`, `real_name`, `role`, `gender`, `phone`, `email`, `repair_specialty`) VALUES
-(1, 'admin', '123456', '林志远(后勤主任)', 'ADMIN', 1, '13800138000', 'admin@edu.cn', NULL),
-(2, 'dm01', '123456', '张桂芳(紫荆1号楼宿管)', 'DORM_MANAGER', 2, '13910002001', 'dm01@edu.cn', NULL),
-(3, 'dm02', '123456', '王建国(紫荆2号楼宿管)', 'DORM_MANAGER', 1, '13910002002', 'dm02@edu.cn', NULL),
-(4, 'dm03', '123456', '李淑芬(丁香1号楼宿管)', 'DORM_MANAGER', 2, '13910002003', 'dm03@edu.cn', NULL),
-(5, 'worker01', '123456', '赵铁柱(高级电工)', 'REPAIRMAN', 1, '13766661001', 'w01@edu.cn', 'ELECTRIC'),
-(6, 'worker02', '123456', '孙大伟(水暖工程师)', 'REPAIRMAN', 1, '13766661002', 'w02@edu.cn', 'WATER'),
-(7, 'worker03', '123456', '周木生(木工师傅)', 'REPAIRMAN', 1, '13766661003', 'w03@edu.cn', 'WOOD'),
-(8, 'worker04', '123456', '吴网通(网络与空调工)', 'REPAIRMAN', 1, '13766661004', 'w04@edu.cn', 'NETWORK'),
-(9, 'worker05', '123456', '郑光明(值班电工)', 'REPAIRMAN', 1, '13766661005', 'w05@edu.cn', 'ELECTRIC');
+(1, 'admin', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '林志远(后勤主任)', 'ADMIN', 1, '13800138000', 'admin@edu.cn', NULL),
+(2, 'dm01', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '张桂芳(紫荆1号楼宿管)', 'DORM_MANAGER', 2, '13910002001', 'dm01@edu.cn', NULL),
+(3, 'dm02', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '王建国(紫荆2号楼宿管)', 'DORM_MANAGER', 1, '13910002002', 'dm02@edu.cn', NULL),
+(4, 'dm03', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '李淑芬(丁香1号楼宿管)', 'DORM_MANAGER', 2, '13910002003', 'dm03@edu.cn', NULL),
+(5, 'worker01', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '赵铁柱(高级电工)', 'REPAIRMAN', 1, '13766661001', 'w01@edu.cn', 'ELECTRIC'),
+(6, 'worker02', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '孙大伟(水暖工程师)', 'REPAIRMAN', 1, '13766661002', 'w02@edu.cn', 'WATER'),
+(7, 'worker03', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '周木生(木工师傅)', 'REPAIRMAN', 1, '13766661003', 'w03@edu.cn', 'WOOD'),
+(8, 'worker04', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '吴网通(网络与空调工)', 'REPAIRMAN', 1, '13766661004', 'w04@edu.cn', 'NETWORK'),
+(9, 'worker05', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '郑光明(值班电工)', 'REPAIRMAN', 1, '13766661005', 'w05@edu.cn', 'ELECTRIC');
 
 -- 2. 插入学生账号 (10~25: 已入住学生与待智能分寝新生)
 INSERT INTO `sys_user` (`id`, `username`, `password`, `real_name`, `role`, `gender`, `phone`, `college`, `major`, `class_name`, `grade`) VALUES
 -- 已入住 紫荆1号楼 301 室 (学霸早睡型寝室)
-(10, '20230101', '123456', '陈嘉豪', 'STUDENT', 1, '15811110001', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
-(11, '20230102', '123456', '林宇轩', 'STUDENT', 1, '15811110002', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
-(12, '20230103', '123456', '张明哲', 'STUDENT', 1, '15811110003', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
-(13, '20230104', '123456', '黄浩然', 'STUDENT', 1, '15811110004', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
+(10, '20230101', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '陈嘉豪', 'STUDENT', 1, '15811110001', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
+(11, '20230102', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '林宇轩', 'STUDENT', 1, '15811110002', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
+(12, '20230103', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '张明哲', 'STUDENT', 1, '15811110003', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
+(13, '20230104', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '黄浩然', 'STUDENT', 1, '15811110004', '计算机科学与技术学院', '软件工程', '软工2301班', '2023级'),
 -- 已入住 紫荆1号楼 302 室 (电竞活跃型寝室)
-(14, '20230105', '123456', '刘子墨', 'STUDENT', 1, '15811110005', '计算机科学与技术学院', '计算机科学', '计科2301班', '2023级'),
-(15, '20230106', '123456', '徐梓轩', 'STUDENT', 1, '15811110006', '计算机科学与技术学院', '计算机科学', '计科2301班', '2023级'),
-(16, '20230107', '123456', '马天佑', 'STUDENT', 1, '15811110007', '计算机科学与技术学院', '计算机科学', '计科2301班', '2023级'),
+(14, '20230105', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '刘子墨', 'STUDENT', 1, '15811110005', '计算机科学与技术学院', '计算机科学', '计科2301班', '2023级'),
+(15, '20230106', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '徐梓轩', 'STUDENT', 1, '15811110006', '计算机科学与技术学院', '计算机科学', '计科2301班', '2023级'),
+(16, '20230107', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '马天佑', 'STUDENT', 1, '15811110007', '计算机科学与技术学院', '计算机科学', '计科2301班', '2023级'),
 -- 已入住 丁香1号楼 201 室 (女生文明示范寝室)
-(17, '20230201', '123456', '苏婉清', 'STUDENT', 2, '15822220001', '经济与管理学院', '会计学', '会计2301班', '2023级'),
-(18, '20230202', '123456', '沈星辰', 'STUDENT', 2, '15822220002', '经济与管理学院', '会计学', '会计2301班', '2023级'),
-(19, '20230203', '123456', '宋雨琦', 'STUDENT', 2, '15822220003', '经济与管理学院', '财务管理', '财管2301班', '2023级'),
-(20, '20230204', '123456', '叶知秋', 'STUDENT', 2, '15822220004', '经济与管理学院', '财务管理', '财管2301班', '2023级'),
+(17, '20230201', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '苏婉清', 'STUDENT', 2, '15822220001', '经济与管理学院', '会计学', '会计2301班', '2023级'),
+(18, '20230202', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '沈星辰', 'STUDENT', 2, '15822220002', '经济与管理学院', '会计学', '会计2301班', '2023级'),
+(19, '20230203', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '宋雨琦', 'STUDENT', 2, '15822220003', '经济与管理学院', '财务管理', '财管2301班', '2023级'),
+(20, '20230204', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '叶知秋', 'STUDENT', 2, '15822220004', '经济与管理学院', '财务管理', '财管2301班', '2023级'),
 -- 待分配床位的 8 名新生 (用于演示【一键智能算法分寝】功能！分为明显的两类人群：4名早睡考研型、4名晚睡电竞型)
-(21, '20260101', '123456', '陆景行', 'STUDENT', 1, '15933330001', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
-(22, '20260102', '123456', '顾言深', 'STUDENT', 1, '15933330002', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
-(23, '20260103', '123456', '江屿白', 'STUDENT', 1, '15933330003', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
-(24, '20260104', '123456', '周叙白', 'STUDENT', 1, '15933330004', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
-(25, '20260105', '123456', '韩烁', 'STUDENT', 1, '15933330005', '人工智能学院', '智能科学', '智科2601班', '2026级'),
-(26, '20260106', '123456', '谢危', 'STUDENT', 1, '15933330006', '人工智能学院', '智能科学', '智科2601班', '2026级'),
-(27, '20260107', '123456', '萧蘅', 'STUDENT', 1, '15933330007', '人工智能学院', '智能科学', '智科2601班', '2026级'),
-(28, '20260108', '123456', '范闲', 'STUDENT', 1, '15933330008', '人工智能学院', '智能科学', '智科2601班', '2026级');
+(21, '20260101', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '陆景行', 'STUDENT', 1, '15933330001', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
+(22, '20260102', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '顾言深', 'STUDENT', 1, '15933330002', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
+(23, '20260103', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '江屿白', 'STUDENT', 1, '15933330003', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
+(24, '20260104', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '周叙白', 'STUDENT', 1, '15933330004', '人工智能学院', '人工智能', 'AI2601班', '2026级'),
+(25, '20260105', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '韩烁', 'STUDENT', 1, '15933330005', '人工智能学院', '智能科学', '智科2601班', '2026级'),
+(26, '20260106', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '谢危', 'STUDENT', 1, '15933330006', '人工智能学院', '智能科学', '智科2601班', '2026级'),
+(27, '20260107', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '萧蘅', 'STUDENT', 1, '15933330007', '人工智能学院', '智能科学', '智科2601班', '2026级'),
+(28, '20260108', '$2b$10$JOARIO1GOwvHQaXkicLM6Ok9ONNiQ68Z5Tn5ZNULTkdi//6ls6r2i', '范闲', 'STUDENT', 1, '15933330008', '人工智能学院', '智能科学', '智科2601班', '2026级');
 
 -- 3. 插入楼栋数据
 INSERT INTO `dorm_building` (`id`, `building_code`, `building_name`, `gender_type`, `total_floors`, `manager_id`, `location_desc`, `remark`) VALUES

@@ -128,7 +128,7 @@ class StudentIdorAuthorizationTest {
         var res = allocController.saveHabitProfile(profile, student(10L));
         assertEquals(200, res.getCode());
         assertEquals(10L, profile.getStudentId());
-        verify(habitProfileMapper).insert(argThat(p -> Long.valueOf(10L).equals(p.getStudentId())));
+        verify(habitProfileMapper).insert(argThat((StudentHabitProfile p) -> Long.valueOf(10L).equals(p.getStudentId())));
     }
 
     @Test
@@ -149,7 +149,7 @@ class StudentIdorAuthorizationTest {
         d.setStudentId(11L);
         d.setRecordType("LATE_RETURN");
         assertEquals(403, affairController.saveDiscipline(d, student(10L)).getCode());
-        verify(disciplineMapper, never()).insert(any(DisciplineRecord.class));
+        verify(disciplineMapper, never()).insert(org.mockito.ArgumentMatchers.any(DisciplineRecord.class));
     }
 
     @Test
@@ -161,6 +161,6 @@ class StudentIdorAuthorizationTest {
         var res = affairController.submitAdjustApply(apply, student(10L));
         assertEquals(200, res.getCode());
         assertEquals(10L, apply.getStudentId());
-        verify(adjustApplyMapper).insert(argThat(a -> Long.valueOf(10L).equals(a.getStudentId())));
+        verify(adjustApplyMapper).insert(argThat((DormAdjustApply a) -> Long.valueOf(10L).equals(a.getStudentId())));
     }
 }

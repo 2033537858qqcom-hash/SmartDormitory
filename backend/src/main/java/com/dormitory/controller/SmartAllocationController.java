@@ -8,6 +8,8 @@ import com.dormitory.service.SmartAllocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -94,7 +96,7 @@ public class SmartAllocationController {
 
     @PostMapping("/run")
     public Result<Map<String, Object>> runAllocation(@RequestBody Map<String, Object> body,
-                                                     jakarta.servlet.http.HttpServletRequest request) {
+                                                     HttpServletRequest request) {
         Long buildingId = Long.valueOf(body.get("buildingId").toString());
         boolean commit = body.get("commit") != null && Boolean.parseBoolean(body.get("commit").toString());
         String strategy = body.get("strategy") != null ? body.get("strategy").toString() : "HABIT_FIRST";

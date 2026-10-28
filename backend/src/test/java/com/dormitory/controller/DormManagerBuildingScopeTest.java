@@ -94,7 +94,7 @@ class DormManagerBuildingScopeTest {
         room.setBuildingId(2L);
         room.setRoomNo("999");
         assertEquals(403, dormController.createOrUpdateRoom(room, manager()).getCode());
-        verify(roomMapper, never()).insert(any());
+        verify(roomMapper, never()).insert(org.mockito.ArgumentMatchers.any(DormRoom.class));
     }
 
     @Test
