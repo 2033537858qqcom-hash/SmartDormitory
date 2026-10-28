@@ -13,6 +13,7 @@ import com.dormitory.mapper.DormRoomMapper;
 import com.dormitory.mapper.DormBuildingMapper;
 import com.dormitory.mapper.DormBedMapper;
 import com.dormitory.service.SmartRepairService;
+import com.dormitory.service.UserMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,12 +34,13 @@ class RepairAuthorizationTest {
     @Mock DormBedMapper beds;
     @Mock BuildingScopeService buildingScope;
     @Mock SmartRepairService service;
+    @Mock UserMessageService messageService;
 
     RepairOrderController controller;
 
     @BeforeEach
     void init() {
-        controller = new RepairOrderController(orders, service, users, rooms, buildings, beds, buildingScope);
+        controller = new RepairOrderController(orders, service, users, rooms, buildings, beds, buildingScope, messageService);
         lenient().when(buildingScope.resolve(any())).thenReturn(null);
     }
 

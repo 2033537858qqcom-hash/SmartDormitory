@@ -8,6 +8,7 @@ import com.dormitory.common.SessionService;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import com.dormitory.service.SmartAllocationService;
+import com.dormitory.service.UserMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class AuthController {
     private final DormAdjustApplyMapper adjustApplyMapper;
     private final SmartAllocationService smartAllocationService;
     private final SessionService sessions;
+    private final UserMessageService messageService;
 
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> body) {
@@ -100,6 +102,8 @@ public class AuthController {
                         .last("LIMIT 6")
         );
         data.put("notices", notices);
+        data.put("messages", messageService.listForUser(studentId, null, 20));
+        data.put("unreadMessageCount", messageService.unreadCount(studentId));
         return Result.success(data);
     }
 
@@ -300,5 +304,95 @@ public class AuthController {
             }
         }
         return Objects.equals(stored, raw) || Objects.equals(stored, DigestUtil.md5Hex(raw));
+    }
+
+    /**
+     * 新生 CSV 批量导入。表头：username(学号),realName,gender(1男2女),college,major,className,grade
+     * 也可用中文表头：学号,姓名,性别,学院,专业,班级,年级
+     */
+    @PostMapping("/import-students")
+    public Result<Map<String, Object>> importStudents(@RequestBody Map<String, Object> body) {
+        String csv = body.get("csv") != null ? body.get("csv").toString() : "";
+        if (csv.isBlank()) {
+            return Result.error("请粘贴 CSV 内容（含表头）");
+        }
+        String[] lines = csv.replace("\r\n", "\n").replace('\r', '\n').split("\n");
+        if (lines.length < 2) {
+            return Result.error("CSV 至少需要表头与一行数据");
+        }
+        String header = lines[0].trim();
+        String[] cols = header.split(",");
+        Map<String, Integer> idx = new HashMap<>();
+        for (int i = 0; i < cols.length; i++) {
+            String c = cols[i].trim().toLowerCase();
+            if (c.contains("学号") || c.equals("username") || c.equals("studentno")) idx.put("username", i);
+            else if (c.contains("姓名") || c.equals("realname") || c.equals("name")) idx.put("realName", i);
+            else if (c.contains("性别") || c.equals("gender")) idx.put("gender", i);
+            else if (c.contains("学院") || c.equals("college")) idx.put("college", i);
+            else if (c.contains("专业") || c.equals("major")) idx.put("major", i);
+            else if (c.contains("班级") || c.equals("classname") || c.equals("class")) idx.put("className", i);
+            else if (c.contains("年级") || c.equals("grade")) idx.put("grade", i);
+        }
+        if (!idx.containsKey("username") || !idx.containsKey("realName")) {
+            return Result.error("CSV 表头需包含学号与姓名（或 username,realName）");
+        }
+        int created = 0, skipped = 0;
+        List<String> errors = new ArrayList<>();
+        List<Map<String, Object>> createdUsers = new ArrayList<>();
+        for (int li = 1; li < lines.length; li++) {
+            String line = lines[li].trim();
+            if (line.isEmpty()) continue;
+            String[] parts = line.split(",", -1);
+            try {
+                String username = parts[idx.get("username")].trim();
+                String realName = parts[idx.get("realName")].trim();
+                if (username.isEmpty() || realName.isEmpty()) {
+                    skipped++;
+                    continue;
+                }
+                Long exists = sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
+                if (exists != null && exists > 0) {
+                    skipped++;
+                    errors.add(username + " 已存在");
+                    continue;
+                }
+                SysUser u = new SysUser();
+                u.setUsername(username);
+                u.setRealName(realName);
+                u.setRole("STUDENT");
+                u.setPassword(BCrypt.hashpw("123456"));
+                u.setStatus(1);
+                if (idx.containsKey("gender") && idx.get("gender") < parts.length) {
+                    String g = parts[idx.get("gender")].trim();
+                    if ("2".equals(g) || g.contains("女")) u.setGender(2);
+                    else u.setGender(1);
+                } else {
+                    u.setGender(1);
+                }
+                if (idx.containsKey("college") && idx.get("college") < parts.length) u.setCollege(parts[idx.get("college")].trim());
+                if (idx.containsKey("major") && idx.get("major") < parts.length) u.setMajor(parts[idx.get("major")].trim());
+                if (idx.containsKey("className") && idx.get("className") < parts.length) u.setClassName(parts[idx.get("className")].trim());
+                if (idx.containsKey("grade") && idx.get("grade") < parts.length) u.setGrade(parts[idx.get("grade")].trim());
+                sysUserMapper.insert(u);
+                created++;
+                Map<String, Object> brief = new LinkedHashMap<>();
+                brief.put("id", u.getId());
+                brief.put("username", u.getUsername());
+                brief.put("realName", u.getRealName());
+                brief.put("gender", u.getGender());
+                createdUsers.add(brief);
+                messageService.push(u.getId(), "欢迎报到",
+                        "账号已开通，默认密码 123456。请尽快填写六维生活习惯画像以便智能分寝。",
+                        "SYSTEM", null);
+            } catch (Exception ex) {
+                errors.add("第" + (li + 1) + "行：" + (ex.getMessage() != null ? ex.getMessage() : "解析失败"));
+            }
+        }
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("created", created);
+        res.put("skipped", skipped);
+        res.put("errors", errors);
+        res.put("users", createdUsers);
+        return Result.success("导入完成：新建 " + created + " 人，跳过 " + skipped + " 人", res);
     }
 }

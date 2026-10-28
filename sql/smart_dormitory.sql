@@ -151,7 +151,8 @@ CREATE TABLE `repair_order` (
     `rating` INT DEFAULT NULL COMMENT '学生满意度评分(1-5星)',
     `rating_comment` VARCHAR(200) DEFAULT NULL COMMENT '学生评价内容',
     `finish_time` DATETIME DEFAULT NULL COMMENT '完成时间',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '报修时间'
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '报修时间',
+    `photo_urls` TEXT DEFAULT NULL COMMENT '故障图片(JSON数组，本地路径或dataURL演示)'
 ) ENGINE=InnoDB COMMENT='智能报修工单表';
 
 -- -------------------------------------------------------------------------
@@ -405,3 +406,19 @@ INSERT INTO `sys_notice` (`title`, `content`, `notice_type`, `target_role`, `pub
 ('关于开展2026年秋季学期“五星文明寝室”量化评比与安全用电专项检查的通知', '全体住宿同学：\n为营造安全、整洁、和谐的智慧公寓环境，系统将于每月1日自动汇总【卫生检查(50%) + 违纪晚归记录(30%) + 水电节约表现(20%)】进行量化评比。请各寝室严禁使用热得快、电煮锅等大功率违规电器，智慧水电监测模块已开启24小时突增能耗预警。', 'SAFETY', 'ALL', '校后勤保障部·宿管中心', 1, 342, '2026-10-10 09:00:00'),
 ('2026级新生“六维生活习惯画像”问卷采集与智能分寝系统开放公告', '欢迎新同学入住智慧公寓！请尚未分配床位的同学登录个人工作台，如实填写《六维生活习惯画像问卷》（含作息时间、睡眠深浅、空调偏好、卫生标准、氛围偏好、异味敏感度）。后勤中心将通过多维余弦/欧氏聚类算法为您匹配生活习惯最契合的室友！', 'SYSTEM', 'STUDENT', '学生工作处', 1, 518, '2026-10-15 14:00:00'),
 ('第十四周全校文明示范寝室红榜公示（紫荆1-301、丁香1-201上榜）', '经过本阶段多维量化考核，紫荆公寓1号楼301室（综合得分96.5分）、丁香公寓1号楼201室（综合得分98.0分）获评五星级文明示范寝室，特此通报表扬并奖励免费电费额度50度！', 'HYGIENE', 'ALL', '紫荆园区管委会', 0, 215, '2026-10-22 17:30:00');
+
+
+-- -------------------------------------------------------------------------
+-- 14. 站内消息 (user_message) -> P1 轻量通知中心
+-- -------------------------------------------------------------------------
+CREATE TABLE `user_message` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '消息ID',
+    `user_id` BIGINT NOT NULL COMMENT '接收用户ID',
+    `title` VARCHAR(100) NOT NULL COMMENT '标题',
+    `content` VARCHAR(500) NOT NULL COMMENT '正文',
+    `msg_type` VARCHAR(20) NOT NULL DEFAULT 'SYSTEM' COMMENT 'REPAIR/APPEAL/ADJUST/UTILITY/VISITOR/SYSTEM',
+    `biz_id` VARCHAR(50) DEFAULT NULL COMMENT '关联业务ID',
+    `read_flag` TINYINT NOT NULL DEFAULT 0 COMMENT '0未读 1已读',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    KEY `idx_user_read` (`user_id`, `read_flag`)
+) ENGINE=InnoDB COMMENT='站内消息';

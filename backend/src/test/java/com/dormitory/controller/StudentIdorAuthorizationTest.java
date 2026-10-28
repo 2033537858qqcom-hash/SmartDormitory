@@ -8,6 +8,7 @@ import com.dormitory.service.SmartAllocationService;
 import com.dormitory.service.SmartEvaluationService;
 import com.dormitory.service.SmartRepairService;
 import com.dormitory.service.SmartUtilityService;
+import com.dormitory.service.UserMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +42,7 @@ class StudentIdorAuthorizationTest {
     @Mock HygieneInspectionMapper hygieneMapper;
     @Mock SmartEvaluationService smartEvaluationService;
     @Mock SmartAllocationService smartAllocationService;
+    @Mock UserMessageService messageService;
 
     RepairOrderController repairController;
     UtilityBillController utilityController;
@@ -50,14 +52,13 @@ class StudentIdorAuthorizationTest {
     @BeforeEach
     void init() {
         repairController = new RepairOrderController(
-                repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope);
-        utilityController = new UtilityBillController(
-                utilityBillMapper, smartUtilityService, roomMapper, buildingMapper, bedMapper, buildingScope);
+                repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
+        utilityController = new UtilityBillController(utilityBillMapper, smartUtilityService, smartRepairService, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
         allocController = new SmartAllocationController(
                 smartAllocationService, userMapper, habitProfileMapper, bedMapper, roomMapper, buildingMapper, allocationLogMapper);
         affairController = new DormAffairController(
                 smartEvaluationService, smartAllocationService, hygieneMapper, disciplineMapper, adjustApplyMapper,
-                visitorMapper, noticeMapper, roomMapper, buildingMapper, bedMapper, userMapper, habitProfileMapper, buildingScope);
+                visitorMapper, noticeMapper, roomMapper, buildingMapper, bedMapper, userMapper, habitProfileMapper, buildingScope, messageService);
     }
 
     private MockHttpServletRequest student(long id) {

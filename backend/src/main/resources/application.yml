@@ -2,6 +2,10 @@ server:
   port: 7000
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 3MB
+      max-request-size: 10MB
   application:
     name: smart-dormitory-backend
   datasource:
@@ -20,3 +24,6 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
+
+app:
+  upload-dir: uploads

@@ -10,7 +10,7 @@
         <div><h2>水电账单与余额联动</h2><p>查看每月阶梯用量、账户余额抵扣与需要核查的能耗异常。</p></div>
         <div class="workspace-actions">
           <el-popover placement="bottom-start" :width="340" trigger="click"><template #reference><el-button text size="small">计费规则</el-button></template><div class="rule-popover-content"><h4>阶梯计价与异常监测</h4><ul><li>电费：每月免额 20 度，20–100 度每度 0.60 元，超出 100 度每度 0.85 元。</li><li>水费：每月免额 4 吨，4–15 吨每吨 3 元，超出 15 吨每吨 4.50 元。</li><li>用量超过楼栋均值 1.5 倍或环比激增时，系统会标记异常；缴纳账单时自动联动抵扣寝室水电余额。</li></ul></div></el-popover>
-          <el-button v-if="isAdmin" plain icon="Download" @click="exportUtilityCsv">导出账单</el-button><el-button type="primary" icon="Plus" @click="entryVisible = true">录入抄表</el-button>
+          <el-button v-if="isAdmin" plain icon="Download" @click="exportUtilityCsv">导出账单</el-button><el-button plain @click="batchVisible = true">批量抄表</el-button><el-button type="primary" icon="Plus" @click="entryVisible = true">录入抄表</el-button>
         </div>
       </div>
       <div class="bill-filters"><el-checkbox v-model="onlyAbnormal" @change="loadBills">仅看能耗异常账单</el-checkbox><span>{{ bills.length }} 条账单</span></div>
@@ -31,7 +31,9 @@
           <div class="bill-usage"><div><span>用电</span><strong>{{ bill.electricUsed }} 度</strong><small>{{ formatMoney(bill.electricCost) }}</small></div><div><span>用水</span><strong>{{ bill.waterUsed }} 吨</strong><small>{{ formatMoney(bill.waterCost) }}</small></div></div>
           <div class="bill-amount"><span>账单总额</span><strong>{{ formatMoney(bill.totalCost) }}</strong><small>人均 {{ formatMoney(bill.perCapitaCost) }}</small></div>
           <div class="bill-action"><span :class="bill.payStatus === 1 ? 'settled' : 'unsettled'">{{ bill.payStatus === 1 ? '已缴清' : '待缴纳' }}</span><el-button v-if="bill.payStatus === 0" type="primary" plain size="small" @click="handlePayBill(bill)">扣余额核销</el-button><span v-else class="settled-note">已核销</span></div>
-          <details v-if="bill.abnormalFlag === 1" class="bill-warning"><summary>查看异常原因</summary><p>{{ bill.abnormalReason }}</p></details>
+          <details v-if="bill.abnormalFlag === 1" class="bill-warning"><summary>查看异常原因</summary><p>{{ bill.abnormalReason }}</p>
+            <el-button type="warning" plain size="small" style="margin-top:8px" :loading="convertingId===bill.id" @click="convertAnomaly(bill)">转报修工单排查</el-button>
+          </details>
         </li>
       </ul>
     </section>
@@ -54,7 +56,7 @@
         </el-form-item>
         <el-form-item label="本月用电(度)">
           <el-input-number v-model="entryForm.electricUsed" :min="0" :max="1000" :step="10" class="full-width" />
-          <div class="field-tip">输入大于 145 度将触发能耗异常预警</div>
+          <div class="field-tip">异常规则：用电超过 max(145kWh, 楼栋均值×1.5) 或用水超过 max(18吨, 楼栋均值×1.6) 将标记预警</div>
         </el-form-item>
         <el-form-item label="本月用水(吨)">
           <el-input-number v-model="entryForm.waterUsed" :min="0" :max="200" :step="2" class="full-width" />
@@ -65,6 +67,36 @@
         <el-button type="primary" :loading="submitting" @click="submitEntry">核算并保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="batchVisible" title="楼栋批量抄表" width="720px" @open="initBatchMap">
+      <el-form label-width="100px">
+        <el-form-item label="账单月份">
+          <el-input v-model="batchMonth" placeholder="如 2026-10" style="max-width:200px" />
+        </el-form-item>
+        <el-form-item label="录入方式">
+          <el-radio-group v-model="batchMode">
+            <el-radio-button label="grid">按房间网格</el-radio-button>
+            <el-radio-button label="csv">CSV 粘贴</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <p v-if="thresholdTip" class="field-tip">{{ thresholdTip }}</p>
+      <div v-if="batchMode === 'grid'" class="batch-grid">
+        <div v-for="r in rooms" :key="r.id" class="batch-row">
+          <span class="batch-room">{{ r.buildingName }} · {{ r.roomNo }}室</span>
+          <el-input-number v-model="batchMap[r.id].electricUsed" :min="0" :max="1000" :step="10" size="small" />
+          <span class="batch-unit">度</span>
+          <el-input-number v-model="batchMap[r.id].waterUsed" :min="0" :max="200" :step="2" size="small" />
+          <span class="batch-unit">吨</span>
+        </div>
+      </div>
+      <el-input v-else v-model="batchCsv" type="textarea" :rows="10" placeholder="roomId,electricUsed,waterUsed" />
+      <template #footer>
+        <el-button @click="batchVisible = false">取消</el-button>
+        <el-button type="primary" :loading="batchSubmitting" @click="submitBatch">提交批量核算</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -85,6 +117,15 @@ const bills = ref([])
 const rooms = ref([])
 const onlyAbnormal = ref(route.query.abnormal === '1')
 const entryVisible = ref(false)
+const batchVisible = ref(false)
+const batchSubmitting = ref(false)
+const batchMonth = ref('2026-10')
+const batchMode = ref('grid')
+const batchCsv = ref('roomId,electricUsed,waterUsed\n2,180,12')
+const batchMap = reactive({})
+const convertingId = ref(null)
+const thresholdTip = ref('')
+
 
 const entryForm = reactive({
   billMonth: '2026-10',
@@ -110,6 +151,9 @@ const loadBills = async () => {
 const loadRooms = async () => {
   const res = await request.get('/dorm/rooms')
   rooms.value = res.data || []
+  rooms.value.forEach(r => {
+    if (!batchMap[r.id]) batchMap[r.id] = { electricUsed: 90, waterUsed: 11 }
+  })
 }
 
 const submitEntry = async () => {
@@ -137,9 +181,57 @@ const exportUtilityCsv = () => {
   downloadExport('utility-bills', '水电账单.csv').catch(() => ElMessage.error('导出失败，请检查登录状态'))
 }
 
+const initBatchMap = () => {
+  for (const r of rooms.value) {
+    if (!batchMap[r.id]) {
+      batchMap[r.id] = { electricUsed: 80, waterUsed: 6 }
+    }
+  }
+}
+
+const submitBatch = async () => {
+  batchSubmitting.value = true
+  try {
+    let entries = []
+    if (batchMode.value === 'csv') {
+      const lines = batchCsv.value.trim().split(/\n/).filter(Boolean)
+      const start = lines[0].toLowerCase().includes('room') ? 1 : 0
+      for (let i = start; i < lines.length; i++) {
+        const [roomId, electricUsed, waterUsed] = lines[i].split(',').map(s => s.trim())
+        entries.push({ roomId: Number(roomId), electricUsed: Number(electricUsed), waterUsed: Number(waterUsed) })
+      }
+    } else {
+      entries = rooms.value.map(r => ({
+        roomId: r.id,
+        electricUsed: batchMap[r.id]?.electricUsed ?? 0,
+        waterUsed: batchMap[r.id]?.waterUsed ?? 0
+      }))
+    }
+    const res = await request.post('/utility/meter-batch', { billMonth: batchMonth.value, entries })
+    ElMessage.success(res.message || '批量抄表完成')
+    batchVisible.value = false
+    await loadBills()
+  } finally {
+    batchSubmitting.value = false
+  }
+}
+
+const convertAnomaly = async (bill) => {
+  convertingId.value = bill.id
+  try {
+    const res = await request.post('/utility/anomaly-to-repair', { billId: bill.id })
+    ElMessage.success(res.message || '已转报修')
+  } finally {
+    convertingId.value = null
+  }
+}
+
 onMounted(() => {
   loadBills()
   loadRooms()
+  request.get('/utility/threshold-rules').then(res => {
+    thresholdTip.value = res.data?.ruleText || ''
+  }).catch(() => {})
 })
 </script>
 
@@ -153,4 +245,7 @@ onMounted(() => {
 .workspace-empty { padding: 44px 20px; text-align: center; color: var(--text-muted); }.workspace-empty p { margin: 8px 0 3px; font-size: 14px; color: var(--text-secondary); }.workspace-empty span { font-size: 12px; }.field-tip { font-size: 12px; color: var(--text-muted); margin-top: 4px; }.full-width { width: 100%; }
 @media (max-width: 1050px) { .bill-row { grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr) auto; }.bill-heading { grid-column: 1; }.bill-usage { grid-column: 1; padding-left: 53px; }.bill-amount { grid-column: 2; grid-row: 1 / span 2; }.bill-action { grid-column: 3; grid-row: 1 / span 2; } }
 @media (max-width: 600px) { .workspace-panel { padding: 22px 18px 15px; }.workspace-heading { flex-wrap: wrap; }.workspace-actions { width: 100%; }.bill-row { grid-template-columns: minmax(0, 1fr) auto; gap: 15px 10px; }.bill-heading { grid-column: 1 / -1; }.bill-usage { grid-column: 1; padding-left: 0; }.bill-amount { grid-column: 2; grid-row: 2; text-align: right; }.bill-action { grid-column: 1 / -1; grid-row: auto; flex-direction: row; justify-content: space-between; align-items: center; }.bill-warning { grid-column: 1 / -1; } }
+
+.batch-grid { max-height: 360px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.batch-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; align-items: center; font-size: 13px; }
 </style>

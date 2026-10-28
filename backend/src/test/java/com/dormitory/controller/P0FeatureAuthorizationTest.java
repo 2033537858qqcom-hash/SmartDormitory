@@ -11,6 +11,7 @@ import com.dormitory.mapper.*;
 import com.dormitory.service.SmartAllocationService;
 import com.dormitory.service.SmartEvaluationService;
 import com.dormitory.service.SmartRepairService;
+import com.dormitory.service.UserMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ class P0FeatureAuthorizationTest {
     @Mock DormAdjustApplyMapper adjustApplyMapper;
     @Mock VisitorRecordMapper visitorMapper;
     @Mock SysNoticeMapper noticeMapper;
+    @Mock UserMessageService messageService;
 
     DormManageController dormController;
     RepairOrderController repairController;
@@ -54,11 +56,11 @@ class P0FeatureAuthorizationTest {
                 buildingMapper, roomMapper, bedMapper, userMapper, habitProfileMapper,
                 smartAllocationService, buildingScope);
         repairController = new RepairOrderController(
-                repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope);
+                repairOrderMapper, smartRepairService, userMapper, roomMapper, buildingMapper, bedMapper, buildingScope, messageService);
         affairController = new DormAffairController(
                 smartEvaluationService, smartAllocationService, hygieneMapper, disciplineMapper,
                 adjustApplyMapper, visitorMapper, noticeMapper, roomMapper, buildingMapper, bedMapper,
-                userMapper, habitProfileMapper, buildingScope);
+                userMapper, habitProfileMapper, buildingScope, messageService);
         lenient().when(buildingScope.resolve(any())).thenReturn(null);
         lenient().when(buildingScope.forbiddenIfOutOfScope(isNull(), any())).thenReturn(null);
         lenient().when(buildingScope.forbiddenIfOutOfScope(any(), isNull())).thenReturn(null);

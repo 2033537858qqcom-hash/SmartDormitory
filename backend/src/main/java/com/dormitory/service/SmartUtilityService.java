@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 
 /**
  * 核心亮点三：水电阶梯计价核算与能耗突增异常预警引擎
@@ -164,5 +164,24 @@ public class SmartUtilityService {
         }
         roomMapper.updateById(room);
         return room;
+    }
+
+    /** 前端展示用的真实阈值规则（替代演示作弊提示） */
+    public Map<String, Object> thresholdRules() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("electricFreeKwh", 20);
+        m.put("electricTier1MaxKwh", 100);
+        m.put("electricTier1Price", 0.60);
+        m.put("electricTier2Price", 0.85);
+        m.put("waterFreeTon", 4);
+        m.put("waterTier1MaxTon", 15);
+        m.put("waterTier1Price", 3.00);
+        m.put("waterTier2Price", 4.50);
+        m.put("electricAbnormalFloorKwh", 145);
+        m.put("electricAbnormalAvgFactor", 1.5);
+        m.put("waterAbnormalFloorTon", 18);
+        m.put("waterAbnormalAvgFactor", 1.6);
+        m.put("ruleText", "用电：超过 max(145kWh, 楼栋均值×1.5) 标记异常；用水：超过 max(18吨, 楼栋均值×1.6) 标记异常。");
+        return m;
     }
 }

@@ -99,6 +99,11 @@
           <div class="detail-box">
             <div class="box-title">{{ currentOrder.title }}</div>
             <p class="box-desc body-pretty">{{ currentOrder.description || '无补充说明' }}</p>
+            <div v-if="orderPhotos(currentOrder).length" class="photo-grid">
+              <a v-for="(u, i) in orderPhotos(currentOrder)" :key="i" :href="photoSrc(u)" target="_blank" rel="noopener">
+                <img :src="photoSrc(u)" alt="故障图片" />
+              </a>
+            </div>
           </div>
         </div>
 
@@ -313,6 +318,19 @@ const typeName = (t) => {
   return m[t] || t
 }
 
+const orderPhotos = (order) => {
+  if (!order?.photoUrls) return []
+  try {
+    const raw = typeof order.photoUrls === 'string' ? JSON.parse(order.photoUrls) : order.photoUrls
+    return Array.isArray(raw) ? raw.slice(0, 3) : []
+  } catch (_) { return [] }
+}
+const photoSrc = (u) => {
+  if (!u) return ''
+  if (u.startsWith('http') || u.startsWith('data:') || u.startsWith('blob:')) return u
+  return u.startsWith('/') ? u : ('/' + u)
+}
+
 const statusLabel = (s) => {
   const m = { PENDING: '待派单', ASSIGNED: '待维修', PROCESSING: '维修中', COMPLETED: '待评价', RATED: '已完结', CANCELLED: '已取消' }
   return m[s] || s
@@ -500,4 +518,7 @@ onMounted(() => {
 .drawer-footer-actions { margin-top: 4px; }.full-width { width: 100%; }
 @media (max-width: 900px) { .worker-workbench { flex-direction: column; align-items: flex-start; } .record-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }.record-side { grid-column: 1; margin-left: 55px; flex-direction: row; flex-wrap: wrap; }.record-actions { grid-column: 2; grid-row: 1 / span 2; } }
 @media (max-width: 600px) { .workspace-panel { padding: 22px 18px 15px; }.workspace-heading { flex-wrap: wrap; }.workspace-actions { width: 100%; justify-content: space-between; }.record-row { gap: 8px; }.record-icon { width: 36px; height: 36px; }.record-main { gap: 11px; }.record-side { margin-left: 47px; }.record-id { display: none; }.record-actions { flex-direction: column; gap: 2px; }.info-grid { grid-template-columns: 1fr; } }
+
+.photo-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.photo-grid img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-subtle); }
 </style>

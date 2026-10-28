@@ -2,11 +2,13 @@ package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dormitory.common.BuildingScopeService;
+import com.dormitory.common.PassCodeUtil;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import com.dormitory.service.SmartAllocationService;
 import com.dormitory.service.SmartEvaluationService;
+import com.dormitory.service.UserMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +40,7 @@ public class DormAffairController {
     private final SysUserMapper userMapper;
     private final StudentHabitProfileMapper habitProfileMapper;
     private final BuildingScopeService buildingScope;
+    private final UserMessageService messageService;
 
     @GetMapping("/evaluation")
     public Result<List<Map<String, Object>>> getCivilizedEvaluation(HttpServletRequest request) {
@@ -271,6 +274,12 @@ public class DormAffairController {
         }
         disciplineMapper.updateById(d);
         smartEvaluationService.evaluateAllRooms();
+        if (d.getStudentId() != null) {
+            messageService.push(d.getStudentId(),
+                    approved ? "违纪申诉已通过" : "违纪申诉未通过",
+                    approved ? ("宿管已核销：" + reviewNote) : ("申诉驳回：" + reviewNote),
+                    "APPEAL", String.valueOf(d.getId()));
+        }
         return Result.success(approved ? "申诉审核通过，已撤销扣分并恢复寝室文明积分！" : "已驳回申诉，维持原扣分记录", d);
     }
 
@@ -658,6 +667,12 @@ public class DormAffairController {
                 smartAllocationService.recalculateRoomHarmony(apply.getTargetRoomId());
             }
         }
+        if (apply.getStudentId() != null) {
+            String title = "APPROVED".equals(status) ? "调宿/退宿申请已批准" : "调宿/退宿申请已驳回";
+            messageService.push(apply.getStudentId(), title,
+                    comment == null || comment.isEmpty() ? title : comment,
+                    "ADJUST", String.valueOf(apply.getId()));
+        }
         return Result.success("审批处理完成，床位数据与寝室契合度已自动同步", apply);
     }
 
@@ -685,7 +700,7 @@ public class DormAffairController {
                 stayMinutes = Math.max(1, Duration.between(v.getEnterTime(), end).toMinutes());
             }
             boolean overstay = v.getStatus() != null && v.getStatus() == 0 && stayMinutes > 120;
-            String passCode = String.format("VP-%06d", Math.abs((v.getId() != null ? v.getId() : 1L) * 13579L + 802100L) % 1000000L);
+            String passCode = PassCodeUtil.fromVisitorId(v.getId());
 
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", v.getId());
@@ -741,6 +756,76 @@ public class DormAffairController {
         v.setStatus(0);
         visitorMapper.insert(v);
         return Result.success("来访登记成功", v);
+    }
+
+
+    @PostMapping("/visitor-verify")
+    public Result<Map<String, Object>> verifyVisitorPass(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        String raw = body != null && body.get("passCode") != null ? body.get("passCode").toString() : "";
+        String code = PassCodeUtil.normalize(raw);
+        if (code.isEmpty() || !code.startsWith("VP-")) {
+            return Result.error("请输入有效通行码（如 VP-802101）");
+        }
+        boolean checkOut = body != null && body.get("checkOut") != null && Boolean.parseBoolean(body.get("checkOut").toString());
+        Set<Long> scope = buildingScope.resolve(request);
+        List<VisitorRecord> list = visitorMapper.selectList(new LambdaQueryWrapper<VisitorRecord>().orderByDesc(VisitorRecord::getEnterTime));
+        VisitorRecord matched = null;
+        for (VisitorRecord v : list) {
+            if (code.equals(PassCodeUtil.fromVisitorId(v.getId()))) {
+                matched = v;
+                break;
+            }
+        }
+        if (matched == null) {
+            return Result.error("未找到匹配的通行码，请核对后重试");
+        }
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(scope, matched.getBuildingId());
+        if (denied != null) {
+            @SuppressWarnings("unchecked")
+            Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
+            return typed;
+        }
+        SysUser stu = userMapper.selectById(matched.getVisitStudentId());
+        DormBuilding b = buildingMapper.selectById(matched.getBuildingId());
+        LocalDateTime now = LocalDateTime.now();
+        long stayMinutes = 0;
+        if (matched.getEnterTime() != null) {
+            LocalDateTime end = matched.getLeaveTime() != null ? matched.getLeaveTime() : now;
+            stayMinutes = Math.max(1, Duration.between(matched.getEnterTime(), end).toMinutes());
+        }
+        boolean overstay = matched.getStatus() != null && matched.getStatus() == 0 && stayMinutes > 120;
+        boolean alreadyLeft = matched.getStatus() != null && matched.getStatus() == 1;
+        if (checkOut && !alreadyLeft) {
+            matched.setLeaveTime(now);
+            matched.setStatus(1);
+            visitorMapper.updateById(matched);
+            alreadyLeft = true;
+            if (matched.getVisitStudentId() != null) {
+                messageService.push(matched.getVisitStudentId(), "访客已签离",
+                        matched.getVisitorName() + " 已于门岗核验签离", "VISITOR", String.valueOf(matched.getId()));
+            }
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", matched.getId());
+        m.put("passCode", PassCodeUtil.fromVisitorId(matched.getId()));
+        m.put("visitorName", matched.getVisitorName());
+        m.put("visitorPhone", matched.getVisitorPhone());
+        m.put("relation", matched.getRelation());
+        m.put("visitReason", matched.getVisitReason());
+        m.put("visitStudentId", matched.getVisitStudentId());
+        m.put("visitStudentName", stu != null ? stu.getRealName() : "");
+        m.put("buildingId", matched.getBuildingId());
+        m.put("buildingName", b != null ? b.getBuildingName() : "");
+        m.put("roomNo", matched.getRoomNo());
+        m.put("enterTime", matched.getEnterTime());
+        m.put("leaveTime", matched.getLeaveTime());
+        m.put("stayMinutes", stayMinutes);
+        m.put("overstayFlag", overstay ? 1 : 0);
+        m.put("status", matched.getStatus());
+        m.put("passOk", !alreadyLeft && matched.getStatus() != null && matched.getStatus() == 0);
+        m.put("verifiedAt", now);
+        String tip = alreadyLeft ? "该通行码已签离" : (overstay ? "在访中但已超时，建议签离" : "核验通过，允许通行");
+        return Result.success(tip, m);
     }
 
     @PostMapping("/visitor-leave/{id}")
