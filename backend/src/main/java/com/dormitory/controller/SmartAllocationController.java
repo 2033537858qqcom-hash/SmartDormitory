@@ -69,7 +69,11 @@ public class SmartAllocationController {
     }
 
     @PostMapping("/habit-profile")
-    public Result<StudentHabitProfile> saveHabitProfile(@RequestBody StudentHabitProfile profile) {
+    public Result<StudentHabitProfile> saveHabitProfile(@RequestBody StudentHabitProfile profile,
+                                                        HttpServletRequest request) {
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            profile.setStudentId((Long) request.getAttribute("currentUserId"));
+        }
         StudentHabitProfile existing = habitProfileMapper.selectOne(
                 new LambdaQueryWrapper<StudentHabitProfile>().eq(StudentHabitProfile::getStudentId, profile.getStudentId())
         );

@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
@@ -8,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,14 +28,25 @@ public class DashboardController {
     private final SysUserMapper userMapper;
     private final RepairOrderMapper repairOrderMapper;
     private final UtilityBillMapper utilityBillMapper;
+    private final BuildingScopeService buildingScope;
 
     @GetMapping("/overview")
-    public Result<Map<String, Object>> getOverview() {
+    public Result<Map<String, Object>> getOverview(HttpServletRequest request) {
+        Set<Long> scope = buildingScope.resolve(request);
         List<DormBuilding> buildings = buildingMapper.selectList(null);
         List<DormRoom> rooms = roomMapper.selectList(null);
         List<DormBed> beds = bedMapper.selectList(null);
         List<RepairOrder> repairs = repairOrderMapper.selectList(null);
         List<UtilityBill> bills = utilityBillMapper.selectList(null);
+        if (scope != null) {
+            buildings = buildings.stream().filter(b -> scope.contains(b.getId())).collect(Collectors.toList());
+            Set<Long> buildingIds = buildings.stream().map(DormBuilding::getId).collect(Collectors.toSet());
+            rooms = rooms.stream().filter(r -> buildingIds.contains(r.getBuildingId())).collect(Collectors.toList());
+            Set<Long> roomIds = rooms.stream().map(DormRoom::getId).collect(Collectors.toSet());
+            beds = beds.stream().filter(b -> roomIds.contains(b.getRoomId())).collect(Collectors.toList());
+            repairs = repairs.stream().filter(r -> buildingIds.contains(r.getBuildingId())).collect(Collectors.toList());
+            bills = bills.stream().filter(b -> buildingIds.contains(b.getBuildingId())).collect(Collectors.toList());
+        }
 
         long totalBeds = beds.size();
         long occupiedBeds = beds.stream().filter(b -> b.getStatus() != null && b.getStatus() == 1).count();

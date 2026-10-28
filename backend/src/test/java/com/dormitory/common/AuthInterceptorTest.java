@@ -100,4 +100,18 @@ class AuthInterceptorTest {
         request.addHeader("Authorization", token);
         assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), new Object()));
     }
+
+    @Test
+    void studentsCannotPostDisciplineRecords() throws Exception {
+        when(users.selectById(7L)).thenReturn(user);
+        String token = sessions.create(7L);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/affair/discipline");
+        request.addHeader("Authorization", token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        assertFalse(interceptor.preHandle(request, response, new Object()));
+        assertEquals(403, response.getStatus());
+        MockHttpServletRequest appeal = new MockHttpServletRequest("POST", "/api/affair/discipline-appeal");
+        appeal.addHeader("Authorization", token);
+        assertTrue(interceptor.preHandle(appeal, new MockHttpServletResponse(), new Object()));
+    }
 }

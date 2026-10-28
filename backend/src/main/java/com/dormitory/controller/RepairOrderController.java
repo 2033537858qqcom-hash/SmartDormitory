@@ -1,6 +1,7 @@
 package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.Result;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
@@ -23,6 +24,8 @@ public class RepairOrderController {
     private final SysUserMapper userMapper;
     private final DormRoomMapper roomMapper;
     private final DormBuildingMapper buildingMapper;
+    private final DormBedMapper bedMapper;
+    private final BuildingScopeService buildingScope;
 
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> listOrders(@RequestParam(required = false) Long studentId,
@@ -33,6 +36,13 @@ public class RepairOrderController {
         LambdaQueryWrapper<RepairOrder> wrapper = new LambdaQueryWrapper<>();
         if ("REPAIRMAN".equals(request.getAttribute("currentUserRole"))) {
             workerId = (Long) request.getAttribute("currentUserId");
+        }
+        Set<Long> scope = buildingScope.resolve(request);
+        if (scope != null) {
+            if (scope.isEmpty()) {
+                return Result.success(List.of());
+            }
+            wrapper.in(RepairOrder::getBuildingId, scope);
         }
         if (studentId != null) wrapper.eq(RepairOrder::getStudentId, studentId);
         if (workerId != null) wrapper.eq(RepairOrder::getAssignedWorkerId, workerId);
@@ -82,7 +92,31 @@ public class RepairOrderController {
     }
 
     @PostMapping("/submit")
-    public Result<RepairOrder> submitOrder(@RequestBody RepairOrder order) {
+    public Result<RepairOrder> submitOrder(@RequestBody RepairOrder order, HttpServletRequest request) {
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            Long uid = (Long) request.getAttribute("currentUserId");
+            order.setStudentId(uid);
+            DormBed bed = bedMapper.selectOne(
+                    new LambdaQueryWrapper<DormBed>()
+                            .eq(DormBed::getStudentId, uid)
+                            .eq(DormBed::getStatus, 1)
+                            .last("LIMIT 1")
+            );
+            if (bed == null) {
+                return Result.error("未找到您的在住床位，无法报修");
+            }
+            if (order.getRoomId() != null && !Objects.equals(order.getRoomId(), bed.getRoomId())) {
+                return Result.error(403, "只能为自己的寝室提交报修");
+            }
+            order.setRoomId(bed.getRoomId());
+            DormRoom room = roomMapper.selectById(bed.getRoomId());
+            if (room != null) {
+                order.setBuildingId(room.getBuildingId());
+            }
+        } else {
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), order.getBuildingId());
+            if (denied != null) return (Result<RepairOrder>) denied;
+        }
         RepairOrder saved = smartRepairService.createAndSmartDispatch(order);
         return Result.success("报修提交成功，系统已完成智能优先级识别与派单！", saved);
     }
@@ -105,6 +139,9 @@ public class RepairOrderController {
                     || !Set.of("PROCESSING", "COMPLETED").contains(status)) {
                 return Result.error("工单状态不允许此操作");
             }
+        } else {
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), order.getBuildingId());
+            if (denied != null) return (Result<RepairOrder>) denied;
         }
         order.setStatus(status);
         if (repairResult != null) {
@@ -118,7 +155,7 @@ public class RepairOrderController {
     }
 
     @PostMapping("/rate")
-    public Result<RepairOrder> rateOrder(@RequestBody Map<String, Object> body) {
+    public Result<RepairOrder> rateOrder(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long id = Long.valueOf(body.get("id").toString());
         Integer rating = Integer.valueOf(body.get("rating").toString());
         String comment = body.get("ratingComment") != null ? body.get("ratingComment").toString() : "好评！";
@@ -126,6 +163,11 @@ public class RepairOrderController {
         RepairOrder order = repairOrderMapper.selectById(id);
         if (order == null) {
             return Result.error("工单不存在");
+        }
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            if (!Objects.equals(order.getStudentId(), request.getAttribute("currentUserId"))) {
+                return Result.error(403, "只能评价自己的报修工单");
+            }
         }
         order.setRating(rating);
         order.setRatingComment(comment);
