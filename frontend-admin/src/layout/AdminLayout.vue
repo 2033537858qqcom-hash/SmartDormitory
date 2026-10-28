@@ -93,8 +93,33 @@
             </div>
           </el-popover>
           <el-dropdown trigger="click" placement="bottom-end">
-            <button type="button" class="account-menu" aria-label="个人账号菜单"><span class="header-user-name">{{ displayName }}</span><span class="account-avatar small">{{ displayName.slice(0, 1) }}</span></button>
-            <template #dropdown><el-dropdown-menu><el-dropdown-item @click="pwdVisible = true">修改密码</el-dropdown-item><el-dropdown-item divided @click="logout">退出登录</el-dropdown-item></el-dropdown-menu></template>
+            <button type="button" class="account-menu" aria-label="个人账号菜单">
+              <span class="account-avatar small">{{ displayName.slice(0, 1) }}</span>
+              <span class="header-user-meta">
+                <span class="header-user-name">{{ displayName }}</span>
+                <span class="header-user-role">{{ roleLabel }}</span>
+              </span>
+              <el-icon class="dropdown-caret"><ArrowDown /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu class="header-account-popover">
+                <div class="user-popover-card">
+                  <span class="account-avatar medium">{{ displayName.slice(0, 1) }}</span>
+                  <div class="user-popover-info">
+                    <strong class="user-popover-name">{{ displayName }}</strong>
+                    <span class="user-popover-badge">{{ roleBadgeText }}</span>
+                  </div>
+                </div>
+                <el-dropdown-item divided @click="pwdVisible = true">
+                  <el-icon><Lock /></el-icon>
+                  <span>修改密码</span>
+                </el-dropdown-item>
+                <el-dropdown-item class="logout-item" @click="logout">
+                  <el-icon><SwitchButton /></el-icon>
+                  <span>退出登录</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
           </el-dropdown>
         </div>
       </el-header>
@@ -386,21 +411,196 @@ onBeforeUnmount(() => {
 .account-summary b { display: block; font-size: 13px; }
 .account-summary small { display: block; color: var(--text-muted); font-size: 11px; margin-top: 2px; }
 .account-avatar { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: #fafafa; color: #686870; font-size: 13px; }
-.account-avatar.small { width: 30px; height: 30px; background: #e7e7ec; font-size: 12px; }
+.account-avatar.small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0071e3 0%, #388bfd 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 1px 3px rgba(0, 113, 227, 0.28);
+  flex-shrink: 0;
+}
+.account-avatar.medium {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0071e3 0%, #388bfd 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.25);
+  flex-shrink: 0;
+}
 .student-link { margin: 19px 0 0 4px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); text-decoration: none; font-size: 12px; }
 .student-link:hover { color: var(--accent-primary); }
 .right-container { min-width: 0; flex: 1; }
 .top-header { height: 62px; background: rgb(245 245 247 / 90%); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; gap: 15px; z-index: var(--z-header); }
 .header-left { display: flex; align-items: center; gap: 13px; color: var(--text-secondary); font-size: 12px; min-width: 0; }
-.header-right { display: flex; align-items: center; gap: 14px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
 .role-quick-switcher { display: flex; align-items: center; gap: 4px; background: #e6e6eb; padding: 3px 4px; border-radius: 10px; }
 .switcher-caption { font-size: 11px; color: var(--text-muted); padding: 0 6px; white-space: nowrap; }
 .role-pill { border: 0; background: transparent; color: var(--text-secondary); font-size: 12px; padding: 5px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
 .role-pill.active { background: #fff; color: var(--accent-primary); font-weight: 600; box-shadow: 0 1px 4px rgb(29 29 31 / 6%); }
 .collapse-btn { color: var(--text-muted); padding: 6px; }
 .breadcrumb-parent, .breadcrumb-slash { color: var(--text-muted); }
-.account-menu { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; color: var(--text-secondary); border-radius: 20px; cursor: pointer; }
-.header-user-name { font-size: 12px; }
+
+/* 头部个人账号胶囊按钮 */
+.account-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-decoration: none !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.account-menu:hover {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  text-decoration: none !important;
+}
+.account-menu:active {
+  transform: scale(0.98);
+}
+.account-menu:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.account-menu * {
+  text-decoration: none !important;
+}
+.header-user-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none !important;
+}
+.header-user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1;
+  text-decoration: none !important;
+}
+.header-user-role {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--accent-primary);
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none !important;
+}
+.dropdown-caret {
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+  margin-left: 1px;
+}
+.account-menu:hover .dropdown-caret {
+  color: var(--text-primary);
+}
+
+/* 站内消息铃铛按钮 */
+.msg-bell {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  text-decoration: none !important;
+}
+.msg-bell:hover {
+  background: #ffffff;
+  color: var(--accent-primary);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+.msg-bell:active {
+  transform: scale(0.96);
+}
+.msg-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 13px;
+  text-align: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(255, 59, 48, 0.35);
+}
+
+/* 账号弹出卡片 */
+:deep(.header-account-popover) {
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+.user-popover-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 10px;
+  margin-bottom: 2px;
+  text-decoration: none !important;
+}
+.user-popover-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-decoration: none !important;
+}
+.user-popover-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.user-popover-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+:deep(.logout-item) {
+  color: #ff3b30 !important;
+}
+:deep(.logout-item:hover) {
+  background: rgba(255, 59, 48, 0.08) !important;
+  color: #ff3b30 !important;
+}
+
 .main-content { padding: 18px 32px 36px; overflow-y: auto; background: var(--bg-canvas); }
 .content-wrap { max-width: 1520px; margin: 0 auto; }
 .page-intro { margin-bottom: 29px; }
@@ -409,10 +609,15 @@ onBeforeUnmount(() => {
 .page-intro p { color: var(--text-muted); font-size: 13px; margin-top: 9px; }
 @supports (backdrop-filter: blur(16px)) { .top-header { backdrop-filter: blur(16px); } }
 @media (max-width: 900px) { .top-header { padding: 0 22px; } .main-content { padding: 12px 22px 30px; } .switcher-caption { display: none; } }
-@media (max-width: 600px) { .top-header { height: 54px; padding: 0 15px; } .main-content { padding: 12px 15px 25px; } .breadcrumb-parent, .breadcrumb-slash, .header-user-name, .role-quick-switcher { display: none; } .page-title { font-size: 28px; } .page-intro { margin-bottom: 23px; } .sidebar-footer { padding: 18px; } }
-
-.msg-bell { position: relative; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; padding: 6px; border-radius: 10px; }
-.msg-dot { position: absolute; top: -2px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: #ff3b30; color: #fff; font-size: 10px; line-height: 16px; }
+@media (max-width: 600px) {
+  .top-header { height: 54px; padding: 0 15px; }
+  .main-content { padding: 12px 15px 25px; }
+  .breadcrumb-parent, .breadcrumb-slash, .header-user-meta, .dropdown-caret, .role-quick-switcher { display: none; }
+  .account-menu { padding: 3px; }
+  .page-title { font-size: 28px; }
+  .page-intro { margin-bottom: 23px; }
+  .sidebar-footer { padding: 18px; }
+}
 .msg-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .msg-empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
 .msg-item { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; padding: 10px 0; cursor: pointer; }
