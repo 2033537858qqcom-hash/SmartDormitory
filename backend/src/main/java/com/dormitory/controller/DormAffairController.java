@@ -2,6 +2,7 @@ package com.dormitory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import cn.hutool.json.JSONUtil;
 import com.dormitory.common.BuildingScopeService;
 import com.dormitory.common.PassCodeUtil;
 import com.dormitory.common.Result;
@@ -620,6 +621,7 @@ public class DormAffairController {
             m.put("reason", a.getReason());
             m.put("status", a.getStatus());
             m.put("reviewComment", a.getReviewComment());
+            m.put("checkoutChecklist", a.getCheckoutChecklist());
             m.put("reviewTime", a.getReviewTime());
             m.put("createTime", a.getCreateTime());
             res.add(m);
@@ -662,6 +664,15 @@ public class DormAffairController {
                 .eq(DormAdjustApply::getId, id).last("FOR UPDATE"));
         if (apply == null) return Result.error("申请记录不存在");
         if (!"PENDING".equals(apply.getStatus())) return Result.error("申请已处理，请勿重复审批");
+        if ("APPROVED".equals(status) && "CHECKOUT".equals(apply.getApplyType())) {
+            Object raw = body.get("handover");
+            if (!(raw instanceof Map<?, ?> handover) || !Boolean.TRUE.equals(handover.get("keyReturned"))
+                    || !Boolean.TRUE.equals(handover.get("facilitiesChecked")) || !Boolean.TRUE.equals(handover.get("roomCleared")))
+                return Result.error("请完成退宿交接清单：钥匙、设施和寝室清理");
+            String note = handover.get("note") == null ? "" : handover.get("note").toString().trim();
+            if (note.length() > 300) return Result.error("交接备注过长");
+            apply.setCheckoutChecklist(JSONUtil.toJsonStr(Map.of("keyReturned", true, "facilitiesChecked", true, "roomCleared", true, "note", note)));
+        }
         if (apply.getOldRoomId() != null) {
             DormRoom oldRoom = roomMapper.selectById(apply.getOldRoomId());
             Result<?> denied = buildingScope.forbiddenIfOutOfScope(

@@ -127,6 +127,7 @@ CREATE TABLE `dorm_adjust_apply` (
     `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING-待审批, APPROVED-已通过, REJECTED-已驳回',
     `reviewer_id` BIGINT DEFAULT NULL COMMENT '审批人ID',
     `review_comment` VARCHAR(200) DEFAULT NULL COMMENT '审批意见',
+    `checkout_checklist` TEXT DEFAULT NULL COMMENT '退宿交接检查记录(JSON)',
     `review_time` DATETIME DEFAULT NULL COMMENT '审批时间',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间'
 ) ENGINE=InnoDB COMMENT='调宿与退宿申请表';

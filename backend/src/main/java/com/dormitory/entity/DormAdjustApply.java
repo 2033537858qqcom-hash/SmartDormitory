@@ -23,6 +23,7 @@ public class DormAdjustApply {
     private String status;
     private Long reviewerId;
     private String reviewComment;
+    private String checkoutChecklist;
     private LocalDateTime reviewTime;
     private LocalDateTime createTime;
 }

@@ -146,3 +146,9 @@ CREATE TABLE IF NOT EXISTS residence_request (
   KEY idx_residence_student (student_id, status), KEY idx_residence_room (room_id, status)
 ) ENGINE=InnoDB COMMENT='入住和假期留宿申请';
 ```
+
+退宿交接清单（已有库执行一次）：
+
+```sql
+ALTER TABLE dorm_adjust_apply ADD COLUMN checkout_checklist TEXT DEFAULT NULL COMMENT '退宿交接检查记录(JSON)';
+```
