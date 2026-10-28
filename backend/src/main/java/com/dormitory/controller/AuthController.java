@@ -4,6 +4,7 @@ import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dormitory.common.Result;
+import com.dormitory.common.SessionService;
 import com.dormitory.entity.*;
 import com.dormitory.mapper.*;
 import com.dormitory.service.SmartAllocationService;
@@ -29,6 +30,7 @@ public class AuthController {
     private final DisciplineRecordMapper disciplineMapper;
     private final DormAdjustApplyMapper adjustApplyMapper;
     private final SmartAllocationService smartAllocationService;
+    private final SessionService sessions;
 
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> body) {
@@ -58,7 +60,7 @@ public class AuthController {
         Map<String, Object> data = new LinkedHashMap<>();
         user.setPassword(null);
         data.put("user", user);
-        data.put("token", "SMART-DORM-TOKEN-" + user.getId() + "-" + System.currentTimeMillis());
+        data.put("token", sessions.create(user.getId()));
 
         if ("DORM_MANAGER".equals(user.getRole())) {
             DormBuilding managed = buildingMapper.selectOne(
@@ -71,6 +73,12 @@ public class AuthController {
             enrichStudentContext(user.getId(), data);
         }
         return Result.success("登录成功", data);
+    }
+
+    @PostMapping("/logout")
+    public Result<String> logout(@RequestHeader("Authorization") String token) {
+        sessions.revoke(token);
+        return Result.success("已退出登录", "OK");
     }
 
     @GetMapping("/student-dashboard/{studentId}")
@@ -225,12 +233,15 @@ public class AuthController {
             }
             sysUserMapper.insert(user);
         } else {
+            boolean revoke = user.getPassword() != null && !user.getPassword().isEmpty()
+                    || Integer.valueOf(0).equals(user.getStatus());
             if (user.getPassword() != null && !user.getPassword().isEmpty()) {
                 user.setPassword(BCrypt.hashpw(user.getPassword()));
             } else {
                 user.setPassword(null);
             }
             sysUserMapper.updateById(user);
+            if (revoke) sessions.revokeUser(user.getId());
         }
         user.setPassword(null);
         return Result.success("用户信息保存成功", user);
@@ -251,6 +262,7 @@ public class AuthController {
         }
         user.setPassword(BCrypt.hashpw(newPwd));
         sysUserMapper.updateById(user);
+        sessions.revokeUser(userId);
         return Result.success("密码修改成功", "OK");
     }
 
@@ -260,6 +272,7 @@ public class AuthController {
         if (user == null) return Result.error("用户不存在");
         user.setPassword(BCrypt.hashpw("123456"));
         sysUserMapper.updateById(user);
+        sessions.revokeUser(id);
         return Result.success("密码已重置为默认密码 123456", "OK");
     }
 
@@ -269,6 +282,7 @@ public class AuthController {
             return Result.error("超级管理员账号不可删除");
         }
         sysUserMapper.deleteById(id);
+        sessions.revokeUser(id);
         return Result.success("账号已删除", "OK");
     }
 
