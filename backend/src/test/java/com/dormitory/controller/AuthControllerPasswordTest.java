@@ -81,7 +81,7 @@ class AuthControllerPasswordTest {
         AtomicReference<String> stored = new AtomicReference<>();
         doAnswer(invocation -> { stored.set(((SysUser) invocation.getArgument(0)).getPassword()); return 1; })
                 .when(users).updateById(any(SysUser.class));
-        assertEquals(200, controller.changePassword(Map.of("userId", 1, "oldPassword", "old", "newPassword", "new-secret")).getCode());
+        assertEquals(200, controller.changePassword(Map.of("userId", 1, "oldPassword", "old", "newPassword", "new-secret"), 1L).getCode());
         assertNotNull(stored.get());
         assertTrue(BCrypt.checkpw("new-secret", stored.get()));
     }
@@ -101,5 +101,13 @@ class AuthControllerPasswordTest {
         String token = sessions.create(1L);
         controller.resetPassword(1L);
         assertNull(sessions.getUserId(token));
+    }
+
+    @Test
+    void changePasswordCannotTargetAnotherAccountThroughRequestBody() {
+        when(users.selectById(7L)).thenReturn(user("own-password"));
+        controller.changePassword(Map.of("userId", 1, "oldPassword", "own-password", "newPassword", "new-secret"), 7L);
+        verify(users, never()).selectById(1L);
+        verify(users).selectById(7L);
     }
 }
