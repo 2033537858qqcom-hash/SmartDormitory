@@ -122,6 +122,19 @@ class StudentIdorAuthorizationTest {
     }
 
     @Test
+    void authorizedPaymentUsesIdempotentTransactionService() {
+        DormRoom room = new DormRoom(); room.setId(1L);
+        DormBed bed = new DormBed(); bed.setRoomId(1L); bed.setStudentId(10L); bed.setStatus(1);
+        when(roomMapper.selectById(1L)).thenReturn(room);
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(bed);
+        when(smartUtilityService.processPayment(eq(1L), isNull(), any(), any(), eq(10L), eq("payment_request_007")))
+                .thenReturn(Map.of("txnNo", "DEMO-payment_request_007"));
+        var result = utilityController.payOrRecharge(Map.of("roomId", 1, "electricRecharge", 10, "requestId", "payment_request_007"), student(10L));
+        assertEquals(200, result.getCode());
+        assertEquals("DEMO-payment_request_007", result.getData().get("txnNo"));
+    }
+
+    @Test
     void habitProfileIgnoresForgedStudentId() {
         when(habitProfileMapper.selectOne(any(Wrapper.class))).thenReturn(null);
         StudentHabitProfile profile = new StudentHabitProfile();
