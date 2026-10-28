@@ -71,4 +71,14 @@ class UtilityPaymentWorkflowTest {
         verify(logs, times(1)).insert(any(UtilityPaymentLog.class));
         assertThrows(IllegalArgumentException.class, () -> service.processPayment(1L, null, new BigDecimal("20"), BigDecimal.ZERO, 7L, "payment_request_006"));
     }
+
+    @Test
+    void meterEntryCannotOverwritePaidBill() {
+        UtilityBill existing = new UtilityBill(); existing.setId(8L); existing.setRoomId(1L); existing.setPayStatus(1);
+        when(bills.selectOne(any(Wrapper.class))).thenReturn(existing);
+        UtilityBill reading = new UtilityBill(); reading.setRoomId(1L); reading.setBillMonth("2026-10");
+        reading.setElectricUsed(new BigDecimal("100")); reading.setWaterUsed(new BigDecimal("10"));
+        assertThrows(IllegalArgumentException.class, () -> service.createOrUpdateMeterBill(reading));
+        verify(bills, never()).updateById(any(UtilityBill.class));
+    }
 }
