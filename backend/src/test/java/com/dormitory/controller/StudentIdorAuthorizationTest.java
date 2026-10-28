@@ -156,6 +156,12 @@ class StudentIdorAuthorizationTest {
 
     @Test
     void adjustApplyForcesOwnStudentId() {
+        DormBed bed = new DormBed();
+        bed.setStudentId(10L);
+        bed.setRoomId(1L);
+        bed.setBedNo(1);
+        bed.setStatus(1);
+        when(bedMapper.selectOne(any(Wrapper.class))).thenReturn(bed);
         DormAdjustApply apply = new DormAdjustApply();
         apply.setStudentId(99L);
         apply.setOldRoomId(1L);
