@@ -11,6 +11,7 @@ import com.dormitory.service.SmartRepairService;
 import com.dormitory.service.UserMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
@@ -89,6 +90,10 @@ public class UtilityBillController {
             item.put("lowBalanceFlag", lowBal ? 1 : 0);
             item.put("abnormalFlag", b.getAbnormalFlag());
             item.put("abnormalReason", b.getAbnormalReason());
+            item.put("anomalyStatus", b.getAnomalyStatus() == null ? "PENDING" : b.getAnomalyStatus());
+            item.put("anomalyNote", b.getAnomalyNote());
+            item.put("anomalyRepairId", b.getAnomalyRepairId());
+            item.put("anomalyUpdatedAt", b.getAnomalyUpdatedAt());
             item.put("payStatus", b.getPayStatus());
             item.put("payTime", b.getPayTime());
             result.add(item);
@@ -231,9 +236,11 @@ public class UtilityBillController {
     }
 
     @PostMapping("/anomaly-to-repair")
+    @Transactional(rollbackFor = Exception.class)
     public Result<RepairOrder> anomalyToRepair(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long billId = Long.valueOf(body.get("billId").toString());
-        UtilityBill bill = utilityBillMapper.selectById(billId);
+        UtilityBill bill = utilityBillMapper.selectOne(new LambdaQueryWrapper<UtilityBill>()
+                .eq(UtilityBill::getId, billId).last("FOR UPDATE"));
         if (bill == null) return Result.error("账单不存在");
         Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), bill.getBuildingId());
         if (denied != null) {
@@ -244,6 +251,8 @@ public class UtilityBillController {
         if (bill.getAbnormalFlag() == null || bill.getAbnormalFlag() != 1) {
             return Result.error("该账单未标记异常，无需转报修");
         }
+        if (bill.getAnomalyRepairId() != null) return Result.error("该异常已转报修，请查看原工单");
+        if ("RESOLVED".equals(bill.getAnomalyStatus())) return Result.error("该异常已解决，无需转报修");
         DormRoom room = roomMapper.selectById(bill.getRoomId());
         // 取寝室任一在住学生作为报修人
         DormBed bed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
@@ -264,9 +273,34 @@ public class UtilityBillController {
         order.setDescription("由" + bill.getBillMonth() + "月异常账单自动转单：" + reason
                 + "（房间 " + (room != null ? room.getRoomNo() : bill.getRoomId()) + "）");
         RepairOrder saved = smartRepairService.createAndSmartDispatch(order);
+        bill.setAnomalyRepairId(saved.getId());
+        bill.setAnomalyStatus("INVESTIGATING");
+        bill.setAnomalyUpdatedBy((Long) request.getAttribute("currentUserId"));
+        bill.setAnomalyUpdatedAt(java.time.LocalDateTime.now());
+        utilityBillMapper.updateById(bill);
         messageService.push(bed.getStudentId(), "异常能耗已转报修",
                 "系统已根据水电异常为您创建排查工单「" + saved.getTitle() + "」",
-                "UTILITY", String.valueOf(saved.getId()));
+                "REPAIR", String.valueOf(saved.getId()));
         return Result.success("已生成异常排查报修工单", saved);
+    }
+
+    @PostMapping("/anomaly-status")
+    @Transactional(rollbackFor = Exception.class)
+    public Result<UtilityBill> updateAnomaly(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        Long billId = Long.valueOf(body.get("billId").toString());
+        String status = String.valueOf(body.get("status"));
+        String note = body.get("note") == null ? "" : body.get("note").toString().trim();
+        if (!Set.of("PENDING", "INVESTIGATING", "RESOLVED").contains(status)) return Result.error("无效的排查状态");
+        if (note.length() > 500 || ("RESOLVED".equals(status) && note.isEmpty())) return Result.error("请填写不超过 500 字的处理结果");
+        UtilityBill bill = utilityBillMapper.selectOne(new LambdaQueryWrapper<UtilityBill>()
+                .eq(UtilityBill::getId, billId).last("FOR UPDATE"));
+        if (bill == null || !Integer.valueOf(1).equals(bill.getAbnormalFlag())) return Result.error("异常账单不存在");
+        Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), bill.getBuildingId());
+        if (denied != null) return Result.error(403, denied.getMessage());
+        bill.setAnomalyStatus(status); bill.setAnomalyNote(note);
+        bill.setAnomalyUpdatedBy((Long) request.getAttribute("currentUserId"));
+        bill.setAnomalyUpdatedAt(java.time.LocalDateTime.now());
+        utilityBillMapper.updateById(bill);
+        return Result.success("排查记录已保存", bill);
     }
 }

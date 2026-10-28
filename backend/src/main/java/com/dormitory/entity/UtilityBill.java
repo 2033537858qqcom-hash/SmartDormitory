@@ -22,6 +22,11 @@ public class UtilityBill {
     private BigDecimal totalCost;
     private Integer abnormalFlag;
     private String abnormalReason;
+    private String anomalyStatus;
+    private String anomalyNote;
+    private Long anomalyRepairId;
+    private Long anomalyUpdatedBy;
+    private LocalDateTime anomalyUpdatedAt;
     private Integer payStatus;
     private LocalDateTime payTime;
     private LocalDateTime createTime;

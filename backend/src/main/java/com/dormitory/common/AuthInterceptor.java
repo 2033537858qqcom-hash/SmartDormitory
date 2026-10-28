@@ -87,7 +87,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         return "POST".equals(method) && (Set.of("/api/dorm/room", "/api/dorm/assign-bed",
                 "/api/repair/submit", "/api/repair/process", "/api/repair/reassign", "/api/repair/cancel",
-                "/api/utility/meter-entry", "/api/utility/meter-batch", "/api/utility/anomaly-to-repair",
+                "/api/utility/meter-entry", "/api/utility/meter-batch", "/api/utility/anomaly-to-repair", "/api/utility/anomaly-status",
                 "/api/utility/pay-or-recharge", "/api/affair/curfew-check", "/api/affair/discipline",
                 "/api/affair/discipline-review", "/api/affair/visitor", "/api/affair/visitor-verify",
                 "/api/affair/hygiene", "/api/affair/adjust-review",

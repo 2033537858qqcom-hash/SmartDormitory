@@ -117,3 +117,16 @@ ALTER TABLE repair_order
 ```
 
 服务默认每五分钟检查一次；到期前一小时通知维修人员，超时后通知维修人员和楼栋宿管（无宿管时通知管理员）。消息与标记在同一事务中保存。
+
+## 能耗异常排查增量
+
+已有库在备份后执行一次：
+
+```sql
+ALTER TABLE utility_bill
+  ADD COLUMN anomaly_status VARCHAR(20) DEFAULT NULL,
+  ADD COLUMN anomaly_note VARCHAR(500) DEFAULT NULL,
+  ADD COLUMN anomaly_repair_id BIGINT DEFAULT NULL,
+  ADD COLUMN anomaly_updated_by BIGINT DEFAULT NULL,
+  ADD COLUMN anomaly_updated_at DATETIME DEFAULT NULL;
+```
