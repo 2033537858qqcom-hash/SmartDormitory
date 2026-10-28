@@ -36,7 +36,14 @@
         </div>
 
         <p v-if="!users.length" class="list-empty">暂无符合条件的用户</p>
-        <ul v-else class="person-list" aria-label="用户列表">
+        <div v-else>
+          <div class="person-table-head" aria-hidden="true">
+            <span>人员与账号</span>
+            <span>角色与归属</span>
+            <span>账号状态</span>
+            <span>操作</span>
+          </div>
+          <ul class="person-list" aria-label="用户列表">
           <li v-for="row in users" :key="row.id" class="person-row">
             <div class="person-identity">
               <span class="person-avatar" aria-hidden="true">{{ (row.realName || '?').slice(0, 1) }}</span>
@@ -56,6 +63,7 @@
             </div>
           </li>
         </ul>
+        </div>
       </el-tab-pane>
 
       <!-- Tab 2: 园区通知公告发布 -->

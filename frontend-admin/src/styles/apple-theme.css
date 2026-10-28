@@ -61,6 +61,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--el-font-family); background: var(--bg-canvas); color: var(--text-primary); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 button, input, textarea, select { font: inherit; }
+input, textarea, select, .el-input__inner, .el-textarea__inner { outline: none !important; }
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible, select:focus, select:focus-visible, .el-input__inner:focus, .el-input__inner:focus-visible { outline: none !important; box-shadow: none !important; }
 button, a { -webkit-tap-highlight-color: transparent; text-decoration: none !important; color: inherit; }
 button:hover, a:hover, button:focus, a:focus, button:active, a:active { text-decoration: none !important; }
 button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px solid #95bff0; outline-offset: 3px; }
@@ -85,8 +87,10 @@ b, strong { font-weight: 600; }
 .el-button.is-text { border-radius: 8px; }
 .el-tag { border-color: transparent; font-weight: 500; border-radius: 6px; }
 .el-tag--small { padding: 0 7px; font-size: 12px; }
-.el-input__wrapper, .el-select__wrapper, .el-textarea__inner { background: var(--bg-canvas); border-radius: 10px; box-shadow: 0 0 0 1px transparent inset; }
-.el-input__wrapper.is-focus, .el-select__wrapper.is-focused, .el-textarea__inner:focus { box-shadow: 0 0 0 2px var(--accent-primary) inset; }
+.el-input__wrapper, .el-select__wrapper, .el-textarea__inner { background: var(--bg-canvas); border-radius: 10px; box-shadow: 0 0 0 1px transparent inset; outline: none !important; }
+.el-input__inner { outline: none !important; box-shadow: none !important; border: none !important; }
+.el-input__inner:focus, .el-input__inner:focus-visible { outline: none !important; box-shadow: none !important; }
+.el-input__wrapper.is-focus, .el-select__wrapper.is-focused, .el-textarea__inner:focus { box-shadow: 0 0 0 2px var(--accent-primary) inset; outline: none !important; }
 .el-form-item__label { color: var(--text-secondary); }
 .el-radio-group:has(.el-radio-button) { display: inline-flex; flex-wrap: wrap; padding: 3px; gap: 2px; background: var(--bg-muted); border-radius: 11px; }
 .el-radio-button { --el-radio-button-checked-bg-color: var(--bg-surface); --el-radio-button-checked-text-color: var(--text-primary); --el-radio-button-checked-border-color: transparent; }
@@ -144,9 +148,20 @@ b, strong { font-weight: 600; }
   margin: 0;
   padding: 0;
 }
+.person-table-head {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) minmax(200px, 1.2fr) 130px 180px;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 4px 10px;
+  border-bottom: 1px solid var(--border-color, #e8e8ed);
+  font-size: 12px;
+  font-weight: 500;
+  color: #86868b;
+}
 .person-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.1fr) minmax(165px, 1fr) minmax(105px, .7fr) auto;
+  grid-template-columns: minmax(240px, 1.4fr) minmax(200px, 1.2fr) 130px 180px;
   align-items: center;
   gap: 20px;
   padding: 17px 4px;
@@ -168,8 +183,21 @@ b, strong { font-weight: 600; }
 .person-identity > div, .person-details { display: grid; gap: 5px; min-width: 0; }
 .person-identity strong, .person-details strong { color: #1d1d1f; font-size: 14px; font-weight: 600; }
 .person-identity small, .person-details small, .notice-meta { color: #86868b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.person-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.person-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 180px;
+  flex-shrink: 0;
+}
 .person-actions .el-button + .el-button { margin-left: 0; }
+.person-actions .el-button {
+  padding: 0 !important;
+  margin: 0 !important;
+  height: auto;
+  font-size: 13.5px;
+}
 .person-details .status-disabled { color: #bd4a47; }
 .list-empty { margin: 0; padding: 36px 0; color: #86868b; text-align: center; font-size: 13px; }
 .notice-row { display: flex; align-items: flex-start; gap: 24px; padding: 17px 4px; border-bottom: 1px solid var(--border-color, #e8e8ed); }

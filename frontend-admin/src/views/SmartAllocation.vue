@@ -283,7 +283,14 @@
       </template>
 
       <p v-if="!filteredCandidates.length" class="list-empty">暂无符合条件的学生</p>
-      <ul v-else class="person-list" aria-label="学生习惯问卷与住宿状态">
+      <div v-else>
+        <div class="person-table-head" aria-hidden="true">
+          <span>学生信息</span>
+          <span>生活习惯画像</span>
+          <span>住宿分配状态</span>
+          <span>操作</span>
+        </div>
+        <ul class="person-list" aria-label="学生习惯问卷与住宿状态">
         <li v-for="row in filteredCandidates" :key="row.studentId || row.studentNo" class="person-row">
           <div class="person-identity">
             <span class="person-avatar" aria-hidden="true">{{ (row.realName || '?').slice(0, 1) }}</span>
@@ -300,6 +307,7 @@
           </div>
         </li>
       </ul>
+      </div>
     </el-card>
 
     <!-- 室友契合度雷达图弹窗 -->

@@ -424,6 +424,7 @@ const handleLogin = async () => {
   border: 1px solid #d2d2d7;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   transition: all 0.18s ease;
+  outline: none !important;
 }
 
 .apple-login-form :deep(.el-input__wrapper:hover) {
@@ -433,13 +434,23 @@ const handleLogin = async () => {
 
 .apple-login-form :deep(.el-input__wrapper.is-focus) {
   background: #ffffff;
-  border-color: #0071e3;
+  border-color: #0071e3 !important;
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15) !important;
+  outline: none !important;
 }
 
 .apple-login-form :deep(.el-input__inner) {
   font-size: 13.5px;
   color: #1d1d1f;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.apple-login-form :deep(.el-input__inner:focus),
+.apple-login-form :deep(.el-input__inner:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .apple-alert-error {
