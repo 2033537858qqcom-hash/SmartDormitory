@@ -1,6 +1,6 @@
 <view class="utility-page container">
   <view class="page-heading"><view class="page-title">水电缴费</view><view class="page-subtitle">余额、账单与充值，都在这里。</view></view>
-  <view class="demo-note">演示模拟 · 仅本地余额核销，非微信支付</view>
+  <view class="demo-note">{{paymentConfigLoaded ? (demoSupported ? '演示模拟 · 仅本地余额核销，非微信支付' : '演示水电核销未启用') : '正在检查可用支付方式…'}}</view>
   <view wx:if="{{loading && !room}}" class="empty-box card"><view class="empty-text">正在加载水电账户...</view></view>
   <view wx:elif="{{loadError && !room}}" class="empty-box card"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="retry-action spring-btn" bindtap="loadUtilityData">重新加载</button></view>
   <view wx:elif="{{!room}}" class="empty-box card"><view class="empty-title">水电账户待开通</view><view class="empty-text">分配寝室后即可查看余额与账单</view></view>
@@ -20,7 +20,7 @@
       <view class="bill-head"><text class="bill-month">{{item.billMonth}} 月度账单</text><text class="badge {{item.payStatus === 1 ? 'badge-green' : 'badge-amber'}}">{{item.payStatus === 1 ? '已缴清' : '待缴费'}}</text></view>
       <view wx:if="{{item.abnormalFlag === 1}}" class="abnormal-warn">能耗异常提醒：{{item.abnormalReason}}</view>
       <view class="bill-lines"><view><text>用电</text><text>{{item.electricUsed || 0}} 度 · ¥{{item.electricCost || 0}}</text></view><view><text>用水</text><text>{{item.waterUsed || 0}} 吨 · ¥{{item.waterCost || 0}}</text></view></view>
-      <view class="bill-foot"><view><text class="bill-total-label">账单总额</text><text class="bill-total">¥ {{item.totalCost || 0}}</text></view><button wx:if="{{item.payStatus !== 1}}" class="pay-btn spring-btn" disabled="{{paying || recharging}}" bindtap="handlePayBill" data-bill="{{item}}">余额缴纳</button></view>
+      <view class="bill-foot"><view><text class="bill-total-label">账单总额</text><text class="bill-total">¥ {{item.totalCost || 0}}</text></view><button wx:if="{{item.payStatus !== 1}}" class="pay-btn spring-btn" disabled="{{paying || recharging || !demoSupported}}" bindtap="handlePayBill" data-bill="{{item}}">余额缴纳</button></view>
     </view>
     <view wx:if="{{paymentLogs.length}}" class="logs-section"><view class="list-heading"><text>账户流水</text><text>演示记录</text></view><view class="logs-card card"><view wx:for="{{paymentLogs}}" wx:key="id" class="log-item"><view class="log-main"><view class="log-title">{{item.actionText}}</view><view class="log-meta">{{item.createTimeText}} · {{item.txnNo}}</view></view><view class="log-amount"><view>电 {{item.electricDelta}}</view><view>水 {{item.waterDelta}}</view></view></view></view></view>
   </block>
@@ -28,6 +28,6 @@
     <view class="input-group"><text class="input-label">充值账户</text><view class="target-selector"><view class="target-item spring-btn {{rechargeTarget === 'ELECTRIC' ? 'target-act' : ''}}" bindtap="selectTarget" data-target="ELECTRIC">电费账户</view><view class="target-item spring-btn {{rechargeTarget === 'WATER' ? 'target-act' : ''}}" bindtap="selectTarget" data-target="WATER">水费账户</view></view></view>
     <view class="demo-note">小程序仅支持演示模拟；支付宝沙箱请使用学生 H5。</view>
     <view class="input-group"><text class="input-label">充值金额</text><view class="amount-grid"><view wx:for="{{amountPills}}" wx:key="*this" class="amount-pill spring-btn {{rechargeAmount === item ? 'pill-act' : ''}}" bindtap="selectAmount" data-amount="{{item}}">¥{{item}}</view></view></view>
-    <button class="btn-primary spring-btn recharge-btn" loading="{{recharging}}" disabled="{{recharging || paying}}" bindtap="handleRecharge">{{recharging ? '正在处理...' : '确认模拟充值 ¥' + rechargeAmount}}</button>
+    <button class="btn-primary spring-btn recharge-btn" loading="{{recharging}}" disabled="{{recharging || paying || !demoSupported}}" bindtap="handleRecharge">{{recharging ? '正在处理...' : '确认模拟充值 ¥' + rechargeAmount}}</button>
   </view></view>
 </view>

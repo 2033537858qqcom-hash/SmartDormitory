@@ -114,7 +114,7 @@ test('payment retry retains id until a successful response', async () => {
   wx.showModal = () => {};
   const ids = [];
   api.post = async (_path, data) => { ids.push(data.requestId); if (ids.length === 1) throw Error('timeout'); return { data: {} }; };
-  const p = page('utility'); p.data.room = { id: 5 }; p.loadUtilityData = () => {};
+  const p = page('utility'); p.data.room = { id: 5 }; p.data.demoSupported = true; p.loadUtilityData = () => {};
   await p.handleRecharge(); await p.handleRecharge(); await p.handleRecharge();
   assert.equal(ids[0], ids[1]);
   assert.notEqual(ids[1], ids[2]);

@@ -14,6 +14,8 @@ Page({
     waterBalanceText: '¥ 0.00',
     rechargeTarget: 'ELECTRIC',
     payChannel: 'DEMO',
+    demoSupported: false,
+    paymentConfigLoaded: false,
     rechargeAmount: 50,
     amountPills: [20, 50, 100, 200],
     recharging: false,
@@ -31,6 +33,14 @@ Page({
     }
     tabbar.update(this, { selected: 2, visible: !this.data.rechargeVisible });
     this.loadUtilityData();
+    this.loadPaymentConfig();
+  },
+
+  async loadPaymentConfig() {
+    try {
+      const result = await api.get('/utility/pay/config');
+      this.setData({ demoSupported: result.data?.demoSupported === true, paymentConfigLoaded: true });
+    } catch (_) { this.setData({ demoSupported: false, paymentConfigLoaded: true }); }
   },
 
   onPullDownRefresh() {
@@ -120,6 +130,7 @@ Page({
         return;
       }
 
+      if (!this.data.demoSupported) { wx.showToast({ title: '演示充值未启用', icon: 'none' }); return; }
       const isEle = rechargeTarget === 'ELECTRIC';
       const payload = {
         roomId: room.id,
@@ -149,6 +160,7 @@ Page({
     const bill = e.currentTarget.dataset.bill;
     const room = this.data.room;
     if (!bill || !room || this.data.paying || this.data.recharging) return;
+    if (!this.data.demoSupported) { wx.showToast({ title: '演示缴费未启用', icon: 'none' }); return; }
     this.setData({ paying: true });
 
     wx.showModal({
