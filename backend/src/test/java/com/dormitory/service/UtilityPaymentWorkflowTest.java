@@ -183,4 +183,12 @@ class UtilityPaymentWorkflowTest {
         }
     }
 
+    @Test
+    void alipayOrderDoesNotSilentlyFallBackWhenDisabled() {
+        when(rooms.selectById(1L)).thenReturn(room());
+        assertThrows(IllegalStateException.class, () -> service.createAlipayOrder(1L, null,
+                new BigDecimal("10"), BigDecimal.ZERO, 7L));
+        verify(logs, never()).insert(any(UtilityPaymentLog.class));
+    }
+
 }
