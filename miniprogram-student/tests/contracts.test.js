@@ -220,3 +220,17 @@ test('mini program lets students select an available recommended bed', async () 
   assert.equal(p.data.rooms[p.data.roomIndex].id, 2);
   assert.equal(p.data.freeBeds[p.data.bedIndex].bedNo, 4);
 });
+
+test('mini program disables simulated recharge when backend demo mode is off', async () => {
+  api.get = async path => {
+    assert.equal(path, '/utility/pay/config');
+    return { data: { demoSupported: false } };
+  };
+  let calls = 0;
+  api.post = async () => { calls++; };
+  const p = page('utility'); p.data.room = { id: 1 };
+  await p.loadPaymentConfig();
+  await p.handleRecharge();
+  assert.equal(p.data.demoSupported, false);
+  assert.equal(calls, 0);
+});
