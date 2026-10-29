@@ -116,27 +116,7 @@ Page({
 
     try {
       if (this.data.payChannel === 'ALIPAY') {
-        const isEle = rechargeTarget === 'ELECTRIC';
-        const res = await api.post('/utility/pay/alipay-create', {
-          roomId: room.id,
-          electricRecharge: isEle ? rechargeAmount : 0,
-          waterRecharge: !isEle ? rechargeAmount : 0
-        });
-        this.setData({ rechargeVisible: false, rechargeClosing: false });
-        tabbar.update(this, { visible: true });
-        const data = (res && res.data) || {};
-        wx.showModal({
-          title: '【支付宝沙箱】下单成功',
-          content: `沙箱单号：${data.outTradeNo || 'ALI-ORDER'}\n金额：¥${rechargeAmount}.00\n通道：Alipay EasySDK\n${data.tip || '如已配置沙箱环境，可复制单号至沙箱APP完成支付。'}`,
-          confirmText: '复制单号',
-          showCancel: true,
-          success: (m) => {
-            if (m.confirm && data.outTradeNo) {
-              wx.setClipboardData({ data: data.outTradeNo });
-            }
-          }
-        });
-        this.loadUtilityData();
+        wx.showToast({ title: '请在学生 H5 使用支付宝沙箱', icon: 'none' });
         return;
       }
 

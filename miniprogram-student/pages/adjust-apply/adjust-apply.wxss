@@ -57,3 +57,9 @@
 .retry-btn {
   margin-top: 24rpx;
 }
+
+.recommendations { margin-bottom: 32rpx; }
+.recommend-title { color: #1d1d1f; font-size: 27rpx; font-weight: 600; margin-bottom: 14rpx; }
+.recommend-hint { color: #86868b; font-size: 20rpx; font-weight: 400; }
+.recommend-item { display: flex; justify-content: space-between; gap: 12rpx; padding: 20rpx; margin-bottom: 10rpx; background: #f1f6ff; border-radius: 16rpx; color: #2f435c; font-size: 23rpx; }
+.recommend-score { color: #1670dc; white-space: nowrap; }

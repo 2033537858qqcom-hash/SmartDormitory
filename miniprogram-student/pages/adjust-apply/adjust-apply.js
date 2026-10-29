@@ -7,6 +7,7 @@ Page({
     currentBuilding: null,
     currentRoom: null,
     currentBed: null,
+    recommendedRooms: [],
     applyType: 'ADJUST',
 
     buildings: [],
@@ -44,7 +45,7 @@ Page({
       const res = await api.get(`/auth/student-dashboard/${app.globalData.studentId}`);
       const dash = res.data;
       app.globalData.dashData = dash;
-      this.setData({ currentBuilding: dash.building, currentRoom: dash.room, currentBed: dash.bed });
+      this.setData({ currentBuilding: dash.building, currentRoom: dash.room, currentBed: dash.bed, recommendedRooms: dash.recommendedRooms || [] });
       await this.loadBuildings();
     } catch (_) { this.setData({ loadError: true }); }
     finally { this.setData({ loading: false }); }
@@ -90,6 +91,24 @@ Page({
       }
     } catch (_) { if (requestId === this._roomLoadId) this.setData({ roomsError: true }); }
     finally { if (requestId === this._roomLoadId) this.setData({ roomsLoading: false }); }
+  },
+
+  async selectRecommendation(e) {
+    const recommendation = this.data.recommendedRooms[Number(e.currentTarget.dataset.index)];
+    if (!recommendation) return;
+    const buildingIndex = this.data.buildings.findIndex(b => b.id === recommendation.buildingId);
+    if (buildingIndex < 0) { wx.showToast({ title: '推荐楼栋不可用', icon: 'none' }); return; }
+    this.setData({ buildingIndex });
+    await this.loadRooms(recommendation.buildingId);
+    if (this.data.roomsError) { wx.showToast({ title: '房间加载失败，请重试', icon: 'none' }); return; }
+    const roomIndex = this.data.rooms.findIndex(r => r.id === recommendation.roomId);
+    if (roomIndex < 0) { wx.showToast({ title: '推荐床位已不可用', icon: 'none' }); return; }
+    this.setData({ roomIndex });
+    this.updateFreeBeds();
+    const bedIndex = this.data.freeBeds.findIndex(b => b.bedNo === recommendation.recommendedBedNo);
+    if (bedIndex < 0) { wx.showToast({ title: '推荐床位已不可用', icon: 'none' }); return; }
+    this.setData({ bedIndex });
+    wx.showToast({ title: '已选择推荐床位', icon: 'success' });
   },
 
   onBuildingChange(e) {

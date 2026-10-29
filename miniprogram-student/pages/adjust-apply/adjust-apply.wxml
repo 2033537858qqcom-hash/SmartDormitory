@@ -37,6 +37,14 @@
       </view>
     </view>
 
+    <view wx:if="{{applyType === 'ADJUST' && recommendedRooms.length}}" class="recommendations">
+      <view class="recommend-title">推荐床位 <text class="recommend-hint">点击选择，提交前会重新核验</text></view>
+      <view wx:for="{{recommendedRooms}}" wx:key="roomId" class="recommend-item spring-btn" bindtap="selectRecommendation" data-index="{{index}}">
+        <text>{{item.buildingName}} · {{item.roomNo}}室 {{item.recommendedBedNo}}号床</text>
+        <text class="recommend-score">契合 {{item.predictedHarmony}} ›</text>
+      </view>
+    </view>
+
     <!-- 调宿目标选择 -->
     <block wx:if="{{applyType === 'ADJUST'}}">
       <view class="input-group">
