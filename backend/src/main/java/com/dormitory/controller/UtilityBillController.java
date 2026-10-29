@@ -128,30 +128,8 @@ public class UtilityBillController {
         BigDecimal waterRecharge = body.get("waterRecharge") != null
                 ? new BigDecimal(body.get("waterRecharge").toString()) : BigDecimal.ZERO;
 
-        DormRoom room = roomMapper.selectById(roomId);
-        if (room == null) {
-            return Result.error("寝室不存在");
-        }
-        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
-            Long uid = (Long) request.getAttribute("currentUserId");
-            DormBed bed = bedMapper.selectOne(
-                    new LambdaQueryWrapper<DormBed>()
-                            .eq(DormBed::getStudentId, uid)
-                            .eq(DormBed::getRoomId, roomId)
-                            .eq(DormBed::getStatus, 1)
-                            .last("LIMIT 1")
-            );
-            if (bed == null) {
-                return Result.error(403, "只能为自己入住的寝室缴费或充值");
-            }
-        } else {
-            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
-            if (denied != null) {
-                @SuppressWarnings("unchecked")
-                Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
-                return typed;
-            }
-        }
+        Result<Map<String, Object>> denied = authorizePaymentRoom(roomId, request);
+        if (denied != null) return denied;
 
         try {
             Map<String, Object> payload = smartUtilityService.processPayment(roomId, billId, electricRecharge,
@@ -160,6 +138,25 @@ public class UtilityBillController {
         } catch (IllegalArgumentException ex) {
             return Result.error(ex.getMessage());
         }
+    }
+
+    private Result<Map<String, Object>> authorizePaymentRoom(Long roomId, HttpServletRequest request) {
+        DormRoom room = roomMapper.selectById(roomId);
+        if (room == null) return Result.error("寝室不存在");
+        if ("STUDENT".equals(request.getAttribute("currentUserRole"))) {
+            DormBed bed = bedMapper.selectOne(new LambdaQueryWrapper<DormBed>()
+                    .eq(DormBed::getStudentId, request.getAttribute("currentUserId"))
+                    .eq(DormBed::getRoomId, roomId).eq(DormBed::getStatus, 1).last("LIMIT 1"));
+            if (bed == null) return Result.error(403, "只能为自己入住的寝室缴费或充值");
+        } else {
+            Result<?> denied = buildingScope.forbiddenIfOutOfScope(buildingScope.resolve(request), room.getBuildingId());
+            if (denied != null) {
+                @SuppressWarnings("unchecked")
+                Result<Map<String, Object>> typed = (Result<Map<String, Object>>) denied;
+                return typed;
+            }
+        }
+        return null;
     }
 
     @GetMapping("/threshold-rules")
@@ -323,6 +320,8 @@ public class UtilityBillController {
         Long billId = body.get("billId") != null ? Long.valueOf(body.get("billId").toString()) : null;
         BigDecimal electric = body.get("electricRecharge") != null ? new BigDecimal(body.get("electricRecharge").toString()) : BigDecimal.ZERO;
         BigDecimal water = body.get("waterRecharge") != null ? new BigDecimal(body.get("waterRecharge").toString()) : BigDecimal.ZERO;
+        Result<Map<String, Object>> denied = authorizePaymentRoom(roomId, request);
+        if (denied != null) return denied;
         Long operatorId = (Long) request.getAttribute("currentUserId");
         Map<String, Object> order = smartUtilityService.createAlipayOrder(roomId, billId, electric, water, operatorId);
         return Result.success("支付宝订单已生成", order);

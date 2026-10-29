@@ -242,6 +242,9 @@ public class SmartUtilityService {
         BigDecimal eDelta = electricRecharge != null ? electricRecharge : BigDecimal.ZERO;
         BigDecimal wDelta = waterRecharge != null ? waterRecharge : BigDecimal.ZERO;
 
+        if (eDelta.signum() < 0 || wDelta.signum() < 0) throw new IllegalArgumentException("充值金额不能为负数");
+        if (billId != null && (eDelta.signum() != 0 || wDelta.signum() != 0)) throw new IllegalArgumentException("缴费不能同时充值");
+
         if (billId != null) {
             UtilityBill bill = utilityBillMapper.selectById(billId);
             if (bill == null || !Objects.equals(roomId, bill.getRoomId())) throw new IllegalArgumentException("账单不属于当前寝室");
