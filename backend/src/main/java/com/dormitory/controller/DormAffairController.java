@@ -548,26 +548,10 @@ public class DormAffairController {
                 row.put("duplicate", true);
                 warned.add(row);
             } else {
-                // 演示批量稽核：未报备视为预警并生成记录（模拟门禁未刷脸归寝）
-                DisciplineRecord record = new DisciplineRecord();
-                record.setStudentId(stu.getId());
-                record.setRoomId(bed.getRoomId());
-                record.setRecordType("LATE_RETURN");
-                record.setDeductScore(5);
-                record.setOccurTime(LocalDateTime.now());
-                record.setDescription("[23:00人脸门禁考勤稽核] 超过门禁时间未归且无请假报备记录，系统自动抓拍预警");
-                record.setStatus(1);
-                disciplineMapper.insert(record);
-                allRecords.add(record);
-                createdWarnings++;
-                row.put("auditResult", "WARNED");
-                row.put("recordId", record.getId());
+                // 无真实门禁记录时只能列出未报备人员，不能推断晚归或写入违纪。
+                row.put("auditResult", "UNVERIFIED");
                 warned.add(row);
             }
-        }
-
-        if (createdWarnings > 0) {
-            smartEvaluationService.evaluateAllRooms(true);
         }
 
         Map<String, Object> res = new LinkedHashMap<>();
@@ -581,7 +565,7 @@ public class DormAffairController {
         res.put("warned", warned);
         res.put("normal", normal);
         String msg = String.format(
-                "楼栋批量门禁稽核完成：扫描 %d 人，豁免 %d、预警 %d（新建预警 %d 条）",
+                "报备情况预览：在住 %d 人，已报备 %d、待人工核实 %d（未生成违纪 %d 条）",
                 (Integer) res.get("scannedCount"), exempted.size(), warned.size(), createdWarnings);
         return Result.success(msg, res);
     }

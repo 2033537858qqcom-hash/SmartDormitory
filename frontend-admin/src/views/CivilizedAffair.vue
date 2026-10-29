@@ -182,7 +182,7 @@
               <el-option v-for="b in buildings" :key="b.id" :label="b.buildingName" :value="b.id" />
             </el-select>
             <el-button v-if="canWrite" type="primary" plain size="small" icon="Aim" :loading="auditingCurfew" @click="handleCurfewAudit">
-              按楼栋批量门禁稽核
+              预览报备情况
             </el-button>
             <el-button size="small" icon="Plus" v-if="canWrite" @click="disciplineVisible = true">
               录入违纪/晚归
@@ -226,7 +226,7 @@
           <div class="section-header" style="margin-bottom: 8px;">
             <span class="section-title">本轮稽核结果</span>
             <span class="unit-note tabular-nums">
-              扫描 {{ curfewAuditResult.scannedCount || 0 }} · 豁免 {{ curfewAuditResult.exemptedCount || 0 }} · 预警 {{ curfewAuditResult.warnedCount || 0 }}
+              在住 {{ curfewAuditResult.scannedCount || 0 }} · 已报备 {{ curfewAuditResult.exemptedCount || 0 }} · 待核实 {{ curfewAuditResult.warnedCount || 0 }}
             </span>
           </div>
           <el-table :data="curfewResultRows" size="small" max-height="220">
@@ -755,7 +755,7 @@ const handleCurfewAudit = async () => {
     if (curfewBuildingId.value) body.buildingId = curfewBuildingId.value
     const res = await request.post('/affair/curfew-check', body)
     curfewAuditResult.value = res.data || null
-    ElMessage.success(res.message || '楼栋批量门禁稽核已完成')
+    ElMessage.success(res.message || '报备情况预览完成，未生成违纪记录')
     await loadAll()
   } finally {
     auditingCurfew.value = false
