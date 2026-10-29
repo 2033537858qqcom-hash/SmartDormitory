@@ -224,7 +224,7 @@
 
         <div v-if="curfewAuditResult" class="curfew-result surface-card" style="margin: 12px 0 16px; padding: 12px 14px;">
           <div class="section-header" style="margin-bottom: 8px;">
-            <span class="section-title">本轮稽核结果</span>
+            <span class="section-title">本轮报备预览</span>
             <span class="unit-note tabular-nums">
               在住 {{ curfewAuditResult.scannedCount || 0 }} · 已报备 {{ curfewAuditResult.exemptedCount || 0 }} · 待核实 {{ curfewAuditResult.warnedCount || 0 }}
             </span>
@@ -237,7 +237,7 @@
             <el-table-column label="结果" width="110">
               <template #default="{ row }">
                 <el-tag :type="row.auditResult === 'EXEMPTED' ? 'success' : 'warning'" size="small">
-                  {{ row.auditResult === 'EXEMPTED' ? '豁免' : '预警' }}
+                  {{ row.auditResult === 'EXEMPTED' ? '已报备' : (row.auditResult === 'WARNED' ? '已有记录' : '待核实') }}
                 </el-tag>
               </template>
             </el-table-column>

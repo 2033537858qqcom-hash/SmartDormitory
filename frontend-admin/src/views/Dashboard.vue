@@ -28,7 +28,7 @@
         <button v-for="alert in overview.abnormalAlerts || []" :key="`${alert.roomName}-${alert.billMonth}`" type="button" class="energy-alert" @click="goTo('/utility-manage', { abnormal: '1' })"><span class="alert-title"><i class="urgent-dot"></i>{{ alert.roomName }}<el-icon><ArrowRight /></el-icon></span><span class="alert-description">{{ alert.reason }}</span><span class="alert-meta tabular-nums">{{ alert.billMonth }} · {{ formatMoney(alert.totalCost) }}</span></button>
       </aside>
     </div>
-    <el-card v-if="isAdmin" shadow="never" class="surface-card demo-script" style="margin-bottom: 16px;">
+    <el-card v-if="isAdmin && demoEnabled" shadow="never" class="surface-card demo-script" style="margin-bottom: 16px;">
       <template #header>
         <div class="section-header">
           <span class="section-title">5 分钟答辩演示剧本</span>
@@ -40,7 +40,7 @@
         <li><b>学生 H5</b>：习惯问卷 → 报修（标题含「跳闸」高危词）→ 水电余额。</li>
         <li><b>worker01</b>：报修派单页接单结单；切回学生评价。</li>
         <li><b>dm01</b>：文明宿务卫生打分 / 申诉审核 / 五星补贴。</li>
-        <li><b>学生</b>：宿务 Tab 预约访客绿码；<b>dm01</b> 门禁栏按楼栋批量稽核。</li>
+        <li><b>学生</b>：宿务 Tab 预约访客绿码；<b>dm01</b> 门禁栏预览报备情况。</li>
         <li>可选：房态页「楼栋宿管绑定」演示 manager_id；手动分床试性别不符拦截。</li>
       </ol>
     </el-card>
@@ -146,6 +146,7 @@ const router = useRouter()
 const currentUser = ref(JSON.parse(localStorage.getItem('dorm_admin_user') || '{}'))
 const isAdmin = computed(() => currentUser.value.role === 'ADMIN')
 const resettingDemo = ref(false)
+const demoEnabled = ref(false)
 const loading = ref(false)
 const loadError = ref(false)
 const overview = ref({})
@@ -370,6 +371,7 @@ const initCharts = () => {
 }
 
 onMounted(() => {
+  if (isAdmin.value) request.get('/utility/pay/config').then(res => { demoEnabled.value = res.data?.demoSupported === true }).catch(() => {})
   loadOverview()
   if (window.ResizeObserver && containerRef.value) {
     resizeObserver = new ResizeObserver(() => {

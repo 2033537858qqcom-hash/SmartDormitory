@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ExportAuthenticationTest {
     @Configuration
     @EnableAutoConfiguration
-    @Import({ExportController.class, AuthInterceptor.class, SessionService.class, WebMvcConfig.class})
+    @Import({ExportController.class, AuthInterceptor.class, SessionService.class, com.dormitory.common.TestSessionStore.class, WebMvcConfig.class})
     static class TestConfig {}
     @Autowired MockMvc mvc;
     @Autowired SessionService sessions;

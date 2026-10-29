@@ -3,7 +3,7 @@
     <header class="mobile-page-heading">
       <h1>水电缴费</h1>
       <p>余额、账单与充值，都在这里。</p>
-      <div class="demo-banner" role="note">演示模拟：充值/缴费仅本地余额核销，<b>非微信支付</b>、非校园卡实扣。</div>
+      <div class="demo-banner" role="note">演示充值不会产生真实扣款；支付宝支付仅支持沙箱环境。</div>
     </header>
 
     <div class="balance-card">
@@ -47,7 +47,7 @@
       <div class="sec-head-inline"><h3 class="sec-title">月度水电账单</h3><span class="tabular-nums">{{ (dash.bills || []).length }} 份</span></div>
       <div v-if="!(dash.bills && dash.bills.length)" class="empty-tip">
         <p>{{ isAllocated ? '当前暂无待出账水电单' : '分配寝室后即可查看月度水电账单' }}</p>
-        <button v-if="isAllocated" type="button" class="empty-action spring-btn" @click="rechargeSheet = true">
+        <button v-if="isAllocated" type="button" class="empty-action spring-btn" @click="openSheetWithCheck('recharge')">
           预先充值水电费
         </button>
       </div>
@@ -72,9 +72,9 @@
             v-if="b.payStatus === 0"
             type="button"
             class="pay-btn spring-btn"
-            :disabled="submitting"
+            :disabled="submitting || !paymentConfig?.demoSupported"
             @click="payBill(b)"
-          >余额抵扣缴纳</button>
+          >{{ paymentConfig?.demoSupported ? '演示余额核销' : '演示核销未启用' }}</button>
         </div>
       </div>
     </div>
@@ -108,7 +108,7 @@
         {{ submitting ? '正在处理...' : (payChannel === 'ALIPAY' ? '前往支付宝沙箱付款' : '确认充值（演示模拟扣款）') }}
       </button>
     </BottomSheet>
-    <BottomSheet v-model="historySheet" title="缴费流水（演示模拟）">
+    <BottomSheet v-model="historySheet" title="缴费流水">
       <p v-if="historyLoading">正在加载流水…</p>
       <p v-else-if="!history.length">暂无缴费流水</p>
       <div v-for="item in history" :key="item.txnNo" class="history-row">
@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import api from '../api'
 import { submitDemoPayment, requireSandboxForm } from '../payment'
 import BottomSheet from './BottomSheet.vue'
@@ -163,6 +163,20 @@ const openHistory = async () => {
 
 const formatMoney = (val) => `¥${Number(val || 0).toFixed(2)}`
 
+const loadPaymentConfig = async () => {
+  paymentConfigLoading.value = true
+  paymentConfig.value = null
+  payChannel.value = ''
+  try {
+    const res = await api.get('/utility/pay/config')
+    paymentConfig.value = res.data || {}
+    payChannel.value = paymentConfig.value.demoSupported ? 'DEMO' : (paymentConfig.value.alipayEnabled ? 'ALIPAY' : '')
+  } catch (error) {
+    emit('toast', { msg: error.message || '支付配置加载失败', type: 'error' })
+  } finally { paymentConfigLoading.value = false }
+}
+onMounted(loadPaymentConfig)
+
 const openSheetWithCheck = async (kind) => {
   if (!isAllocated.value) {
     emit('toast', { msg: '分配寝室后即可使用水电充值', type: 'info' })
@@ -170,16 +184,7 @@ const openSheetWithCheck = async (kind) => {
   }
   if (kind === 'recharge') {
     rechargeSheet.value = true
-    paymentConfigLoading.value = true
-    paymentConfig.value = null
-    payChannel.value = ''
-    try {
-      const res = await api.get('/utility/pay/config')
-      paymentConfig.value = res.data || {}
-      payChannel.value = paymentConfig.value.demoSupported ? 'DEMO' : (paymentConfig.value.alipayEnabled ? 'ALIPAY' : '')
-    } catch (error) {
-      emit('toast', { msg: error.message || '支付配置加载失败', type: 'error' })
-    } finally { paymentConfigLoading.value = false }
+    await loadPaymentConfig()
   }
 }
 

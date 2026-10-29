@@ -275,19 +275,13 @@ public class SmartUtilityService {
         res.put("actionType", actionType);
         res.put("alipayEnabled", alipayConfig != null && alipayConfig.isEnabled());
 
-        if (alipayConfig != null && alipayConfig.isEnabled()) {
-            try {
-                String returnUrl = alipayConfig.getReturnUrl() != null ? alipayConfig.getReturnUrl() : "http://localhost:5174";
-                var payResponse = Factory.Payment.Page().pay(subject, outTradeNo, totalAmount.setScale(2, RoundingMode.HALF_UP).toString(), returnUrl);
-                res.put("formHtml", payResponse.getBody());
-                res.put("mode", "SDK_PAGE");
-            } catch (Exception e) {
-                throw new IllegalStateException("支付宝沙箱统一下单失败：" + e.getMessage(), e);
-            }
-        } else {
-            res.put("formHtml", null);
-            res.put("mode", "DEMO_FALLBACK");
-            res.put("tip", "支付宝沙箱插件已就绪（当前为演示模拟通道；配置沙箱密钥后即可无缝切换真实沙箱付款）");
+        try {
+            String returnUrl = alipayConfig.getReturnUrl() != null ? alipayConfig.getReturnUrl() : "http://localhost:5174";
+            var payResponse = Factory.Payment.Page().pay(subject, outTradeNo, totalAmount.setScale(2, RoundingMode.HALF_UP).toString(), returnUrl);
+            res.put("formHtml", payResponse.getBody());
+            res.put("mode", "SDK_PAGE");
+        } catch (Exception e) {
+            throw new IllegalStateException("支付宝沙箱统一下单失败：" + e.getMessage(), e);
         }
 
         UtilityPaymentLog log = new UtilityPaymentLog();
@@ -300,7 +294,7 @@ public class SmartUtilityService {
         log.setWaterDelta(wDelta);
         log.setElectricBefore(room.getElectricBalance());
         log.setWaterBefore(room.getWaterBalance());
-        log.setChannel(alipayConfig != null && alipayConfig.isEnabled() ? "ALIPAY_PENDING" : "DEMO_PENDING");
+        log.setChannel("ALIPAY_PENDING");
         log.setRemark((billId != null ? ("BILL:" + billId) : ("RECHARGE:" + eDelta + ":" + wDelta))
                 + "|AMOUNT=" + totalAmount.setScale(2, RoundingMode.HALF_UP).toPlainString());
         log.setCreateTime(LocalDateTime.now());

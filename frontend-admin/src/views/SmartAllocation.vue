@@ -47,7 +47,7 @@
           <el-button plain size="small" icon="Upload" type="success" @click="importVisible = true">新生 CSV 导入</el-button>
           <el-button plain size="small" icon="CircleCheck" @click="loadPrecheck">分寝前校验</el-button>
           <el-button plain size="small" icon="Document" @click="openAllocationLogs">分配记录</el-button>
-          <el-button plain size="small" icon="RefreshLeft" type="warning" :loading="resetting" @click="handleResetDemo">重置演示新生</el-button>
+          <el-button v-if="demoEnabled && isAdmin" plain size="small" icon="RefreshLeft" type="warning" :loading="resetting" @click="handleResetDemo">重置演示新生</el-button>
         </div>
       </div>
 
@@ -385,6 +385,8 @@ const loading = ref(false)
 const loadError = ref(false)
 const savingProfile = ref(false)
 const resetting = ref(false)
+const demoEnabled = ref(false)
+const isAdmin = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}').role === 'ADMIN'
 
 const buildings = ref([])
 const rooms = ref([])
@@ -707,6 +709,7 @@ const submitImport = async () => {
 }
 
 onMounted(() => {
+  request.get('/utility/pay/config').then(res => { demoEnabled.value = res.data?.demoSupported === true }).catch(() => {})
   loadData()
 })
 
