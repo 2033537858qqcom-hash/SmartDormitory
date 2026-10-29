@@ -26,6 +26,9 @@ public class SmartAllocationController {
     private final DormBuildingMapper buildingMapper;
     private final DormAllocationLogMapper allocationLogMapper;
 
+    @org.springframework.beans.factory.annotation.Value("${app.demo-enabled:false}")
+    private boolean demoEnabled;
+
     @GetMapping("/candidates")
     public Result<List<Map<String, Object>>> listCandidates() {
         List<SysUser> students = userMapper.selectList(
@@ -120,6 +123,7 @@ public class SmartAllocationController {
 
     @PostMapping("/reset-demo")
     public Result<Map<String, Object>> resetDemoFreshmen() {
+        if (!demoEnabled) return Result.error(403, "演示数据重置未启用");
         Map<String, Object> res = smartAllocationService.resetDemoFreshmen();
         return Result.success("2026级待分寝新生演示状态已重置，可重新执行分寝对比实验！", res);
     }

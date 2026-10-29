@@ -27,6 +27,7 @@ mybatis-plus:
 
 app:
   upload-dir: uploads
+  demo-enabled: ${DEMO_MODE:false}
 
 alipay:
   enabled: ${ALIPAY_ENABLED:false}

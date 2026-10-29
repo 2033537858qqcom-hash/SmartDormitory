@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "app.repair-sla-check-ms=3600000")
+@SpringBootTest(properties = {"app.repair-sla-check-ms=3600000", "app.demo-enabled=true"})
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "DORM_INTEGRATION_TEST", matches = "true")
 class MySqlWorkflowIntegrationTest {

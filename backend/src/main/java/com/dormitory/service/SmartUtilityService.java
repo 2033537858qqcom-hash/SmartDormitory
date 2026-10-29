@@ -32,6 +32,11 @@ public class SmartUtilityService {
     private final UtilityPaymentLogMapper paymentLogMapper;
     private final AlipayConfig alipayConfig;
 
+    @org.springframework.beans.factory.annotation.Value("${app.demo-enabled:false}")
+    private boolean demoEnabled;
+
+    public boolean isDemoEnabled() { return demoEnabled; }
+
     /**
      * 阶梯电价核算规则：
      * 每月每寝室赠送基础免额 20 度；
@@ -143,6 +148,7 @@ public class SmartUtilityService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> processPayment(Long roomId, Long billId, BigDecimal electricRecharge,
                                                BigDecimal waterRecharge, Long operatorId, String requestId) {
+        if (!demoEnabled) throw new IllegalStateException("演示水电核销未启用");
         BigDecimal electric = electricRecharge == null ? BigDecimal.ZERO : electricRecharge;
         BigDecimal water = waterRecharge == null ? BigDecimal.ZERO : waterRecharge;
         if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{16,30}")) throw new IllegalArgumentException("请提供有效的请求编号");

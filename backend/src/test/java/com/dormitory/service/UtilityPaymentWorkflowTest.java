@@ -28,6 +28,7 @@ class UtilityPaymentWorkflowTest {
 
     @org.junit.jupiter.api.BeforeEach
     void initializeMapping() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "demoEnabled", true);
         com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(new org.apache.ibatis.builder.MapperBuilderAssistant(new com.baomidou.mybatisplus.core.MybatisConfiguration(), "test"), UtilityPaymentLog.class);
         com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(new org.apache.ibatis.builder.MapperBuilderAssistant(new com.baomidou.mybatisplus.core.MybatisConfiguration(), "test"), DormRoom.class);
     }

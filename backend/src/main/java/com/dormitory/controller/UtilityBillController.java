@@ -309,8 +309,11 @@ public class UtilityBillController {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("alipayEnabled", smartUtilityService.isAlipayEnabled());
         map.put("sandbox", true);
-        map.put("demoSupported", true);
-        map.put("channels", List.of("DEMO", "ALIPAY_SANDBOX"));
+        map.put("demoSupported", smartUtilityService.isDemoEnabled());
+        List<String> channels = new ArrayList<>();
+        if (smartUtilityService.isDemoEnabled()) channels.add("DEMO");
+        if (smartUtilityService.isAlipayEnabled()) channels.add("ALIPAY_SANDBOX");
+        map.put("channels", channels);
         return Result.success(map);
     }
 
