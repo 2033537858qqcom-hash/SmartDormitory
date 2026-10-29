@@ -370,11 +370,11 @@
           <el-input-number v-model="hygieneForm.safetyScore" :min="0" :max="25" />
         </el-form-item>
         <el-form-item label="现场照片">
-          <input type="file" accept="image/*" multiple @change="onHygienePhotos" />
+          <input type="file" accept="image/*" multiple :disabled="hygieneUploading" @change="onHygienePhotos" />
           <div v-if="hygieneForm.photoList.length" class="hygiene-photos preview">
             <img v-for="(u, i) in hygieneForm.photoList" :key="i" :src="photoSrc(u)" alt="预览" />
           </div>
-          <p class="form-hint">最多 3 张，演示本地压缩上传</p>
+          <p class="form-hint">最多 3 张，每张不超过 3 MB</p>
         </el-form-item>
         <el-form-item label="检查评语">
           <el-input v-model="hygieneForm.remark" />
@@ -382,7 +382,7 @@
       </el-form>
       <template #footer>
         <el-button @click="hygieneVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitHygiene">保存评分</el-button>
+        <el-button type="primary" :loading="submitting" :disabled="hygieneUploading" @click="submitHygiene">保存评分</el-button>
       </template>
     </el-dialog>
 
@@ -500,6 +500,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import * as echarts from 'echarts'
 import request, { downloadExport } from '@/api/request'
+import { uploadHygienePhotos } from '@/hygienePhotos'
 const adminUser = JSON.parse(localStorage.getItem('dorm_admin_user') || '{}')
 const isAdmin = adminUser.role === 'ADMIN'
 const canWrite = adminUser.role !== 'COUNSELOR'
@@ -636,6 +637,7 @@ const openAdminQrModal = (row) => {
 }
 
 const hygieneVisible = ref(false)
+const hygieneUploading = ref(false)
 const hygieneForm = reactive({
   checkWeek: '第8周',
   roomId: 1,
@@ -821,23 +823,24 @@ const photoSrc = (u) => {
   return u.startsWith('/') ? u : ('/' + u)
 }
 const onHygienePhotos = async (ev) => {
-  const files = Array.from(ev.target.files || []).slice(0, 3)
-  const list = []
-  for (const f of files) {
-    const dataUrl = await new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.readAsDataURL(f)
-    })
-    // 演示压缩：过长则截断提示，仍存短 dataURL/文件名占位
-    if (typeof dataUrl === 'string' && dataUrl.length > 180000) {
-      list.push(`/uploads/hygiene/demo-${Date.now()}-${f.name}`)
-    } else {
-      list.push(dataUrl)
-    }
+  const files = Array.from(ev.target.files || [])
+  if (!files.length) return
+  if (files.length > 3) {
+    ElMessage.warning('最多选择 3 张图片')
+    ev.target.value = ''
+    return
   }
-  hygieneForm.photoList = list
+  hygieneUploading.value = true
+  try {
+    hygieneForm.photoList = await uploadHygienePhotos(files, (url, body) => request.post(url, body))
+  } catch (error) {
+    ElMessage.error(error.message || '图片上传失败，请重试')
+  } finally {
+    hygieneUploading.value = false
+    ev.target.value = ''
+  }
 }
+
 const loadHygieneTrend = async () => {
   if (!trendRoomId.value) {
     trendPoints.value = []
