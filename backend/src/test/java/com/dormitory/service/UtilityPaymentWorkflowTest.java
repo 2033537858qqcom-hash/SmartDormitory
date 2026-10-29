@@ -128,4 +128,12 @@ class UtilityPaymentWorkflowTest {
         assertThrows(IllegalArgumentException.class, () -> service.createOrUpdateMeterBill(reading));
         verify(bills, never()).updateById(any(UtilityBill.class));
     }
+    @Test
+    void alipayOrderRejectsMixedNegativeRecharge() {
+        when(rooms.selectById(1L)).thenReturn(room());
+        assertThrows(IllegalArgumentException.class, () -> service.createAlipayOrder(1L, null,
+                new BigDecimal("-10"), new BigDecimal("20"), 7L));
+        verify(logs, never()).insert(any(UtilityPaymentLog.class));
+    }
+
 }

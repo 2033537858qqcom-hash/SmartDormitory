@@ -268,4 +268,24 @@ class StudentIdorAuthorizationTest {
         assertEquals(1, result.getData().get("status"));
         verify(messageService, never()).push(anyLong(), anyString(), anyString(), anyString(), anyString());
     }
+    @Test
+    void alipayOrderRejectsStudentOutsideRoom() {
+        DormRoom room = new DormRoom(); room.setId(20L); room.setBuildingId(2L);
+        when(roomMapper.selectById(20L)).thenReturn(room);
+        assertEquals(403, utilityController.createAlipayOrder(Map.of("roomId", 20, "electricRecharge", 10), student(10L)).getCode());
+        verify(smartUtilityService, never()).createAlipayOrder(anyLong(), any(), any(), any(), anyLong());
+    }
+
+    @Test
+    void alipayOrderRejectsManagerOutsideBuilding() {
+        DormRoom room = new DormRoom(); room.setId(20L); room.setBuildingId(2L);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute("currentUserRole", "DORM_MANAGER"); request.setAttribute("currentUserId", 3L);
+        when(roomMapper.selectById(20L)).thenReturn(room);
+        when(buildingScope.resolve(request)).thenReturn(Set.of(1L));
+        when(buildingScope.forbiddenIfOutOfScope(Set.of(1L), 2L)).thenReturn(Result.error(403, "无权限"));
+        assertEquals(403, utilityController.createAlipayOrder(Map.of("roomId", 20, "electricRecharge", 10), request).getCode());
+        verify(smartUtilityService, never()).createAlipayOrder(anyLong(), any(), any(), any(), anyLong());
+    }
+
 }
