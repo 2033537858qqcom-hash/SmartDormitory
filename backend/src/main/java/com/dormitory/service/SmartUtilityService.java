@@ -259,6 +259,8 @@ public class SmartUtilityService {
             actionType = "RECHARGE";
         }
 
+        if (!isAlipayEnabled()) throw new IllegalStateException("支付宝沙箱未配置，请选择可用的支付方式");
+
         String outTradeNo = "ALI-" + System.currentTimeMillis() + "-" + RandomUtil.randomNumbers(4);
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("outTradeNo", outTradeNo);

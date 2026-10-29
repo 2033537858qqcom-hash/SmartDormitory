@@ -31,8 +31,10 @@ public class AlipayConfig {
 
     @PostConstruct
     public void init() {
-        if (!enabled || appId == null || appId.isBlank() || privateKey == null || privateKey.isBlank()) {
-            log.info("支付宝支付插件当前处于【演示模拟通道 (DEMO)】；若需体验沙箱真实扫码付，请在 application.yml 中配置 alipay 参数。");
+        if (!enabled || appId == null || appId.isBlank() || privateKey == null || privateKey.isBlank()
+                || alipayPublicKey == null || alipayPublicKey.isBlank()) {
+            this.enabled = false;
+            log.info("支付宝沙箱未启用或配置不完整；如需使用请配置支付参数。");
             return;
         }
         try {
