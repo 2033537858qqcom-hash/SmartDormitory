@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AuthControllerPasswordTest {
     @Mock SysUserMapper users;
-    @Spy SessionService sessions = new SessionService();
+    @Spy SessionService sessions = new SessionService(new com.dormitory.common.TestSessionStore());
     @InjectMocks AuthController controller;
 
     private SysUser user(String password) {

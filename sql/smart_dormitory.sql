@@ -473,3 +473,12 @@ CREATE TABLE `utility_payment_log` (
     UNIQUE KEY `uk_txn` (`txn_no`),
     KEY `idx_room` (`room_id`)
 ) ENGINE=InnoDB COMMENT='水电演示模拟缴费流水';
+
+-- 持久化登录会话（仅保存令牌哈希）
+CREATE TABLE IF NOT EXISTS auth_session (
+    token_hash CHAR(64) NOT NULL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    expires_at DATETIME(3) NOT NULL,
+    KEY idx_auth_session_user (user_id),
+    KEY idx_auth_session_expiry (expires_at)
+) ENGINE=InnoDB COMMENT='登录会话，仅保存令牌哈希';

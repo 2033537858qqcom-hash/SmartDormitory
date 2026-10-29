@@ -1,47 +1,44 @@
 package com.dormitory.common;
 
+import cn.hutool.crypto.digest.DigestUtil;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SessionService {
     private static final long LIFETIME_SECONDS = 8 * 60 * 60;
     private final SecureRandom random = new SecureRandom();
-    private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
+    private final SessionStore store;
+
+    public SessionService(SessionStore store) { this.store = store; }
 
     public String create(Long userId) {
         Instant now = Instant.now();
-        sessions.entrySet().removeIf(entry -> !entry.getValue().expiresAt().isAfter(now));
+        store.deleteExpired(now);
         byte[] bytes = new byte[32];
-        String token;
-        do {
+        while (true) {
             random.nextBytes(bytes);
-            token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        } while (sessions.putIfAbsent(token, new Session(userId, now.plusSeconds(LIFETIME_SECONDS))) != null);
-        return token;
+            String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+            try {
+                store.save(DigestUtil.sha256Hex(token), userId, now.plusSeconds(LIFETIME_SECONDS));
+                return token;
+            } catch (DuplicateKeyException ignored) {
+                // Generate a fresh token if the hash already exists.
+            }
+        }
     }
 
     public Long getUserId(String token) {
-        if (token == null) return null;
-        Session session = sessions.get(token);
-        if (session == null) return null;
-        if (!session.expiresAt().isAfter(Instant.now())) {
-            sessions.remove(token, session);
-            return null;
-        }
-        return session.userId();
+        if (token == null || token.isBlank()) return null;
+        return store.findUser(DigestUtil.sha256Hex(token), Instant.now());
     }
 
     public void revoke(String token) {
-        if (token != null) sessions.remove(token);
+        if (token != null && !token.isBlank()) store.delete(DigestUtil.sha256Hex(token));
     }
 
-    public void revokeUser(Long userId) {
-        sessions.entrySet().removeIf(entry -> entry.getValue().userId().equals(userId));
-    }
-
-    private record Session(Long userId, Instant expiresAt) {}
+    public void revokeUser(Long userId) { if (userId != null) store.deleteUser(userId); }
 }

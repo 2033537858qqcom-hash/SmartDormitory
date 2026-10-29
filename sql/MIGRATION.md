@@ -154,3 +154,7 @@ CREATE TABLE IF NOT EXISTS residence_request (
 ```sql
 ALTER TABLE dorm_adjust_apply ADD COLUMN checkout_checklist TEXT DEFAULT NULL COMMENT '退宿交接检查记录(JSON)';
 ```
+
+## 会话持久化增量（启动新版后端之前）
+
+请先备份数据库，然后选择目标库，执行 `sql/20261029-auth-session.sql`。该脚本只创建 `auth_session` 表（可重复执行），不会删除原有业务数据。新安装的初始化脚本已包含该表；原有内存会话不能迁移，升级后用户需要重新登录一次。不要为升级已有库重新导入包含 `DROP DATABASE` 的初始化脚本。

@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MySqlWorkflowIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired SmartUtilityService utility;
+    @Autowired com.dormitory.common.SessionStore sessionStore;
     @Autowired SmartAllocationService allocation;
     @Autowired DormAffairController affair;
     @Autowired MockMvc mvc;
@@ -42,6 +43,20 @@ class MySqlWorkflowIntegrationTest {
         String name = jdbc.queryForObject("SELECT DATABASE()", String.class);
         assertNotNull(name);
         assertTrue(name.matches("codex_dorm_it_[a-f0-9]+"), "Integration tests require an isolated test database");
+    }
+
+    @Test
+    void sessionsAreStoredAsHashesAndSurviveNewServiceInstances() {
+        var first = new com.dormitory.common.SessionService(sessionStore);
+        var second = new com.dormitory.common.SessionService(sessionStore);
+        String token = first.create(10L);
+        try {
+            assertEquals(10L, second.getUserId(token));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM auth_session WHERE token_hash = ?", Integer.class, token));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM auth_session WHERE token_hash = ?", Integer.class, cn.hutool.crypto.digest.DigestUtil.sha256Hex(token)));
+            second.revoke(token);
+            assertNull(first.getUserId(token));
+        } finally { first.revoke(token); }
     }
 
     @Test

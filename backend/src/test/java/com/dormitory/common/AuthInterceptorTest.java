@@ -12,7 +12,7 @@ import static org.mockito.Mockito.*;
 
 class AuthInterceptorTest {
     private final SysUserMapper users = mock(SysUserMapper.class);
-    private final SessionService sessions = new SessionService();
+    private final SessionService sessions = new SessionService(new com.dormitory.common.TestSessionStore());
     private AuthInterceptor interceptor;
     private SysUser user;
 
