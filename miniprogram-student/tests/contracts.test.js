@@ -197,3 +197,26 @@ test('expired session clears in-memory state and returns to login', async () => 
   assert.equal(app.globalData.studentId, null);
   assert.equal(route, '/pages/login/login');
 });
+
+test('mini program does not create an alipay order it cannot pay', async () => {
+  let calls = 0, message = '';
+  api.post = async () => { calls++; return { data: { outTradeNo: 'ALI-1' } }; };
+  wx.showToast = value => { message = value.title; };
+  const p = page('utility'); p.data.room = { id: 1 }; p.data.payChannel = 'ALIPAY';
+  await p.handleRecharge();
+  assert.equal(calls, 0);
+  assert.match(message, /H5/);
+});
+
+test('mini program lets students select an available recommended bed', async () => {
+  api.get = async path => {
+    if (path.includes('student-dashboard')) return { data: { user: { gender: 1 }, room: { id: 1 }, building: { id: 4 }, bed: { bedNo: 1 }, recommendedRooms: [{ buildingId: 4, roomId: 2, recommendedBedNo: 4, predictedHarmony: 90 }] } };
+    if (path === '/dorm/buildings') return { data: [{ id: 4, genderType: 1, buildingName: '一号楼' }] };
+    return { data: [{ id: 2, roomNo: '302', beds: [{ status: 0, bedNo: 4 }] }] };
+  };
+  const p = page('adjust-apply'); await p.loadCurrent();
+  assert.equal(p.data.recommendedRooms.length, 1);
+  await p.selectRecommendation({ currentTarget: { dataset: { index: 0 } } });
+  assert.equal(p.data.rooms[p.data.roomIndex].id, 2);
+  assert.equal(p.data.freeBeds[p.data.bedIndex].bedNo, 4);
+});
