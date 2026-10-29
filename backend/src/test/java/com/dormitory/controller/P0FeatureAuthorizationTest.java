@@ -207,4 +207,20 @@ class P0FeatureAuthorizationTest {
         assertEquals(403, res.getCode());
         verify(bedMapper, never()).selectList(any());
     }
+    @Test
+    void curfewPreviewDoesNotCreateDisciplineWithoutActualGateRecords() {
+        DormBed bed = new DormBed(); bed.setStudentId(10L); bed.setRoomId(1L); bed.setStatus(1);
+        SysUser student = new SysUser(); student.setId(10L); student.setRealName("学生");
+        when(bedMapper.selectList(any(Wrapper.class))).thenReturn(List.of(bed));
+        when(disciplineMapper.selectList(null)).thenReturn(new java.util.ArrayList<>());
+        when(roomMapper.selectList(null)).thenReturn(List.of());
+        when(buildingMapper.selectList(null)).thenReturn(List.of());
+        when(userMapper.selectById(10L)).thenReturn(student);
+        var result = affairController.runCurfewAudit(Map.of(), admin());
+        assertEquals(200, result.getCode());
+        assertEquals(0, result.getData().get("createdWarnings"));
+        verify(disciplineMapper, never()).insert(any(DisciplineRecord.class));
+        verify(smartEvaluationService, never()).evaluateAllRooms(true);
+    }
+
 }
