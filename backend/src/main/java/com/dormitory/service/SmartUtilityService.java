@@ -293,7 +293,8 @@ public class SmartUtilityService {
         log.setElectricBefore(room.getElectricBalance());
         log.setWaterBefore(room.getWaterBalance());
         log.setChannel(alipayConfig != null && alipayConfig.isEnabled() ? "ALIPAY_PENDING" : "DEMO_PENDING");
-        log.setRemark(billId != null ? ("BILL:" + billId) : ("RECHARGE:" + eDelta + ":" + wDelta));
+        log.setRemark((billId != null ? ("BILL:" + billId) : ("RECHARGE:" + eDelta + ":" + wDelta))
+                + "|AMOUNT=" + totalAmount.setScale(2, RoundingMode.HALF_UP).toPlainString());
         log.setCreateTime(LocalDateTime.now());
         paymentLogMapper.insert(log);
 
@@ -309,20 +310,32 @@ public class SmartUtilityService {
             return "failure";
         }
         try {
-            boolean verified = Boolean.TRUE.equals(Factory.Payment.Common().verifyNotify(params));
-            if (!verified) {
-                return "failure";
-            }
+            if (!Boolean.TRUE.equals(Factory.Payment.Common().verifyNotify(params))) return "failure";
+        } catch (Exception e) {
+            return "failure";
+        }
+        if (!Objects.equals(alipayConfig.getAppId(), params.get("app_id"))) return "failure";
+
             String tradeStatus = params.get("trade_status");
             String outTradeNo = params.get("out_trade_no");
             if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
                 return "success";
             }
             UtilityPaymentLog log = paymentLogMapper.selectOne(new LambdaQueryWrapper<UtilityPaymentLog>()
-                    .eq(UtilityPaymentLog::getTxnNo, outTradeNo));
+                    .eq(UtilityPaymentLog::getTxnNo, outTradeNo).last("FOR UPDATE"));
             if (log == null) {
                 return "failure";
             }
+            String remark = log.getRemark();
+            int amountMarker = remark == null ? -1 : remark.lastIndexOf("|AMOUNT=");
+            if (amountMarker < 0 || params.get("total_amount") == null) return "failure";
+            try {
+                BigDecimal expected = new BigDecimal(remark.substring(amountMarker + 8));
+                if (expected.signum() <= 0 || expected.compareTo(new BigDecimal(params.get("total_amount"))) != 0) return "failure";
+            } catch (NumberFormatException ex) {
+                return "failure";
+            }
+            if (!"ALIPAY_PENDING".equals(log.getChannel()) && !"ALIPAY".equals(log.getChannel())) return "failure";
             if ("ALIPAY".equals(log.getChannel())) {
                 return "success"; // 已处理，幂等返回
             }
@@ -336,11 +349,10 @@ public class SmartUtilityService {
 
             if ("PAY_BILL".equals(log.getActionType()) && log.getBillId() != null) {
                 UtilityBill bill = utilityBillMapper.selectById(log.getBillId());
-                if (bill != null && Integer.valueOf(0).equals(bill.getPayStatus())) {
-                    bill.setPayStatus(1);
-                    bill.setPayTime(LocalDateTime.now());
-                    utilityBillMapper.updateById(bill);
-                }
+                if (bill == null || !Objects.equals(bill.getRoomId(), log.getRoomId()) || !Integer.valueOf(0).equals(bill.getPayStatus())) return "failure";
+                bill.setPayStatus(1);
+                bill.setPayTime(LocalDateTime.now());
+                utilityBillMapper.updateById(bill);
                 log.setElectricAfter(eBefore);
                 log.setWaterAfter(wBefore);
             } else {
@@ -355,8 +367,5 @@ public class SmartUtilityService {
             log.setChannel("ALIPAY");
             paymentLogMapper.updateById(log);
             return "success";
-        } catch (Exception e) {
-            return "failure";
-        }
     }
 }
