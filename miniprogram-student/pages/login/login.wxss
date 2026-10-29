@@ -1,20 +1,20 @@
 .login-page {
-  min-height: 100vh;
-  padding: 40rpx 36rpx calc(50rpx + env(safe-area-inset-bottom));
-}
-
-/* 顶部校园实景封面卡片 */
-.login-cover-banner {
   position: relative;
-  width: 100%;
-  height: 310rpx;
-  border-radius: 32rpx;
+  min-height: 100vh;
   overflow: hidden;
-  margin-bottom: 32rpx;
-  box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.08);
+  background: #122338;
 }
 
-.cover-photo {
+.login-background {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+}
+
+.cover-photo, .cover-gradient-mask {
   position: absolute;
   top: 0;
   left: 0;
@@ -23,144 +23,80 @@
 }
 
 .cover-gradient-mask {
+  background: linear-gradient(180deg, rgba(13, 29, 48, .55) 0%, rgba(13, 29, 48, .32) 42%, rgba(13, 29, 48, .76) 100%);
+}
+
+.login-content {
   position: relative;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  padding: 28rpx 32rpx;
+  z-index: 1;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  background: linear-gradient(
-    155deg,
-    rgba(15, 23, 42, 0.45) 0%,
-    rgba(15, 23, 42, 0.85) 100%
-  );
-  backdrop-filter: blur(2px);
+  padding: 40rpx 36rpx calc(24rpx + env(safe-area-inset-bottom));
 }
 
-.cover-badge {
+.brand-row {
   display: flex;
   align-items: center;
-  gap: 18rpx;
+  gap: 16rpx;
 }
 
-.logo-circle {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 82rpx;
-  height: 82rpx;
-  border-radius: 22rpx;
-  overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.18);
+.brand-logo {
+  width: 70rpx;
+  height: 70rpx;
+  border-radius: 20rpx;
   flex-shrink: 0;
 }
 
-.logo-image {
-  width: 100%;
-  height: 100%;
+.brand-copy { color: #fff; }
+.brand-title { font-size: 31rpx; line-height: 1.2; font-weight: 700; }
+.brand-tag { margin-top: 5rpx; color: rgba(255, 255, 255, .76); font-size: 20rpx; letter-spacing: 1rpx; }
+
+.welcome {
+  padding: 54rpx 4rpx 32rpx;
+  color: #fff;
 }
 
-.cover-badge-texts {
-  display: flex;
-  flex-direction: column;
-}
+.welcome-title { font-size: 48rpx; font-weight: 700; line-height: 1.25; letter-spacing: 1rpx; }
+.welcome-subtitle { margin-top: 12rpx; font-size: 24rpx; color: rgba(255, 255, 255, .82); }
 
-.brand-title {
-  color: #ffffff;
-  font-size: 40rpx;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.5rpx;
-}
-
-.brand-tag {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 20rpx;
-  letter-spacing: 1rpx;
-  margin-top: 2rpx;
-}
-
-.brand-sub {
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 23rpx;
-  line-height: 1.45;
-}
-
-.login-card {
+.login-panel {
   padding: 36rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, .97);
+  box-shadow: 0 20rpx 60rpx rgba(5, 20, 40, .16);
 }
 
-.card-title {
-  color: #1d1d1f;
-  font-size: 32rpx;
-  font-weight: 600;
-  margin-bottom: 30rpx;
-}
+.panel-heading { margin-bottom: 30rpx; }
+.panel-title { font-size: 34rpx; line-height: 1.25; color: #1c2735; font-weight: 700; }
+.panel-subtitle { margin-top: 8rpx; color: #858e99; font-size: 22rpx; }
+.login-field { margin-bottom: 22rpx; }
+.field-label { display: block; margin-bottom: 10rpx; color: #44505e; font-size: 23rpx; font-weight: 600; }
+.login-input { min-height: 82rpx; padding: 0 22rpx; background: #f3f5f8; border-radius: 16rpx; font-size: 27rpx; }
+.input-placeholder { color: #a3abb5; }
 
-.login-btn {
-  width: 100%;
-  margin-top: 38rpx;
-}
-
-.demo-section {
-  margin-top: 42rpx;
-}
-
-.demo-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin: 0 4rpx 18rpx;
-}
-
-.demo-title-text {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1d1d1f;
-}
-
-.demo-title-note {
-  font-size: 22rpx;
-  color: #86868b;
-}
-
-.demo-grid {
-  overflow: hidden;
-  border-radius: 36rpx;
-  background: #fff;
-  padding: 0 28rpx;
-}
-
-.demo-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18rpx;
+button.login-btn {
   min-height: 86rpx;
-  padding: 18rpx 0;
+  margin-top: 30rpx;
+  border-radius: 17rpx;
+  background: #176ee5;
+  box-shadow: 0 8rpx 20rpx rgba(23, 110, 229, .2);
 }
 
-.demo-item + .demo-item {
-  border-top: 1rpx solid #eeeef0;
+.demo-section { margin-top: 32rpx; padding-top: 26rpx; border-top: 1rpx solid #edf0f4; }
+.demo-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16rpx; }
+.demo-title { color: #44505e; font-size: 23rpx; font-weight: 600; }
+.demo-note { color: #a0a8b2; font-size: 20rpx; }
+.demo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10rpx; }
+.demo-item {
+  min-width: 0;
+  padding: 13rpx 12rpx;
+  border: 1rpx solid #e9edf2;
+  border-radius: 14rpx;
+  background: #f8f9fb;
 }
-
-.demo-name {
-  color: #1d1d1f;
-  font-size: 25rpx;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.demo-meta {
-  color: #86868b;
-  font-size: 21rpx;
-  text-align: right;
-}
-
-.demo-item.active .demo-name {
-  color: #006edb;
-}
+.demo-item.active { border-color: #95bcf5; background: #edf5ff; }
+.demo-name { overflow: hidden; color: #3e4a59; font-size: 22rpx; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.demo-item.active .demo-name { color: #176ee5; }
+.demo-meta { margin-top: 3rpx; overflow: hidden; color: #939eaa; font-size: 19rpx; white-space: nowrap; text-overflow: ellipsis; }
+.login-footnote { margin-top: auto; padding: 28rpx 0 0; color: rgba(255, 255, 255, .7); text-align: center; font-size: 20rpx; letter-spacing: 1rpx; }

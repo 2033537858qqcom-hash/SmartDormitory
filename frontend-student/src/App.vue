@@ -475,27 +475,23 @@ onBeforeUnmount(() => {
 <style>
 .login-stage {
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 32px 20px;
-  background: #f5f5f7;
+  background: #0b1120;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .student-login-card {
   width: 100%;
-  max-width: 400px;
-  border-radius: 24px;
-  background: #ffffff;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  min-height: 100dvh;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
   overflow: hidden;
 }
 
 .student-login-cover {
-  position: relative;
-  height: 142px;
+  position: absolute;
+  inset: 0;
   background: #0b1120;
   overflow: hidden;
 }
@@ -514,7 +510,7 @@ onBeforeUnmount(() => {
   z-index: 2;
   height: 100%;
   box-sizing: border-box;
-  padding: 20px 24px;
+  padding: 44px 54% 44px 5%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -561,7 +557,27 @@ onBeforeUnmount(() => {
 }
 
 .student-login-body {
-  padding: 24px 28px 28px;
+  position: relative;
+  z-index: 3;
+  box-sizing: border-box;
+  width: 46%;
+  min-height: 100dvh;
+  padding: 48px max(44px, calc((46vw - 400px) / 2));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+@media (max-width: 768px) {
+  .student-login-card { display: block; }
+  .cover-content-mask { padding: 24px; justify-content: flex-start; gap: 24px; }
+  .student-login-body {
+    width: 100%;
+    min-height: calc(100dvh - 170px);
+    margin-top: 170px;
+    padding: 32px 24px;
+  }
 }
 
 .login-header-group h2 {

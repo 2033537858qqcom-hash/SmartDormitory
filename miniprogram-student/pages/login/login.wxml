@@ -1,71 +1,83 @@
 <view wx:if="{{!checkingSession}}" class="login-page">
-  <view class="login-cover-banner">
+  <view class="login-background" aria-hidden="true">
     <image class="cover-photo" src="/images/login-cover.jpg" mode="aspectFill" />
-    <view class="cover-gradient-mask">
-      <view class="cover-badge">
-        <view class="logo-circle">
-          <image class="logo-image" src="/images/ui/suli-icon-v2.png" mode="aspectFill" />
-        </view>
-        <view class="cover-badge-texts">
-          <view class="brand-title">宿里</view>
-          <view class="brand-tag">数字校园 · 智慧宿舍</view>
-        </view>
+    <view class="cover-gradient-mask"></view>
+  </view>
+
+  <view class="login-content">
+    <view class="brand-row">
+      <image class="brand-logo" src="/images/ui/suli-icon-v2.png" mode="aspectFill" />
+      <view class="brand-copy">
+        <view class="brand-title">宿里</view>
+        <view class="brand-tag">智慧宿舍 · 数字校园</view>
       </view>
-      <view class="brand-sub">让宿舍生活更简单、更有温度。学生与宿管使用各自账号登录。</view>
-    </view>
-  </view>
-
-  <view class="login-card card">
-    <view class="card-title">账号登录</view>
-
-    <view class="input-group">
-      <text class="input-label">学号 / 账号</text>
-      <input
-        class="login-input"
-        type="text"
-        placeholder="请输入学号或宿管账号"
-        value="{{username}}"
-        bindinput="onInputUsername"
-      />
     </view>
 
-    <view class="input-group">
-      <text class="input-label">登录密码</text>
-      <input
-        class="login-input"
-        type="password"
-        placeholder="请输入登录密码"
-        value="{{password}}"
-        bindinput="onInputPassword"
-      />
+    <view class="welcome">
+      <view class="welcome-title">你好，欢迎回家</view>
+      <view class="welcome-subtitle">让宿舍生活更简单，更有温度。</view>
     </view>
 
-    <button
-      class="btn-primary spring-btn login-btn"
-      loading="{{loading}}"
-      disabled="{{loading}}"
-      bindtap="handleLogin"
-    >
-      {{loading ? '登录中...' : '立即登录'}}
-    </button>
-  </view>
+    <view class="login-panel">
+      <view class="panel-heading">
+        <view class="panel-title">账号登录</view>
+        <view class="panel-subtitle">学生和宿管请使用各自账号</view>
+      </view>
 
-  <view class="demo-section">
-    <view class="demo-title">
-      <text class="demo-title-text">演示账号</text>
-      <text class="demo-title-note">选择后自动填入</text>
-    </view>
-    <view class="demo-grid">
-      <view
-        wx:for="{{demoAccounts}}"
-        wx:key="username"
-        class="demo-item spring-btn {{username === item.username ? 'active' : ''}}"
-        bindtap="selectDemoAccount"
-        data-account="{{item}}"
+      <view class="login-field">
+        <text class="field-label">学号 / 账号</text>
+        <input
+          class="login-input"
+          type="text"
+          placeholder="请输入学号或宿管账号"
+          placeholder-class="input-placeholder"
+          value="{{username}}"
+          bindinput="onInputUsername"
+        />
+      </view>
+
+      <view class="login-field">
+        <text class="field-label">登录密码</text>
+        <input
+          class="login-input"
+          password="{{true}}"
+          placeholder="请输入登录密码"
+          placeholder-class="input-placeholder"
+          value="{{password}}"
+          bindinput="onInputPassword"
+        />
+      </view>
+
+      <button
+        class="btn-primary spring-btn login-btn"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+        bindtap="handleLogin"
       >
-        <view class="demo-name">{{item.name}}</view>
-        <view class="demo-meta">{{item.username}} · {{item.desc}}</view>
+        {{loading ? '登录中...' : '进入宿里'}}
+      </button>
+
+      <view class="demo-section">
+        <view class="demo-heading">
+          <text class="demo-title">体验账号</text>
+          <text class="demo-note">点击自动填入</text>
+        </view>
+        <view class="demo-grid">
+          <view
+            wx:for="{{demoAccounts}}"
+            wx:key="username"
+            class="demo-item spring-btn {{username === item.username ? 'active' : ''}}"
+            role="button"
+            aria-label="{{item.name}}，{{item.username}}，{{item.desc}}"
+            bindtap="selectDemoAccount"
+            data-account="{{item}}"
+          >
+            <view class="demo-name">{{item.name}}</view>
+            <view class="demo-meta">{{item.username}}</view>
+          </view>
+        </view>
       </view>
     </view>
+    <view class="login-footnote">宿里 · 让每一天住得更好</view>
   </view>
 </view>

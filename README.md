@@ -1,137 +1,279 @@
-# 《基于Java的智慧宿舍管理系统设计》本科毕业设计工程
+# 宿里 · 智慧宿舍管理系统
 
-## 一、 项目架构概览（一后端 + 一小程序 + 双前端）
+这是一个供毕业设计和本地演示使用的宿舍管理项目，包含管理端网页、学生端网页、学生微信小程序和一个共同的后端。
 
-| 模块目录 | 工程职责 | 核心技术栈 | 运行端口 |
-| :--- | :--- | :--- | :--- |
-| [`sql/smart_dormitory.sql`](./sql/smart_dormitory.sql) | MySQL 8.0 数据库脚本 | 宿舍业务表 + 仿真测试数据 | `3306` |
-| [`backend/`](./backend) | Java 后端核心服务 | Spring Boot 3.2 + MyBatis-Plus + JDK 17 | `7000` |
-| [`frontend-admin/`](./frontend-admin) | PC Web 综合管理端 | Vue 3 + Vite + Element Plus + ECharts 5 | `5173` |
-| [`frontend-student/`](./frontend-student) | 学生端 **Vite H5**（仅小程序形态 UI） | Vue 3（**非**微信小程序 / **非** Uni-app） | `5174` |
+如果你是第一次接触编程，请从下面的 **“Windows 第一次运行”** 开始，按顺序完成。第一次安装需要联网下载软件和项目依赖，可能需要一些时间。本文以 Windows 10/11 为主要示例，macOS/Linux 命令见后文。
 
----
+> 本项目包含演示账号、模拟充值和演示数据，只适合本地学习与答辩。不要直接用于真实学生数据、真实支付或公开部署。
 
-## 二、 核心“智慧”创新与全链路闭环特性
+## 一、先了解要运行什么
 
-### 1. 基于六维生活习惯画像的智能分寝与调宿推荐引擎（[`SmartAllocationService.java`](./backend/src/main/java/com/dormitory/service/SmartAllocationService.java)）
-- **六维特征向量**：采集作息时间、睡眠浅度、空调偏好、卫生标准、寝室氛围、异味敏感度 6 个维度。
-- **自定义权重沙盘与同班聚拢约束**：支持在线调节六维权重占比、切换“纯习惯优先 (`HABIT_FIRST`)”与“同班级优先聚拢 + 习惯聚类 (`CLASS_MIX`)”策略，并与“传统按学号分寝”进行契合度对比实验及六维雷达图可视化；演示模式下支持重置 2026 级演示新生；此操作会释放该年级床位，仅应在隔离演示库使用。
-- **智能调宿推荐与退宿闭环**：为拟调宿学生自动计算全楼空余床位寝室的**预期契合度 (`predictedHarmony`)** 并按 Top 3 推荐；审批通过或手动分床后自动重算原寝室与目标寝室的和谐度评分。
+| 部分 | 用途 | 如何打开 |
+| --- | --- | --- |
+| 后端 | 提供登录、数据库和业务接口；其他页面需要它 | 在终端启动，默认端口 `7000` |
+| 管理端 | 管理员、宿管、维修员、辅导员使用 | 浏览器打开 [http://localhost:5173](http://localhost:5173) |
+| 学生端 H5 | 学生使用的网页，可以在电脑浏览器体验 | 浏览器打开 [http://localhost:5174](http://localhost:5174) |
+| 微信小程序 | 学生和宿管在微信开发者工具中体验 | 导入 `miniprogram-student` 文件夹 |
+| MySQL | 保存账号、床位、报修等数据 | 安装并启动 MySQL 8.0，默认端口 `3306` |
 
-### 2. 智能报修优先级识别与最小负载派单引擎（[`SmartRepairService.java`](./backend/src/main/java/com/dormitory/service/SmartRepairService.java)）
-- 自动扫描报修文本中的高危词库（`跳闸/短路/火花/爆管/漏水`），自动提权为 `HIGH（高危紧急）` 置顶，并按工种匹配当前待办工单数最少的维修师傅。
-- 支持学生端结单后进行 **1~5 星维修服务回访评价**。
+**后端、管理端和学生端是三个独立服务。** 使用时需要让它们对应的终端窗口保持打开；只打开网页而没有启动后端，登录不会成功。微信小程序是可选的，不使用小程序时也能运行两个网页。
 
-### 3. 水电阶梯计价核算、账户余额联动与双通道支付网关（[`SmartUtilityService.java`](./backend/src/main/java/com/dormitory/service/SmartUtilityService.java)）
-- 自动扣除基础免额并按第一、第二阶梯单价核算水电费及人均分摊金额；超出楼栋均值 1.5 倍自动触发“违规大功率电器或漏水排查”预警。
-- **电费/水费双账户充值与缴费联动抵扣**：账单缴纳自动优先抵扣寝室预存水电余额，余额不足时拦截并提示充值。
-- **支付通道**：学生 H5 支持支付宝沙箱收银台和验签回调；演示模拟通道须显式开启。沙箱不可用时不会自动模拟到账。微信小程序不支持支付宝支付。
+## 二、Windows 第一次运行
 
-### 4. 多维量化“文明寝室”动态评比、申诉核销与激励发放（[`SmartEvaluationService.java`](./backend/src/main/java/com/dormitory/service/SmartEvaluationService.java)）
-- 按 `50% 卫生均分 + 30% 纪律晚归表现 + 20% 水电节能表现` 自动核算各寝室星级与文明示范称号。
-- **违纪/晚归在线申诉与扣分回滚**：学生可针对晚归或违纪录入发起申诉（如实验室科研、校医院急诊），宿管审核通过后自动将状态置为 `2-申诉撤销` 并实时恢复文明寝室纪律得分。
-- **五星文明寝室电费补贴一键发放**：支持为当期 `5★ 文明标杆寝室` 一键派发 ¥30（约合 50 度电）电费奖励并自动发布全校表彰红榜公告。
+### 第 1 步：准备项目文件
 
-### 5. 23:00 夜间门禁智能稽核、访客电子绿码与 RBAC 差异化工作台
-- **晚归报备预览**：列出报备与待人工核实人员，不代表真实门禁或在寝状态，也不会自动生成违纪记录。
-- **访客动态电子通行绿码**：学生端登记亲友来访后自动生成带 `VP-xxxxxx` 核验码的动态 SVG 绿码凭证（支持全屏亮码），管理端实时监测在楼时长与超时滞留预警。
-- **多角色差异化工作台**：针对后勤主任 (`ADMIN`)、楼栋宿管 (`DORM_MANAGER`)、维修工程师 (`REPAIRMAN`)、辅导员只读 (`COUNSELOR`) 动态裁剪导航菜单与专属工作台。服务端已限制角色入口，并已对学生写接口做会话身份绑定、对宿管按 `manager_id` 做楼栋数据范围过滤；仍仅供本地演示，请勿公开部署真实数据。
-- **报修 SLA**：创建工单时按优先级写入截止时间（高危 4h / 普通 24h / 低优 48h），列表展示「已超时」徽章。
-- **水电缴费通道**：学生 H5 仅展示配置中可用的演示模拟或支付宝沙箱；小程序仅提供演示模拟。未启用的通道不会执行。
-- **业务处理与追踪**：调宿审批核验并锁定床位，退宿需记录钥匙、设施和清理交接；学生可提交入住登记、假期留宿申请并查看审核结果。水电模拟操作支持请求重试去重与流水查询，能耗异常可记录排查状态并关联唯一报修工单。
-- **报修提醒与方案说明**：工单临近截止时向维修人员发送站内提醒，超时后通知维修人员及宿管；分寝预览展示组内习惯差异和未分配原因，支持导出报告及查看人工床位变更记录。
+1. 将项目完整解压到电脑上的一个文件夹，例如 `D:\SmartDormitory`。建议路径中不要包含中文、空格或特殊字符，以便初学者复制命令。
+2. 打开该文件夹，确认里面能看到 `backend`、`frontend-admin`、`frontend-student`、`miniprogram-student`、`sql` 和 `start-backend.bat`。
+3. 后面的 `D:\SmartDormitory` 只是示例。如果你的项目在其他位置，请使用自己的路径。
 
----
+**如何在项目文件夹打开 PowerShell：** 在文件资源管理器中打开项目文件夹，点击顶部的地址栏，输入 `powershell` 并按回车。会弹出一个命令窗口；后面每次说“打开新的 PowerShell 窗口”时，都可以重复这个操作。复制代码块中的命令后，粘贴到窗口并按回车。
 
-### 演示与支付配置
+### 第 2 步：安装运行环境
 
-演示重置和模拟水电核销默认关闭。仅在独立演示数据库中，启动后端前显式设置环境变量 `DEMO_MODE=true`；模拟充值不会产生真实支付。支付宝沙箱默认关闭，需显式设置 `ALIPAY_ENABLED=true`、应用 ID、私钥、公钥和可访问的回调地址。沙箱付款以验签回调到账为准；历史未记录订单金额的待处理订单不能自动核销，应人工核对。曾出现在仓库历史中的密钥如仍有效，请在支付宝侧撤销并轮换。正式环境尚未接入真实门禁、微信支付或生产支付对账，不应据此用于真实资金或真实考勤。
+下面的软件需要安装在同一台电脑上。下载安装包时选择与你的系统匹配的版本；普通 Windows 电脑一般选择 Windows x64。
 
-## 三、 快速启动步骤
+| 软件 | 推荐版本和作用 | 下载与安装提示 |
+| --- | --- | --- |
+| Java JDK | **JDK 17**；运行后端 | [Eclipse Temurin JDK 17](https://adoptium.net/temurin/releases/?version=17)，选择 JDK 和 Windows 安装包，安装时允许设置 `JAVA_HOME`、添加到 `PATH` |
+| Maven | **Maven 3.9**；下载后端依赖并启动 | [Apache Maven 下载页](https://maven.apache.org/download.cgi)，下载 **Binary zip archive**，解压后把其 `bin` 文件夹加入系统 `Path`；参见[官方安装说明](https://maven.apache.org/install.html) |
+| Node.js | **Node.js 22 LTS**；运行两个网页和小程序地址配置脚本 | [Node.js 下载页](https://nodejs.org/en/download)，安装时保留 npm 和添加到 `PATH` 的选项 |
+| MySQL Server | **MySQL 8.0**；保存数据 | [MySQL Installer 8.0](https://dev.mysql.com/downloads/installer/)，安装 **MySQL Server**；推荐同时安装 **MySQL Workbench**，便于图形化导入数据库 |
+| 微信开发者工具 | 只有需要运行小程序时才安装 | [微信开发者工具下载页](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html) |
 
-### 1. 导入数据库
-1. 确保本地 MySQL 8.0 已启动，执行 [`sql/smart_dormitory.sql`](./sql/smart_dormitory.sql)（会自动创建 `smart_dormitory` 库及全部初始数据）。
-2. 检查 [`backend/src/main/resources/application.yml`](./backend/src/main/resources/application.yml) 中的数据库账号密码（默认为 `root` / `123456`）。
+**Windows 环境变量怎么设置：** 点击 Windows 开始菜单，搜索并打开“编辑系统环境变量”，点击“环境变量”。在上半部分“用户变量”中，先检查是否有 `JAVA_HOME`；没有就点击“新建”，变量名填 `JAVA_HOME`，变量值填 JDK 17 的安装目录。然后选中用户变量中的 `Path`，点击“编辑 → 新建”，分别加入 `%JAVA_HOME%\bin` 和 Maven 解压目录下的 `bin` 完整路径，例如 `D:\Tools\apache-maven-3.9.x\bin`。示例路径要换成自己电脑上的真实路径，Maven 路径应能找到 `mvn.cmd`。逐个点击“确定”保存；如果安装程序已经正确配置，则不必重复添加。
 
-已有数据的数据库不要重新导入初始化脚本：该脚本包含 `DROP DATABASE`。请先备份，再根据 [`sql/MIGRATION.md`](./sql/MIGRATION.md) 更新结构；启动新版后端前必须执行 [`sql/20261029-auth-session.sql`](./sql/20261029-auth-session.sql) 创建会话表。新增的 SLA、能耗异常、住宿申请与退宿交接字段也须先完成迁移。
+安装 MySQL 时请记住设置的 `root` 密码，端口保持 `3306`，并选择将 MySQL 配置为 Windows 服务。项目默认使用 MySQL 用户名 `root`、密码 `123456`；如果你安装时设置了不同密码，不需要修改 MySQL 密码，后面会教你告诉后端正确密码。
 
-### 2. 启动全部服务
-- Windows：双击 [`start-all.bat`](./start-all.bat)（相对路径，后端端口 **7000**）
-- macOS / Linux：`chmod +x start-all.sh && ./start-all.sh`
-- 前端代理目标参考 [`frontend-admin/.env.example`](./frontend-admin/.env.example) / [`frontend-student/.env.example`](./frontend-student/.env.example)
-- 数据库账号可用环境变量 `DB_USER` / `DB_PWD`（见 [`backend/.env.example`](./backend/.env.example)）；种子密码说明见 [`sql/MIGRATION.md`](./sql/MIGRATION.md)
+安装完毕后，**关闭之前的 PowerShell 窗口，重新打开**，依次执行：
 
-或分别在终端执行：
-
-```bash
-# 1. 启动后端 (7000)，并自动配置小程序局域网地址
-# Windows: start-backend.bat
-bash start-backend.sh
-
-# 2. 启动 Web 管理端 (5173)
-cd frontend-admin && npm install && npm run dev
-
-# 3. 启动学生端 Vite H5 (5174)
-cd frontend-student && npm install && npm run dev
+```powershell
+java -version
+mvn -v
+node -v
+npm.cmd -v
 ```
 
-本地后端启动时（包括 IntelliJ IDEA 和 Maven 直接启动）会调用 Node.js 脚本，将当前网卡的 IPv4 和实际监听端口写入小程序 `utils/config.js`。手机和电脑需处于可互通的同一局域网；多网卡选错时，可在启动前设置 `SMART_DORM_IP` 为本机网卡地址（Windows PowerShell：`$env:SMART_DORM_IP="192.168.1.100"`；macOS/Linux：`export SMART_DORM_IP=192.168.1.100`）。后端运行期间切换网络后，需运行 `node scripts/configure-miniprogram.js` 或重启后端，再重新编译并启动真机调试。自动配置需要 Node.js；若脚本失败，后端仍会启动并打印提示。
+预期：能看到 Java 17、Maven 3.9、Node.js 版本和 npm 版本；其中 `mvn -v` 显示的 Java 版本也必须是 17。如果提示“无法识别命令”，通常是软件未安装或没有加入 `Path`；重新打开终端，仍无效时检查该软件的安装说明。这里使用 `npm.cmd` 是为了避免部分 Windows PowerShell 的脚本执行策略拦截 `npm.ps1`。
 
----
+如果 `java -version` 是 17，但 `mvn -v` 仍显示其他版本，检查 Windows 环境变量 `JAVA_HOME` 是否指向 JDK 17 的**安装目录**，例如 `C:\Program Files\Eclipse Adoptium\jdk-17...`，而不是它里面的 `bin`；修改后重新打开 PowerShell 再检查。具体路径以你的电脑为准。
 
-## 四、 演示测试账号一览（密码统一为 `123456`）
+### 第 3 步：启动 MySQL 并准备演示数据库
 
-- **Web 管理端 (`http://localhost:5173`)**：
-  - 系统管理员（后勤主任）：`admin` / `123456`
-  - 楼栋宿管员：`dm01` / `123456`
-  - 维修工程师（电工）：`worker01` / `123456`
-  - 辅导员（只读）：`counselor01` / `123456`
-- **学生端 Vite H5 (`http://localhost:5174`)**：浏览器打开即可，**不是**微信小程序，勿用微信开发者工具打开。学号如 `20230101`（陈嘉豪）、`20230105`（刘子墨）、`20260101`（陆景行）或 `20230201`（苏婉清）。
+1. 按 `Win + R`，输入 `services.msc` 并回车，找到 MySQL 服务（名称可能是 `MySQL80` 或 `MySQL`），确认状态为“正在运行”。如果没有运行，右键选择“启动”。
+2. 打开 **MySQL Workbench**，连接本机 MySQL：主机 `localhost`、端口 `3306`、用户 `root`，输入你安装 MySQL 时设置的密码。
+3. 先在 Workbench 中检查是否已经有名为 `smart_dormitory` 的数据库。**初始化脚本会删除并重建同名数据库，里面的原有数据会丢失。**
+   - 如果是第一次安装，且没有需要保留的 `smart_dormitory` 数据库，继续下一步。
+   - 如果数据库已经存在并有需要保留的数据，**不要运行初始化脚本**。先备份数据库，再根据 [已有数据库升级说明](sql/MIGRATION.md) 执行所需增量脚本；包括 [会话表增量脚本](sql/20261029-auth-session.sql)。不确定时先停止，避免覆盖数据。
+4. 首次安装时，在 Workbench 菜单中选择 **File → Open SQL Script**，打开项目里的 `sql/smart_dormitory.sql`。
+5. 确保没有只选中脚本中的一小段文字，选择 **Query → Execute (All or Selection)** 执行完整脚本。等待执行结束，检查下方输出是否有错误。不要只执行当前光标所在的单条语句。
+6. 在新的 SQL 标签页执行下面的检查语句：
 
-登录会话的令牌哈希保存在数据库中，有效期 8 小时，后端重启后会话仍有效；升级前的内存会话需要重新登录。旧的明文或 MD5 密码在成功登录时升级为 BCrypt。演示库种子密码已存为 BCrypt（登录明文仍为 `123456`，见 `sql/MIGRATION.md`）。请勿用于真实数据或公开部署。
+```sql
+USE smart_dormitory;
+SELECT COUNT(*) AS user_count FROM sys_user;
+SHOW TABLES LIKE 'auth_session';
+```
 
-## 五、 五分钟答辩演示剧本
+第一条计数应大于 0，第二条应显示 `auth_session`。这表示演示账号已导入，会话表也已创建。执行失败时，请先处理 Workbench 的报错，再继续启动后端。
 
-1. **admin** 登录管理端 → 工作台「演示剧本」或智能分寝页：对比策略并确认分寝；需要时可一键「重置 2026 级演示新生」（仅 ADMIN）。
-2. **学生 H5**（如 `20260101`）：习惯问卷 → **报修**（标题含「跳闸」）→ **水电**查看余额 → **宿务**预约访客绿码 / 晚归报备。
-3. **worker01**：报修派单接单结单；学生端评价闭环（待评价强提醒）。
-4. **dm01**：文明宿务卫生打分、申诉材料审核、五星补贴；门禁栏选择楼栋后预览报备情况。
-5. **admin**：房态「楼栋宿管绑定」；手动分床时故意选错性别可演示拦截。
+### 第 4 步：安装两个网页的依赖
 
-学生端底部导航：**首页 / 习惯 / 报修 / 水电 / 宿务**（Vite H5，小程序形态 UI；非 Uni-app、非微信小程序）。
+依赖就是项目运行需要下载的程序包。打开位于**项目根目录**的 PowerShell，依次执行：
 
-## 六、 持续集成
-推送或 PR 时由 [`.github/workflows/verify.yml`](./.github/workflows/verify.yml) 运行：
-- 后端：`mvn -q test`（JDK 17）
-- MySQL：使用独立测试库检查并发调宿和缴费重试
-- 学生端和管理端：Node 测试及生产构建
+```powershell
+cd .\frontend-admin
+npm.cmd ci
+cd ..\frontend-student
+npm.cmd ci
+cd ..
+```
 
----
+两次 `npm.cmd ci` 都需要完成且不能出现安装失败的 `ERR!`。第一次可能需要几分钟，期间请保持联网。以后没有更新依赖时，通常不需要每次重新执行；换电脑或依赖发生变化时再执行。
 
-## 七、 支付宝沙箱支付与 0 成本演示指南（无需购买域名与云服务器）
+### 第 5 步：启动后端
 
-系统采用阿里官方最新轻量级 SDK **`alipay-easysdk`**，完全适配 Spring Boot 3 与 JDK 17。
+打开位于**项目根目录**的新 PowerShell 窗口：
 
-### 1. 0 成本环境说明
-- **无需购买域名**：支付宝沙箱联调支持局域网 IP / 本地 `localhost`；同步回跳 (`returnUrl`) 走前端本地地址，不需要任何域名备案。
-- **无需购买服务器**：所有服务直接在本机（笔记本或台式机）运行即可。
-- **异步回调 (`notifyUrl`)**：如需演示支付宝公网回调通知入库，可使用免费内网穿透工具：
-  
-  ```bash
-  # 下载免费版 cpolar (或 natapp)，一条命令穿透本地后端端口 7000
-  cpolar http 7000
-  # 将生成的公网 https 地址作为 ALIPAY_NOTIFY_URL 环境变量传给后端
-  ```
+1. 如果 MySQL 用户名不是 `root` 或密码不是 `123456`，先输入下面两行，把引号中的内容改为你自己的 MySQL 用户名和密码；这只对当前窗口及其启动的进程生效。若使用默认值，可以跳过这两行。
 
-### 2. 启用支付宝沙箱
-
-1. 访问 [支付宝开放平台·沙箱应用](https://open.alipay.com/develop/sandbox/app) 获取 **AppID**、**应用私钥** 与 **支付宝公钥**。
-2. 在启动后端的环境中设置以下变量（`backend/.env.example` 只是示例文件，不会被启动脚本自动加载）：
-   ```properties
-   ALIPAY_ENABLED=true
-   ALIPAY_APP_ID=90210001xxxxxxxx
-   ALIPAY_PRIVATE_KEY=MIIEvgIBADAN...
-   ALIPAY_PUBLIC_KEY=MIIBIjAN...
-   ALIPAY_RETURN_URL=http://localhost:5174
+   ```powershell
+   $env:DB_USER = 'root'
+   $env:DB_PWD = '这里改成你的MySQL密码'
    ```
-3. 确保异步回调地址从支付宝可访问，启动项目，进入学生端（`http://localhost:5174`）「水电缴费」→「水电充值」选择「🚀 支付宝沙箱支付」，点击后即可自动拉起支付宝沙箱网页收银台，使用沙箱买家账号（或沙箱钱包 APP）完成充值演示！
+
+2. 如果需要演示**模拟水电充值、余额核销和重置演示新生**，并且使用的是独立演示数据库，在同一个窗口输入：
+
+   ```powershell
+   $env:DEMO_MODE = 'true'
+   ```
+
+   这一步可选；不设置时上述演示操作默认关闭。模拟充值不会产生真实扣款，重置演示新生会释放 `2026级` 学生床位，只能对隔离演示数据使用。
+
+3. 在**同一个窗口**启动后端：
+
+   ```powershell
+   .\start-backend.bat
+   ```
+
+4. 首次启动 Maven 会下载依赖。等待日志出现类似 `Started SmartDormitoryApplication` 的字样，说明后端已启动。保持这个窗口打开，不要按 `Ctrl+C`。
+
+如果日志显示数据库连接失败，先检查 MySQL 服务、端口、用户名密码以及第 3 步是否成功。`backend/.env.example` 是配置示例，**复制或修改它不会自动设置环境变量**；请按上面的 PowerShell 步骤设置。
+
+### 第 6 步：启动管理端和学生端网页
+
+**另开一个**位于项目根目录的 PowerShell，启动管理端：
+
+```powershell
+cd .\frontend-admin
+npm.cmd run dev
+```
+
+等待看到 Vite 的 `Local: http://localhost:5173/`，保持窗口打开。
+
+再**另开一个**位于项目根目录的 PowerShell，启动学生端网页：
+
+```powershell
+cd .\frontend-student
+npm.cmd run dev
+```
+
+等待看到 `Local: http://localhost:5174/`，保持窗口打开。此时应有三个服务窗口：后端、管理端和学生端。
+
+如果 Vite 提示原端口被占用并自动换成其他端口，请先关闭占用 `5173` 或 `5174` 的旧程序，再重新启动；两个登录页面中的切换链接使用的是默认端口。
+
+### 第 7 步：打开网页并登录
+
+在同一台电脑的浏览器打开：
+
+- 管理端：[http://localhost:5173](http://localhost:5173)
+- 学生端 H5：[http://localhost:5174](http://localhost:5174)
+
+首次导入演示数据库后，可使用以下账号，**初始密码均为 `123456`**：
+
+| 入口 | 身份 | 账号 |
+| --- | --- | --- |
+| 管理端 | 管理员 | `admin` |
+| 管理端 | 楼栋宿管 | `dm01` |
+| 管理端 | 维修员 | `worker01` |
+| 管理端 | 辅导员 | `counselor01` |
+| 学生端或小程序 | 已入住学生 | `20230101` |
+| 学生端或小程序 | 待分寝新生 | `20260101` |
+| 小程序 | 楼栋宿管 | `dm01` |
+
+如果你使用的是已有数据库或已经修改过密码，实际账号和密码以该数据库为准。
+
+**检查是否真正运行成功：** 管理员能登录并看到管理工作台；学生账号能登录学生端并看到首页数据。只有登录页出现还不能证明数据库和后端已经连通。
+
+## 三、运行微信小程序（可选）
+
+1. 先按上文启动 MySQL 和后端，并保持后端窗口打开。管理端和学生 H5 是否启动不影响小程序访问后端。
+2. 安装并打开微信开发者工具，按提示登录，选择**导入项目**。
+3. 项目目录选择项目中的 `miniprogram-student` 文件夹：该文件夹内应能直接看到 `app.json` 和 `project.config.json`。不要选项目根目录，也不要选 `frontend-student`。
+4. AppID 使用你有权限的 AppID；没有正式 AppID 时，可按开发者工具提示使用测试号。仓库里的 AppID 不代表你有对应账号权限。
+5. 在开发者工具的 **详情 → 本地设置** 中，按工具当前版本的提示勾选“不校验合法域名、TLS 版本及 HTTPS 证书”等本地调试选项，然后点击**编译**。
+6. 在模拟器中使用上面的学生或宿管账号登录。小程序的水电充值仅为演示模拟，需要后端开启 `DEMO_MODE=true`；它不是微信支付。
+
+本地后端启动时会尝试自动更新 `miniprogram-student/utils/config.js` 的后端地址。若模拟器请求失败，可检查该文件中的 `SERVER_HOST`：本机模拟器通常可使用 `http://127.0.0.1:7000`。修改后重新编译。
+
+**手机真机调试：** 手机和电脑需要处于能互相访问的同一局域网；手机上的 `127.0.0.1` 指向手机自己，不能指向电脑。使用电脑的局域网 IPv4，例如 `http://192.168.1.100:7000`，并确保防火墙允许访问后端端口。切换网络后可以在项目根目录运行 `node scripts/configure-miniprogram.js`，或在启动后端前设置 `$env:SMART_DORM_IP = '电脑的局域网IPv4'`，然后重新编译并按微信工具提示进行真机调试。普通预览和正式发布仍受微信合法域名、HTTPS 和账号权限等要求限制；电脑模拟器成功不代表扫码或真机功能已验证。
+
+## 四、以后如何启动与关闭
+
+首次安装依赖并导入数据库后，通常不需要重复第 3、4 步。每次使用时：
+
+1. 确认 MySQL 服务已运行。
+2. 打开后端窗口，按需设置 `DB_USER`、`DB_PWD`、`DEMO_MODE`，运行 `.\start-backend.bat`。这些临时环境变量不会自动保存到新窗口。
+3. 分别启动管理端和学生端的 `npm.cmd run dev`，然后打开网页。需要小程序时再打开微信开发者工具。
+4. 结束使用时，分别在三个服务窗口按 `Ctrl+C`；提示是否终止批处理时，按提示确认。MySQL 服务可以继续运行，也可在 Windows 服务管理器中停止。
+
+熟悉以上步骤后，也可以在已安装环境、已导入数据库、已安装前端依赖的情况下双击 `start-all.bat`，它会打开三个服务窗口。它本身不会安装依赖或导入数据库；如需设置自定义数据库密码或开启演示模式，应从**已经设置这些环境变量的 PowerShell** 中运行 `.\start-all.bat`。请分别检查三个新窗口中的启动结果。
+
+## 五、macOS / Linux
+
+先安装 JDK 17、Maven 3.9、Node.js 22、MySQL 8.0，启动 MySQL；数据库导入时同样要先阅读第 3 步的数据覆盖提示。可以用 MySQL Workbench 打开并执行 `sql/smart_dormitory.sql`，已有数据则按 [增量升级说明](sql/MIGRATION.md) 处理。
+
+在终端执行以下命令，把第一行替换成你的项目路径：
+
+```bash
+cd /你的路径/SmartDormitory
+java -version
+mvn -v
+node -v
+npm -v
+(cd frontend-admin && npm ci)
+(cd frontend-student && npm ci)
+```
+
+然后在项目根目录启动后端；仅在示例值不同时修改数据库账号和密码，演示模式只在需要且使用隔离演示库时开启：
+
+```bash
+export DB_USER='root'
+export DB_PWD='你的MySQL密码'
+export DEMO_MODE='true'   # 可选；模拟充值和演示重置
+bash ./start-backend.sh
+```
+
+另外打开两个终端，在项目根目录分别执行：
+
+```bash
+cd frontend-admin && npm run dev
+```
+
+```bash
+cd frontend-student && npm run dev
+```
+
+等三个服务启动后，使用上面的浏览器地址和演示账号登录。也可在完成安装后从项目根目录运行 `bash ./start-all.sh`；在该脚本所在终端按 `Ctrl+C` 会尝试停止三个子进程。
+
+## 六、常见问题
+
+| 现象 | 建议检查 |
+| --- | --- |
+| `java`、`mvn`、`node` 或 `npm` 找不到 | 确认软件已安装并加入 `Path`，关闭并重新打开终端；`mvn -v` 必须显示 Java 17。 |
+| `Access denied for user` | MySQL 用户名或密码不匹配。在启动后端的同一个窗口设置 `DB_USER` 和 `DB_PWD`，然后重启后端。 |
+| `Communications link failure`、连接 3306 失败 | 确认 MySQL 服务正在运行，端口为 3306，本机防火墙或其他程序没有阻止连接。 |
+| `Table ... doesn't exist`，特别是 `auth_session` | 首次安装检查 SQL 是否完整执行。已有库先备份，再按 [升级说明](sql/MIGRATION.md) 执行缺失的增量脚本；不要重新导入会删库的初始化脚本。 |
+| 后端提示 `Address already in use` | 默认 `7000` 被占用，关闭已有后端或其他占用该端口的程序后再启动。不要关闭不认识的重要系统进程。 |
+| 网页显示连接失败或登录失败 | 检查三个服务窗口是否仍在运行、后端是否成功启动、地址是否是正确的 `5173`/`5174`。检查浏览器和后端窗口的具体错误。 |
+| 水电模拟充值或演示重置不可用 | 后端默认关闭演示模式；在启动后端的窗口设置 `DEMO_MODE=true` 并重启。只对隔离演示库开启。 |
+| 支付宝沙箱不可用 | 默认关闭。需要自己的沙箱配置与可从支付宝访问的异步回调地址；没有配置时不会自动模拟到账。小程序不提供支付宝付款。 |
+| 小程序请求失败 | 先确认后端已启动；检查开发者工具本地调试选项、`SERVER_HOST`、电脑与手机的网络和防火墙。手机不能把 `127.0.0.1` 当成电脑地址。 |
+| `npm.cmd ci` 或 Maven 下载依赖失败 | 检查网络、代理和错误信息，然后重试；不要把中途失败当成安装完成。 |
+
+## 七、功能与边界
+
+项目包含床位与智能分寝、生活习惯画像、报修派单与评价、水电账单、访客登记与核验、调宿退宿申请、文明寝室评比以及站内通知。管理端根据角色限制入口和操作；学生 H5 与微信小程序的部分能力有所不同。
+
+晚归页面目前只提供报备情况预览，不代表真实门禁记录，不会自动生成违纪。支付宝沙箱仅用于测试；配置方式见 [`backend/.env.example`](backend/.env.example)，需要在**启动后端的环境**中设置 `ALIPAY_ENABLED`、App ID、私钥、公钥和可访问的 `ALIPAY_NOTIFY_URL`。旧的、未记录订单金额的待处理订单需要人工核对；曾出现在仓库历史中的密钥若仍有效，应在支付平台撤销并轮换。项目尚未完成真实门禁、微信支付、生产支付对账、正式部署和运维验证。
+
+登录会话的令牌哈希保存在数据库中，有效期为 8 小时；后端重启后会话仍可用。旧版本升级前的内存会话不能迁移，升级后需要重新登录。
+
+## 八、项目目录与开发验证
+
+```text
+SmartDormitory/
+├── backend/                 Java / Spring Boot 后端
+├── frontend-admin/          管理端网页
+├── frontend-student/        学生端 H5 网页，不是微信小程序
+├── miniprogram-student/     微信小程序
+├── sql/                     首次初始化和已有库增量脚本
+├── scripts/                 小程序地址配置脚本及测试
+├── start-backend.bat/.sh    单独启动后端
+└── start-all.bat/.sh        启动后端与两个网页
+```
+
+开发者可在对应目录执行测试和构建；后端测试请使用 JDK 17：
+
+```powershell
+# backend 目录
+mvn -q test
+
+# frontend-admin 和 frontend-student 目录，分别执行
+node --test src/*.test.js
+npm.cmd run build
+
+# miniprogram-student 目录
+node --test tests/*.test.js
+```
+
+项目的 GitHub Actions 还会在独立 MySQL 测试库中验证部分并发业务。普通后端测试默认跳过这部分数据库集成测试；本地运行时请使用独立测试库，不能对现有业务库执行会修改数据的集成测试。

@@ -171,32 +171,24 @@ const handleLogin = async () => {
 <style scoped>
 .login-page {
   min-height: 100dvh;
-  background-color: #f5f5f7;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
+  background-color: #0b1120;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .login-shell {
   width: 100%;
-  max-width: 1140px;
-  min-height: 660px;
-  background: #ffffff;
-  border-radius: 28px;
+  min-height: 100dvh;
+  position: relative;
   overflow: hidden;
   display: flex;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  justify-content: flex-end;
 }
 
 /* ================= 左侧封面展示区 ================= */
 .login-cover-pane {
-  flex: 1.18;
-  position: relative;
-  min-height: 660px;
+  position: absolute;
+  inset: 0;
   background-color: #0b1120;
   overflow: hidden;
   display: flex;
@@ -224,7 +216,7 @@ const handleLogin = async () => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 44px 48px;
+  padding: 44px 54% 44px 5%;
   background: linear-gradient(
     145deg,
     rgba(11, 17, 32, 0.45) 0%,
@@ -299,12 +291,16 @@ const handleLogin = async () => {
 
 /* ================= 右侧表单操作区 ================= */
 .login-form-pane {
-  flex: 1;
+  position: relative;
+  z-index: 3;
+  box-sizing: border-box;
+  width: 46%;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 48px 44px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .form-wrapper {
@@ -523,23 +519,20 @@ const handleLogin = async () => {
 /* 响应式断点 */
 @media (max-width: 1024px) {
   .login-shell {
-    flex-direction: column;
-    max-width: 480px;
-    min-height: auto;
+    display: block;
   }
 
   .login-cover-pane {
-    min-height: 220px;
-    flex: none;
+    min-height: 100%;
   }
 
   .cover-overlay {
     padding: 24px;
+    justify-content: flex-start;
   }
 
   .cover-center-content {
-    margin: 10px 0 0;
-    padding: 0;
+    display: none;
   }
 
   .cover-headline {
@@ -552,6 +545,9 @@ const handleLogin = async () => {
   }
 
   .login-form-pane {
+    width: 100%;
+    min-height: calc(100dvh - 140px);
+    margin-top: 140px;
     padding: 32px 24px;
   }
 }
