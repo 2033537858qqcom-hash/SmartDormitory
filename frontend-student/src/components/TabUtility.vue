@@ -91,8 +91,8 @@
       <div class="form-row">
         <div class="selection-label" id="pay-channel-label">支付通道</div>
         <div class="type-grid channel-grid" role="group" aria-labelledby="pay-channel-label">
-          <button type="button" class="type-chip channel-chip spring-btn" :class="{ active: payChannel === 'DEMO' }" :aria-pressed="payChannel === 'DEMO'" @click="payChannel = 'DEMO'"><span class="channel-copy"><span>演示模拟</span><small>本地模拟充值</small></span><span v-if="payChannel === 'DEMO'" class="selection-check" aria-hidden="true">✓</span></button>
-          <button type="button" class="type-chip channel-chip spring-btn" :class="{ active: payChannel === 'ALIPAY' }" :aria-pressed="payChannel === 'ALIPAY'" @click="payChannel = 'ALIPAY'"><span class="channel-copy"><span>支付宝沙箱</span><small>沙箱环境支付</small></span><span v-if="payChannel === 'ALIPAY'" class="selection-check" aria-hidden="true">✓</span></button>
+          <button type="button" class="type-chip channel-chip spring-btn" :disabled="!paymentConfig?.demoSupported" :class="{ active: payChannel === 'DEMO' }" :aria-pressed="payChannel === 'DEMO'" @click="payChannel = 'DEMO'"><span class="channel-copy"><span>演示模拟</span><small>本地模拟充值</small></span><span v-if="payChannel === 'DEMO'" class="selection-check" aria-hidden="true">✓</span></button>
+          <button type="button" class="type-chip channel-chip spring-btn" :disabled="!paymentConfig?.alipayEnabled" :class="{ active: payChannel === 'ALIPAY' }" :aria-pressed="payChannel === 'ALIPAY'" @click="payChannel = 'ALIPAY'"><span class="channel-copy"><span>支付宝沙箱</span><small>沙箱环境支付</small></span><span v-if="payChannel === 'ALIPAY'" class="selection-check" aria-hidden="true">✓</span></button>
         </div>
       </div>
       <div class="form-row">
@@ -100,9 +100,11 @@
         <input id="recharge-amt" v-model.number="rechargeAmount" type="number" min="10" step="10" class="inp tabular-nums" />
       </div>
       <div v-if="payChannel === 'ALIPAY'" class="alipay-tip-box">
-        <b>支付宝沙箱</b>：需要先配置沙箱账号；未配置时将使用演示模式充值。
+        <b>支付宝沙箱</b>：需要先配置沙箱账号和可访问的回调地址。
       </div>
-      <button type="button" class="sheet-submit spring-btn" :disabled="submitting" @click="submitRecharge">
+      <p v-if="paymentConfigLoading">正在检查可用支付方式…</p>
+      <p v-else-if="!payChannel" class="demo-sheet-note">当前没有可用的充值方式，请联系管理员。</p>
+      <button type="button" class="sheet-submit spring-btn" :disabled="submitting || !payChannel" @click="submitRecharge">
         {{ submitting ? '正在处理...' : (payChannel === 'ALIPAY' ? '前往支付宝沙箱付款' : '确认充值（演示模拟扣款）') }}
       </button>
     </BottomSheet>
@@ -121,7 +123,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from '../api'
-import { submitDemoPayment } from '../payment'
+import { submitDemoPayment, requireSandboxForm } from '../payment'
 import BottomSheet from './BottomSheet.vue'
 
 const props = defineProps({
@@ -139,7 +141,9 @@ const isLowBalance = computed(() => {
 const submitting = ref(false)
 const rechargeSheet = ref(false)
 const rechargeTarget = ref('ELECTRIC')
-const payChannel = ref('DEMO')
+const payChannel = ref('')
+const paymentConfig = ref(null)
+const paymentConfigLoading = ref(false)
 const rechargeAmount = ref(50)
 const historySheet = ref(false)
 const historyLoading = ref(false)
@@ -159,12 +163,24 @@ const openHistory = async () => {
 
 const formatMoney = (val) => `¥${Number(val || 0).toFixed(2)}`
 
-const openSheetWithCheck = (kind) => {
+const openSheetWithCheck = async (kind) => {
   if (!isAllocated.value) {
     emit('toast', { msg: '分配寝室后即可使用水电充值', type: 'info' })
     return
   }
-  if (kind === 'recharge') rechargeSheet.value = true
+  if (kind === 'recharge') {
+    rechargeSheet.value = true
+    paymentConfigLoading.value = true
+    paymentConfig.value = null
+    payChannel.value = ''
+    try {
+      const res = await api.get('/utility/pay/config')
+      paymentConfig.value = res.data || {}
+      payChannel.value = paymentConfig.value.demoSupported ? 'DEMO' : (paymentConfig.value.alipayEnabled ? 'ALIPAY' : '')
+    } catch (error) {
+      emit('toast', { msg: error.message || '支付配置加载失败', type: 'error' })
+    } finally { paymentConfigLoading.value = false }
+  }
 }
 
 watch(() => props.initialAction, (action) => {
@@ -193,27 +209,15 @@ const submitRecharge = async () => {
         waterRecharge: isElec ? 0 : rechargeAmount.value
       })
       const data = res.data?.data || res.data || {}
-      if (data.mode === 'SDK_PAGE' && data.formHtml) {
-        emit('toast', { msg: '支付宝沙箱订单创建成功，正在拉起收银台...', type: 'info' })
-        rechargeSheet.value = false
-        const div = document.createElement('div')
-        div.innerHTML = data.formHtml
-        document.body.appendChild(div)
-        const form = div.querySelector('form')
-        if (form) form.submit()
-        return
-      } else {
-        emit('toast', { msg: data.tip || '支付宝沙箱未配置密钥，自动降级为演示快速充值', type: 'info' })
-        const demoRes = await submitDemoPayment(api, sessionStorage, crypto, {
-          roomId,
-          electricRecharge: isElec ? rechargeAmount.value : 0,
-          waterRecharge: isElec ? 0 : rechargeAmount.value
-        })
-        rechargeSheet.value = false
-        const txn = demoRes.data?.txnNo || demoRes.data?.data?.txnNo
-        emit('toast', { msg: `【沙箱降级演示】已充值${isElec ? '电费' : '水费'} ¥${rechargeAmount.value}.00${txn ? ' · 流水 ' + txn : ''}`, type: 'success' })
-        emit('refresh')
-      }
+      const formHtml = requireSandboxForm(data)
+      emit('toast', { msg: '支付宝沙箱订单创建成功，正在拉起收银台...', type: 'info' })
+      rechargeSheet.value = false
+      const div = document.createElement('div')
+      div.innerHTML = formHtml
+      document.body.appendChild(div)
+      const form = div.querySelector('form')
+      if (!form) { div.remove(); throw new Error('支付宝收银台表单无效') }
+      form.submit()
     } else {
       const res = await submitDemoPayment(api, sessionStorage, crypto, {
         roomId,

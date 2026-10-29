@@ -12,3 +12,8 @@ export async function submitDemoPayment(api, storage, random, payload) {
   storage.removeItem(key)
   return result
 }
+
+export function requireSandboxForm(data) {
+  if (data?.mode !== 'SDK_PAGE' || !data.formHtml) throw new Error('支付宝沙箱收银台不可用，请检查支付配置')
+  return data.formHtml
+}
