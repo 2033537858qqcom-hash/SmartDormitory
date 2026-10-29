@@ -26,6 +26,12 @@ class UtilityPaymentWorkflowTest {
     @Mock AlipayConfig alipayConfig;
     @InjectMocks SmartUtilityService service;
 
+    @org.junit.jupiter.api.BeforeEach
+    void initializeMapping() {
+        com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(new org.apache.ibatis.builder.MapperBuilderAssistant(new com.baomidou.mybatisplus.core.MybatisConfiguration(), "test"), UtilityPaymentLog.class);
+        com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(new org.apache.ibatis.builder.MapperBuilderAssistant(new com.baomidou.mybatisplus.core.MybatisConfiguration(), "test"), DormRoom.class);
+    }
+
     private DormRoom room() {
         DormRoom room = new DormRoom(); room.setId(1L);
         room.setElectricBalance(new BigDecimal("30.00")); room.setWaterBalance(new BigDecimal("20.00")); return room;
@@ -134,6 +140,47 @@ class UtilityPaymentWorkflowTest {
         assertThrows(IllegalArgumentException.class, () -> service.createAlipayOrder(1L, null,
                 new BigDecimal("-10"), new BigDecimal("20"), 7L));
         verify(logs, never()).insert(any(UtilityPaymentLog.class));
+    }
+
+    private UtilityPaymentLog pendingRecharge() {
+        UtilityPaymentLog log = new UtilityPaymentLog(); log.setId(1L); log.setTxnNo("ALI-1");
+        log.setRoomId(1L); log.setActionType("RECHARGE"); log.setChannel("ALIPAY_PENDING");
+        log.setElectricDelta(new BigDecimal("10.00")); log.setWaterDelta(BigDecimal.ZERO);
+        log.setRemark("RECHARGE:10.00:0|AMOUNT=10.00"); return log;
+    }
+
+    @Test
+    void alipayCallbackRejectsMismatchedAmount() throws Exception {
+        when(alipayConfig.isEnabled()).thenReturn(true);
+        lenient().when(alipayConfig.getAppId()).thenReturn("test-app");
+        var client = mock(com.alipay.easysdk.payment.common.Client.class);
+        when(client.verifyNotify(anyMap())).thenReturn(true);
+        try (var payment = org.mockito.Mockito.mockStatic(com.alipay.easysdk.factory.Factory.Payment.class)) {
+        payment.when(com.alipay.easysdk.factory.Factory.Payment::Common).thenReturn(client);
+        when(logs.selectOne(any(Wrapper.class))).thenReturn(pendingRecharge());
+        lenient().when(rooms.selectOne(any(Wrapper.class))).thenReturn(room());
+        assertEquals("failure", service.handleAlipayNotify(java.util.Map.of("trade_status", "TRADE_SUCCESS", "out_trade_no", "ALI-1", "app_id", "test-app", "total_amount", "1.00")));
+        verify(rooms, never()).updateById(any(DormRoom.class));
+        }
+    }
+
+    @Test
+    void alipayCallbackLocksOrderBeforeApplyingAndDoesNotApplyTwice() throws Exception {
+        when(alipayConfig.isEnabled()).thenReturn(true);
+        lenient().when(alipayConfig.getAppId()).thenReturn("test-app");
+        var client = mock(com.alipay.easysdk.payment.common.Client.class);
+        when(client.verifyNotify(anyMap())).thenReturn(true);
+        try (var payment = org.mockito.Mockito.mockStatic(com.alipay.easysdk.factory.Factory.Payment.class)) {
+        payment.when(com.alipay.easysdk.factory.Factory.Payment::Common).thenReturn(client);
+        UtilityPaymentLog pending = pendingRecharge();
+        when(logs.selectOne(any(Wrapper.class))).thenReturn(pending);
+        when(rooms.selectOne(any(Wrapper.class))).thenReturn(room());
+        var callback = java.util.Map.of("trade_status", "TRADE_SUCCESS", "out_trade_no", "ALI-1", "app_id", "test-app", "total_amount", "10.00");
+        assertEquals("success", service.handleAlipayNotify(callback));
+        assertEquals("success", service.handleAlipayNotify(callback));
+        verify(rooms, times(1)).updateById(any(DormRoom.class));
+        verify(logs, times(2)).selectOne(argThat(wrapper -> wrapper.getSqlSegment().contains("FOR UPDATE")));
+        }
     }
 
 }
