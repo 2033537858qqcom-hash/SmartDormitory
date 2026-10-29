@@ -16,3 +16,9 @@ test('failed payment retry reuses its request id and success clears it', async (
   assert.equal(ids[0], ids[1])
   assert.notEqual(ids[1], ids[2])
 })
+
+test('sandbox checkout rejects missing form instead of performing a simulated recharge', async () => {
+  const payment = await import('./payment.js')
+  assert.throws(() => payment.requireSandboxForm({ mode: 'DEMO_FALLBACK' }), /支付宝沙箱/)
+  assert.equal(payment.requireSandboxForm({ mode: 'SDK_PAGE', formHtml: '<form></form>' }), '<form></form>')
+})
