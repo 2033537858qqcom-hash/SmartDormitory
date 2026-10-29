@@ -258,7 +258,7 @@ const saveHabit = async () => {
   height: 24px;
   border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-surface);
   box-shadow: 0 2px 7px rgb(29 29 31 / 20%), 0 0 0 1px rgb(29 29 31 / 5%);
 }
 
@@ -267,7 +267,7 @@ const saveHabit = async () => {
   height: 24px;
   border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-surface);
   box-shadow: 0 2px 7px rgb(29 29 31 / 20%), 0 0 0 1px rgb(29 29 31 / 5%);
 }
 
@@ -310,7 +310,7 @@ const saveHabit = async () => {
 
 .submit-btn {
   width: 100%;
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 13px;

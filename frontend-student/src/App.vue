@@ -18,6 +18,7 @@
 
       <!-- 下半部 Apple 表单区 -->
       <form class="student-login-body" @submit.prevent="login">
+        <div class="student-theme-control"><ThemeToggle /></div>
         <div class="login-header-group">
           <h2>学号登录</h2>
           <p>请使用您的学号与统一身份认证密码登录</p>
@@ -90,7 +91,7 @@
       <!-- 顶部导航栏 -->
       <header class="wx-navbar" :class="{ scrolled: isHeaderCollapsed }">
         <div class="nav-title">{{ currentTab === 'home' ? currentDate : navTitle }}</div>
-        <span class="nav-user">{{ dash.user?.realName || "同学" }}</span>
+        <div class="nav-actions"><span class="nav-user">{{ dash.user?.realName || "同学" }}</span><ThemeToggle /></div>
       </header>
 
       <!-- 顶部操作结果胶囊提示：区分成功、信息说明、警告与错误 -->
@@ -232,6 +233,7 @@
 </template>
 
 <script setup>
+import ThemeToggle from './components/ThemeToggle.vue'
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import api from './api'
 import { signInStudent } from './session'
@@ -580,6 +582,9 @@ onBeforeUnmount(() => {
   }
 }
 
+.student-theme-control { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+
 .login-header-group h2 {
   font-size: 22px;
   font-weight: 600;
@@ -773,7 +778,7 @@ onBeforeUnmount(() => {
 @keyframes pulseOpacity { 0%,100% { opacity: .5; } 50% { opacity: .9; } }
 .error-card { background: var(--bg-surface); border-radius: var(--radius-card); padding: 30px 22px; text-align: center; margin-top: 20px; }
 .err-title { font-size: 18px; font-weight: 600; }.err-desc { font-size: 14px; color: var(--text-muted); margin: 10px 0 18px; }
-.retry-btn { background: var(--accent-primary); color: white; border: 0; padding: 11px 22px; border-radius: 12px; font-size: 14px; }
+.retry-btn { background: var(--button-primary); color: white; border: 0; padding: 11px 22px; border-radius: 12px; font-size: 14px; }
 .wx-tabbar { display: flex; align-items: center; justify-content: space-around; flex-shrink: 0; min-height: 64px; margin: 0 14px 12px; padding: 7px 3px; border-radius: 24px; background: rgb(255 255 255 / 94%); box-shadow: 0 4px 18px rgb(29 29 31 / 5%); z-index: 40; }
 .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--text-muted); padding: 5px 11px; min-height: 46px; font-size: 11px; border-radius: 17px; }
 .tab-item.active { color: var(--accent-primary); }

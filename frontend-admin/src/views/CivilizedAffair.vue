@@ -1084,7 +1084,7 @@ onMounted(() => {
 .admin-qr-box {
   padding: 12px;
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--bg-surface);
   border: 3px solid #22c55e;
   box-shadow: 0 8px 24px rgba(21, 128, 61, 0.12);
 }
@@ -1201,7 +1201,7 @@ onMounted(() => {
 .gate-heading p { margin-top: 4px; color: var(--text-muted); font-size: 12px; }
 .gate-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
 .gate-input { flex: 1; min-width: 220px; }
-.gate-pass-card { margin-top: 14px; padding: 16px; border-radius: 16px; background: #fff; border: 2px solid #cfead6; }
+.gate-pass-card { margin-top: 14px; padding: 16px; border-radius: 16px; background: var(--bg-surface); border: 2px solid #cfead6; }
 .gate-pass-card.ok { border-color: #34c759; box-shadow: 0 0 0 4px rgb(52 199 89 / 12%); }
 .gate-pass-card.warn { border-color: #ff9f0a; }
 .gate-pass-card.done { border-color: #c7c7cc; opacity: .92; }

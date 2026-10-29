@@ -76,6 +76,7 @@
           <span class="breadcrumb-parent">{{ roleLabel }}</span><span class="breadcrumb-slash">/</span><span>{{ $route.meta.title }}</span>
         </div>
         <div class="header-right">
+          <ThemeToggle />
           <el-popover v-if="canAccess('dashboard') || canAccess('civilized-affair')" placement="bottom-end" :width="340" trigger="click" @show="loadMessages">
             <template #reference>
               <button type="button" class="msg-bell" aria-label="站内消息">
@@ -157,6 +158,7 @@ import { computed, ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/api/request'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -392,7 +394,7 @@ onBeforeUnmount(() => {
   text-decoration: none !important;
 }
 .side-menu :deep(.el-sub-menu .el-menu-item.is-active) {
-  background: #ffffff;
+  background: var(--bg-surface);
   color: var(--accent-primary) !important;
   font-weight: 600;
   box-shadow: 0 1px 4px rgba(29, 29, 31, 0.05);
@@ -446,7 +448,7 @@ onBeforeUnmount(() => {
 .role-quick-switcher { display: flex; align-items: center; gap: 4px; background: #e6e6eb; padding: 3px 4px; border-radius: 10px; }
 .switcher-caption { font-size: 11px; color: var(--text-muted); padding: 0 6px; white-space: nowrap; }
 .role-pill { border: 0; background: transparent; color: var(--text-secondary); font-size: 12px; padding: 5px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
-.role-pill.active { background: #fff; color: var(--accent-primary); font-weight: 600; box-shadow: 0 1px 4px rgb(29 29 31 / 6%); }
+.role-pill.active { background: var(--bg-surface); color: var(--accent-primary); font-weight: 600; box-shadow: 0 1px 4px rgb(29 29 31 / 6%); }
 .collapse-btn { color: var(--text-muted); padding: 6px; }
 .breadcrumb-parent, .breadcrumb-slash { color: var(--text-muted); }
 
@@ -466,7 +468,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 .account-menu:hover {
-  background: #ffffff;
+  background: var(--bg-surface);
   border-color: rgba(0, 0, 0, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none !important;
@@ -533,7 +535,7 @@ onBeforeUnmount(() => {
   text-decoration: none !important;
 }
 .msg-bell:hover {
-  background: #ffffff;
+  background: var(--bg-surface);
   color: var(--accent-primary);
   border-color: rgba(0, 0, 0, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);

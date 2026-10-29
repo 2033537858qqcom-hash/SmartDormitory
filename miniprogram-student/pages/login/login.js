@@ -2,7 +2,7 @@ const api = require('../../utils/api.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     username: '20230101',
     password: '123456',
@@ -91,4 +91,4 @@ Page({
       if (!navigating) this.setData({ loading: false });
     }
   }
-});
+}));

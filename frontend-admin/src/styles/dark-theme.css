@@ -1,0 +1,53 @@
+html.dark {
+  color-scheme: dark;
+  --bg-canvas: #10151d;
+  --bg-surface: #1c2430;
+  --bg-muted: #293340;
+  --border-subtle: #34404e;
+  --border-strong: #465465;
+  --text-primary: #eef2f8;
+  --text-secondary: #c5cfdb;
+  --text-muted: #a3b0bf;
+  --accent-primary: #77b5ff;
+  --accent-primary-hover: #9acaff;
+  --accent-subtle: #1d3654;
+  --accent-border: #355b85;
+  --status-success: #7fd9a4;
+  --status-success-bg: #1c3b2d;
+  --status-warning: #f3c47c;
+  --status-warning-bg: #42331d;
+  --status-danger: #ff9e98;
+  --status-danger-bg: #482b2c;
+  --el-bg-color: var(--bg-surface);
+  --el-bg-color-page: var(--bg-canvas);
+  --el-bg-color-overlay: #232d3a;
+  --el-fill-color-blank: var(--bg-surface);
+  --el-fill-color: var(--bg-muted);
+  --el-fill-color-light: #28323f;
+  --el-fill-color-lighter: #242d39;
+  --el-fill-color-extra-light: #202936;
+  --el-fill-color-dark: #344151;
+  --el-border-color-lighter: #303b48;
+  --el-color-info-light-9: #2a3441;
+  --el-mask-color: rgb(0 0 0 / 65%);
+}
+html.dark .el-table { --el-table-bg-color: var(--bg-surface); --el-table-tr-bg-color: var(--bg-surface); --el-table-row-hover-bg-color: var(--bg-muted); }
+html.dark .el-table__body tr:hover > td.el-table__cell { background: var(--bg-muted) !important; }
+html.dark .sidebar { background: #161d27; border-color: var(--border-subtle); }
+html.dark .top-header { background: rgb(16 21 29 / 94%); }
+html.dark .account-menu, html.dark .msg-bell { background: var(--bg-surface); border-color: var(--border-subtle); }
+html.dark .account-menu:hover, html.dark .side-menu .el-sub-menu .el-menu-item:hover { background: var(--bg-muted); }
+html.dark .side-menu .el-sub-menu .el-menu { background: #202a36; border-color: var(--border-strong); }
+html.dark .side-menu .el-sub-menu .el-menu-item { color: var(--text-secondary); }
+html.dark .login-form-pane { background: rgb(24 32 43 / 96%); }
+html.dark .apple-segmented { background: var(--bg-muted); }
+html.dark .segmented-tab.active, html.dark .apple-login-form .el-input__wrapper, html.dark .apple-login-form .el-input__wrapper:hover, html.dark .apple-login-form .el-input__wrapper.is-focus { background: var(--bg-surface); }
+html.dark .intro-title, html.dark .tab-label, html.dark .apple-login-form .el-input__inner, html.dark .apple-login-form .el-form-item__label { color: var(--text-primary); }
+html.dark .intro-desc, html.dark .segmented-caption, html.dark .tab-code, html.dark .footer-hint { color: var(--text-muted); }
+html.dark .login-footer { border-color: var(--border-subtle); }
+html.dark .admin-qr-box { background: #fff !important; }
+html.dark .side-menu .el-menu-item, html.dark .side-menu .el-sub-menu__title { color: var(--text-secondary); }
+html.dark .side-menu .el-menu-item.is-active { color: var(--accent-primary); }
+html.dark .side-menu .el-menu-item:hover, html.dark .side-menu .el-sub-menu__title:hover { background: var(--bg-muted); color: var(--text-primary); }
+html.dark .account-avatar:not(.small):not(.medium) { background: var(--bg-muted); color: var(--text-primary); }
+html.dark .el-button--primary { --el-button-bg-color: #0068cf; --el-button-border-color: #0068cf; --el-button-text-color: #fff; --el-button-hover-bg-color: #0879e6; --el-button-hover-border-color: #0879e6; }

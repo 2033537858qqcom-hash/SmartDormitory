@@ -11,15 +11,15 @@
   flex: 1;
   padding: 16rpx 0;
   text-align: center;
-  color: #76767d;
+  color: var(--dark-muted-text, #76767d);
   font-size: 24rpx;
   font-weight: 500;
   border-radius: 16rpx;
 }
 
 .seg-active {
-  color: #1d1d1f;
-  background: #fff;
+  color: var(--dark-text, #1d1d1f);
+  background: var(--dark-surface, #fff);
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,.07);
 }
 
@@ -32,7 +32,7 @@
 
 .civ-title {
   display: block;
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 32rpx;
   font-weight: 600;
 }
@@ -40,7 +40,7 @@
 .civ-sub {
   display: block;
   margin-top: 6rpx;
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 23rpx;
 }
 
@@ -57,7 +57,7 @@
 .star-label {
   display: block;
   margin-top: 4rpx;
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 21rpx;
 }
 
@@ -67,7 +67,7 @@
   margin: 28rpx 0 20rpx;
   padding: 24rpx;
   border-radius: 24rpx;
-  background: #f7f7f9;
+  background: var(--dark-muted, #f7f7f9);
 }
 
 .score-col {
@@ -81,19 +81,19 @@
 }
 
 .score-val {
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 36rpx;
   font-weight: 600;
 }
 
 .score-lbl {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 21rpx;
   margin-top: 4rpx;
 }
 
 .civ-tip {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 21rpx;
   line-height: 1.6;
 }
@@ -122,7 +122,7 @@
   width: 76rpx;
   height: 76rpx;
   border-radius: 23rpx;
-  background: #edf4ff;
+  background: var(--dark-blue-bg, #edf4ff);
 }
 
 .af-icon image {
@@ -137,13 +137,13 @@
 
 .af-name {
   font-size: 27rpx;
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-weight: 600;
 }
 
 .af-desc {
   font-size: 22rpx;
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   margin-top: 5rpx;
   line-height: 1.4;
 }
@@ -177,27 +177,27 @@
 }
 
 .disc-time, .hist-sub {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 22rpx;
 }
 
 .disc-desc, .hist-reason {
-  color: #515154;
+  color: var(--dark-secondary, #515154);
   font-size: 24rpx;
   line-height: 1.55;
   margin: 12rpx 0;
 }
 
 .disc-score {
-  color: #76767d;
+  color: var(--dark-muted-text, #76767d);
   font-size: 22rpx;
 }
 
 .appeal-btn {
   min-height: 58rpx;
   padding: 10rpx 20rpx;
-  color: #006edb;
-  background: #edf4ff;
+  color: var(--dark-blue, #006edb);
+  background: var(--dark-blue-bg, #edf4ff);
   font-size: 22rpx;
   border-radius: 15rpx;
 }
@@ -213,13 +213,13 @@
 
 .hist-reply {
   font-size: 22rpx;
-  color: #287d4b;
+  color: var(--dark-green, #287d4b);
   margin-top: 8rpx;
 }
 
 .modal-sub {
   margin: 16rpx 0 24rpx;
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 24rpx;
 }
 

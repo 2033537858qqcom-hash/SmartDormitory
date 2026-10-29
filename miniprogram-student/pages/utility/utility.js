@@ -5,7 +5,7 @@ const pendingPayment = require('../../utils/pending-payment.js');
 const tabbar = require('../../utils/tabbar.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     room: null,
     loading: true,
@@ -191,4 +191,4 @@ Page({
       fail: () => this.setData({ paying: false })
     });
   }
-});
+}));

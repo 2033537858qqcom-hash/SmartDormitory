@@ -1246,7 +1246,7 @@ onMounted(() => {
 .qr-canvas-wrap {
   padding: 12px;
   border-radius: 20px;
-  background: #ffffff;
+  background: var(--bg-surface);
   border: 3px solid #22c55e;
   box-shadow: 0 8px 24px rgba(21, 128, 61, 0.12);
 }
@@ -1361,7 +1361,7 @@ onMounted(() => {
 }
 .sheet-submit {
   width: 100%;
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 13px;
@@ -1451,7 +1451,7 @@ onMounted(() => {
   color: var(--text-muted);
 }
 .save-adjust-habit-btn {
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: white;
   border: 0;
   padding: 6px 14px;

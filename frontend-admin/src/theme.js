@@ -17,5 +17,5 @@ export function createThemeStore(storage, root) {
 }
 
 let storage
-try { storage = globalThis.localStorage } catch (_) { /* storage may be unavailable */ }
+try { if (globalThis.document) storage = globalThis.localStorage } catch (_) { /* storage may be unavailable */ }
 export const themeStore = createThemeStore(storage, globalThis.document?.documentElement)

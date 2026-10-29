@@ -1,5 +1,5 @@
 .pass-card {
-  background: #fff;
+  background: var(--dark-surface, #fff);
   border-radius: 40rpx;
   padding: 34rpx;
   margin-bottom: 26rpx;
@@ -11,8 +11,8 @@
 }
 
 .pass-badge {
-  background: #edf7f0;
-  color: #287d4b;
+  background: var(--dark-green-bg, #edf7f0);
+  color: var(--dark-green, #287d4b);
   padding: 7rpx 16rpx;
   border-radius: 30rpx;
   font-size: 22rpx;
@@ -37,7 +37,7 @@
 }
 
 .passcode-text {
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 33rpx;
   font-weight: 600;
   letter-spacing: 3rpx;
@@ -51,7 +51,7 @@
   gap: 24rpx;
   padding: 24rpx;
   border-radius: 24rpx;
-  background: #f5f5f7;
+  background: var(--dark-canvas, #f5f5f7);
 }
 
 .meta-item {
@@ -61,12 +61,12 @@
 }
 
 .m-label {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 21rpx;
 }
 
 .m-val {
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 25rpx;
   font-weight: 500;
   margin-top: 6rpx;
@@ -74,7 +74,7 @@
 }
 
 .pass-tip {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 22rpx;
   margin: 22rpx 0;
   line-height: 1.5;

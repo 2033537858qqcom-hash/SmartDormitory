@@ -1,4 +1,4 @@
-<view wx:if="{{!checkingSession}}" class="login-page">
+<view wx:if="{{!checkingSession}}" class="login-page {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="login-background" aria-hidden="true">
     <image class="cover-photo" src="/images/login-cover.jpg" mode="aspectFill" />
     <view class="cover-gradient-mask"></view>
@@ -6,6 +6,7 @@
 
   <view class="login-content">
     <view class="brand-row">
+      <button class="theme-control login-theme-control spring-btn" bindtap="toggleTheme" aria-label="切换深浅色模式">{{theme === 'dark' ? '☀ 浅色' : '☾ 深色'}}</button>
       <image class="brand-logo" src="/images/ui/suli-icon-v2.png" mode="aspectFill" />
       <view class="brand-copy">
         <view class="brand-title">宿里</view>

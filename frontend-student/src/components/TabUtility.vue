@@ -677,7 +677,7 @@ const payBill = async (b) => {
 .qr-canvas-wrap {
   padding: 12px;
   border-radius: 20px;
-  background: #ffffff;
+  background: var(--bg-surface);
   border: 3px solid #22c55e;
   box-shadow: 0 8px 24px rgba(21, 128, 61, 0.12);
 }
@@ -807,7 +807,7 @@ const payBill = async (b) => {
   font-weight: 500;
 }
 .type-chip.active { border-color: #93bff0; background: var(--accent-subtle); color: var(--accent-primary); }
-.selection-check { display: grid; place-items: center; flex: 0 0 19px; width: 19px; height: 19px; border-radius: 50%; background: var(--accent-primary); color: #fff; font-size: 12px; line-height: 1; }
+.selection-check { display: grid; place-items: center; flex: 0 0 19px; width: 19px; height: 19px; border-radius: 50%; background: var(--button-primary); color: #fff; font-size: 12px; line-height: 1; }
 .channel-chip { min-height: 62px; align-items: center; }
 .channel-copy { min-width: 0; display: grid; gap: 2px; }
 .channel-copy small { color: var(--text-muted); font-size: 11px; line-height: 1.4; font-weight: 400; }
@@ -823,7 +823,7 @@ const payBill = async (b) => {
 }
 .sheet-submit {
   width: 100%;
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 13px;

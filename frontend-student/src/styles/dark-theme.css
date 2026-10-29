@@ -1,0 +1,38 @@
+html.dark {
+  color-scheme: dark;
+  --bg-canvas: #10151d;
+  --bg-surface: #1c2430;
+  --bg-muted: #293340;
+  --border-subtle: #34404e;
+  --border-strong: #465465;
+  --text-primary: #eef2f8;
+  --text-secondary: #c5cfdb;
+  --text-muted: #a3b0bf;
+  --accent-primary: #77b5ff;
+  --accent-subtle: #1d3654;
+  --status-success: #7fd9a4;
+  --status-success-bg: #1c3b2d;
+  --status-warning: #f3c47c;
+  --status-warning-bg: #42331d;
+  --status-danger: #ff9e98;
+  --status-danger-bg: #482b2c;
+}
+html.dark body { background: #0c1118; }
+html.dark .student-login-body { background: rgb(24 32 43 / 96%); }
+html.dark .login-header-group h2, html.dark .field-item label, html.dark .chip-name { color: var(--text-primary); }
+html.dark .login-header-group p, html.dark .demo-box-label, html.dark .chip-meta { color: var(--text-muted); }
+html.dark .student-demo-box, html.dark .demo-switcher { background: var(--bg-muted); border-color: var(--border-subtle); }
+html.dark .demo-student-chip, html.dark .apple-input, html.dark .apple-input:focus { background: var(--bg-surface); color: var(--text-primary); border-color: var(--border-strong); }
+html.dark .demo-student-chip.active { background: var(--accent-subtle); border-color: var(--accent-primary); }
+html.dark .demo-student-chip.active .chip-name { color: var(--accent-primary); }
+html.dark .login-card-footer { border-color: var(--border-subtle); }
+html.dark .phone-frame { border-color: var(--border-subtle); }
+html.dark .wx-navbar.scrolled { background: rgb(16 21 29 / 94%); }
+html.dark .wx-tabbar { background: rgb(28 36 48 / 96%); }
+html.dark .student-logout { color: var(--text-secondary); }
+html.dark .shimmer { background: #303c4a; }
+html.dark .qr-canvas-wrap { background: #fff !important; }
+html.dark .type-chip:not(.active), html.dark .rec-card:not(.active), html.dark .adjust-habit-box { background: var(--bg-muted); border-color: var(--border-subtle); color: var(--text-primary); }
+html.dark .type-chip.active .channel-copy small { color: var(--text-secondary); }
+html.dark .demo-banner, html.dark .demo-sheet-note, html.dark .pending-rate-banner, html.dark .rate-reminder, html.dark .pending-rate-top { background: var(--status-warning-bg); color: var(--status-warning); }
+html.dark .alipay-tip-box { background: var(--accent-subtle); border-color: var(--border-strong); color: var(--accent-primary); }

@@ -33,6 +33,7 @@
       <!-- 右侧：Apple 极简原生交互登录面板 -->
       <main class="login-form-pane">
         <div class="form-wrapper">
+          <div class="login-theme-control"><ThemeToggle /></div>
           <div class="login-intro">
             <div class="intro-eyebrow">管理中心</div>
             <h2 class="intro-title">登录宿里管理后台</h2>
@@ -114,6 +115,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request from '@/api/request'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -303,6 +305,8 @@ const handleLogin = async () => {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.login-theme-control { display: flex; justify-content: flex-end; margin-bottom: 18px; }
+
 .form-wrapper {
   width: 100%;
   max-width: 360px;
@@ -324,7 +328,7 @@ const handleLogin = async () => {
 .intro-title {
   font-size: 25px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text-primary);
   letter-spacing: -0.6px;
   line-height: 1.25;
   margin-bottom: 6px;
@@ -376,14 +380,14 @@ const handleLogin = async () => {
 }
 
 .segmented-tab.active {
-  background: #ffffff;
+  background: var(--bg-surface);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
 .tab-label {
   font-size: 12px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
@@ -409,7 +413,7 @@ const handleLogin = async () => {
 .apple-login-form :deep(.el-form-item__label) {
   font-size: 12.5px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--text-primary);
   padding-bottom: 6px;
 }
 
@@ -425,11 +429,11 @@ const handleLogin = async () => {
 
 .apple-login-form :deep(.el-input__wrapper:hover) {
   border-color: #86868b;
-  background: #ffffff;
+  background: var(--bg-surface);
 }
 
 .apple-login-form :deep(.el-input__wrapper.is-focus) {
-  background: #ffffff;
+  background: var(--bg-surface);
   border-color: #0071e3 !important;
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15) !important;
   outline: none !important;
@@ -437,7 +441,7 @@ const handleLogin = async () => {
 
 .apple-login-form :deep(.el-input__inner) {
   font-size: 13.5px;
-  color: #1d1d1f;
+  color: var(--text-primary);
   outline: none !important;
   box-shadow: none !important;
   border: none !important;

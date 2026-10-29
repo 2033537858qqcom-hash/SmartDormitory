@@ -4,7 +4,7 @@ const tabbar = require('../../utils/tabbar.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     activeTab: 'overview',
     dash: null,
@@ -234,4 +234,4 @@ Page({
   navToResidence() {
     wx.navigateTo({ url: '/pages/residence/residence' });
   }
-});
+}));

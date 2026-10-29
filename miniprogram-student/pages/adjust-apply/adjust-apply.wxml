@@ -1,4 +1,4 @@
-<view class="adjust-page container">
+<view class="adjust-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="page-heading"><view class="page-title">宿舍调整</view><view class="page-subtitle">提交调宿或退宿申请</view></view>
   <view wx:if="{{loading}}" class="card empty-box"><view class="empty-text">正在加载住宿信息...</view></view>
   <view wx:elif="{{loadError}}" class="card empty-box"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="loadCurrent">重新加载</button></view>

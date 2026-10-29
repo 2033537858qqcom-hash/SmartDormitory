@@ -1,4 +1,4 @@
-<view class="repair-page container">
+<view class="repair-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="page-heading"><view class="page-title">报修服务</view><view class="page-subtitle">提交维修申请，跟踪处理进度</view></view>
   <view wx:if="{{unratedCount}}" class="repair-reminder">有 {{unratedCount}} 单报修待评价</view>
   <view class="repair-hero card">

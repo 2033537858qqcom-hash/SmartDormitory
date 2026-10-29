@@ -1,4 +1,4 @@
-<view wx:if="{{visible}}" class="tab-bar">
+<view wx:if="{{visible}}" class="tab-bar {{theme === 'dark' ? 'tab-bar-dark' : ''}}">
   <view wx:for="{{tabs}}" wx:key="pagePath" class="tab-item {{selected === index ? 'tab-selected' : ''}}" bindtap="switchTab" data-index="{{index}}" role="button" aria-label="{{item.text}}">
     <image class="tab-icon" src="{{'/images/ui/tabs/' + item.icon + (selected === index ? '-active.png' : '-normal.png')}}" mode="aspectFit" />
     <text>{{item.text}}</text>

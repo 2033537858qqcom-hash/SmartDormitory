@@ -4,7 +4,7 @@ const tabbar = require('../../utils/tabbar.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     loading: true,
     dash: null,
@@ -179,4 +179,4 @@ Page({
   navToAdjust() {
     wx.navigateTo({ url: '/pages/adjust-apply/adjust-apply' });
   }
-});
+}));

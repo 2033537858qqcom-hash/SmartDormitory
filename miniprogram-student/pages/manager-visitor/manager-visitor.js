@@ -3,7 +3,7 @@ const authNavigation = require('../../utils/auth-navigation.js');
 const util = require('../../utils/util.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: { name: '', code: '', result: null, resultMessage: '', busy: false, scanning: false, confirming: false },
 
   onShow() {
@@ -85,4 +85,4 @@ Page({
       authNavigation.goToLogin();
     } });
   }
-});
+}));

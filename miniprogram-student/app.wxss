@@ -1,8 +1,8 @@
 /* Design tokens are aligned with frontend-student/src/styles/apple-theme.css. */
 
 page {
-  background: #f5f5f7;
-  color: #1d1d1f;
+  background: var(--dark-canvas, #f5f5f7);
+  color: var(--dark-text, #1d1d1f);
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 28rpx;
   line-height: 1.5;
@@ -31,7 +31,7 @@ button::after {
 }
 
 .card {
-  background: #fff;
+  background: var(--dark-surface, #fff);
   border: 0;
   border-radius: 40rpx;
   padding: 34rpx;
@@ -48,12 +48,12 @@ button::after {
   line-height: 1.24;
   font-weight: 600;
   letter-spacing: -1rpx;
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
 }
 
 .page-subtitle {
   margin-top: 12rpx;
-  color: #76767d;
+  color: var(--dark-muted-text, #76767d);
   font-size: 25rpx;
   line-height: 1.5;
 }
@@ -67,13 +67,13 @@ button::after {
 }
 
 .section-title .title-text {
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 32rpx;
   font-weight: 600;
 }
 
 .section-title .title-extra {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 22rpx;
   text-align: right;
 }
@@ -122,7 +122,7 @@ button.modal-cancel, button.modal-confirm {
 
 .btn-secondary {
   background: #f1f1f3;
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
 }
 
 button[disabled] {
@@ -140,28 +140,28 @@ button[disabled] {
 }
 
 .badge-blue {
-  background: #edf4ff;
-  color: #006edb;
+  background: var(--dark-blue-bg, #edf4ff);
+  color: var(--dark-blue, #006edb);
 }
 
 .badge-green {
-  background: #edf7f0;
-  color: #287d4b;
+  background: var(--dark-green-bg, #edf7f0);
+  color: var(--dark-green, #287d4b);
 }
 
 .badge-amber {
-  background: #fbf5e9;
-  color: #9d650a;
+  background: var(--dark-amber-bg, #fbf5e9);
+  color: var(--dark-amber, #9d650a);
 }
 
 .badge-red {
-  background: #fff0ee;
-  color: #c43832;
+  background: var(--dark-red-bg, #fff0ee);
+  color: var(--dark-red, #c43832);
 }
 
 .badge-gray {
-  background: #f5f5f7;
-  color: #76767d;
+  background: var(--dark-canvas, #f5f5f7);
+  color: var(--dark-muted-text, #76767d);
 }
 
 .input-group {
@@ -170,7 +170,7 @@ button[disabled] {
 
 .input-label {
   display: block;
-  color: #515154;
+  color: var(--dark-secondary, #515154);
   font-size: 24rpx;
   font-weight: 600;
   margin-bottom: 12rpx;
@@ -178,8 +178,8 @@ button[disabled] {
 
 .form-input, .form-textarea, .picker-input, .login-input, .custom-tag-input, .appeal-textarea, .rate-input-comment {
   width: 100%;
-  background: #f5f5f7;
-  color: #1d1d1f;
+  background: var(--dark-canvas, #f5f5f7);
+  color: var(--dark-text, #1d1d1f);
   border: 1rpx solid transparent;
   border-radius: 20rpx;
   font-size: 28rpx;
@@ -225,19 +225,19 @@ button[disabled] {
   height: 80rpx;
   margin-bottom: 16rpx;
   border-radius: 26rpx;
-  background: #edf4ff;
-  color: #006edb;
+  background: var(--dark-blue-bg, #edf4ff);
+  color: var(--dark-blue, #006edb);
   font-size: 34rpx;
 }
 
 .empty-title {
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 29rpx;
   font-weight: 600;
 }
 
 .empty-text {
-  color: #86868b;
+  color: var(--dark-muted-text, #86868b);
   font-size: 24rpx;
   line-height: 1.6;
 }
@@ -275,7 +275,7 @@ button[disabled] {
   width: 100%;
   max-height: 88vh;
   overflow: auto;
-  background: #fff;
+  background: var(--dark-surface, #fff);
   border-radius: 36rpx 36rpx 0 0;
   padding: 18rpx 36rpx calc(36rpx + env(safe-area-inset-bottom));
   animation: sheetIn 280ms cubic-bezier(.2,.75,.25,1) both;
@@ -301,7 +301,7 @@ button[disabled] {
 }
 
 .sheet-title {
-  color: #1d1d1f;
+  color: var(--dark-text, #1d1d1f);
   font-size: 36rpx;
   font-weight: 600;
   line-height: 1.35;
@@ -316,7 +316,7 @@ button[disabled] {
   height: 58rpx;
   border-radius: 50%;
   background: #f1f1f3;
-  color: #6e6e73;
+  color: var(--dark-secondary, #6e6e73);
   font-size: 40rpx;
   line-height: 1;
 }
@@ -364,3 +364,45 @@ button[disabled] {
     animation-iteration-count: 1;
   }
 }
+
+/* A page-level class keeps the preference independent from the system theme. */
+.theme-dark {
+  --dark-canvas: #10151d;
+  --dark-surface: #1c2430;
+  --dark-muted: #293340;
+  --dark-text: #eef2f8;
+  --dark-secondary: #c5cfdb;
+  --dark-muted-text: #a3b0bf;
+  --dark-blue: #77b5ff;
+  --dark-blue-bg: #1d3654;
+  --dark-green: #7fd9a4;
+  --dark-green-bg: #1c3b2d;
+  --dark-amber: #f3c47c;
+  --dark-amber-bg: #42331d;
+  --dark-red: #ff9e98;
+  --dark-red-bg: #482b2c;
+  min-height: 100vh;
+  background-color: #10151d;
+  color: #eef2f8;
+}
+.theme-dark .card, .theme-dark .sheet-panel { background-color: #1c2430; }
+.theme-dark .sheet-close { background: #293340; color: #c5cfdb; }
+.theme-dark .shimmer { background: linear-gradient(90deg, #26313e 25%, #354252 50%, #26313e 75%); background-size: 200% 100%; }
+.theme-dark .qr-box { background: #fff; }
+.theme-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 112rpx;
+  min-width: 112rpx;
+  flex: none;
+  min-height: 58rpx;
+  padding: 8rpx 15rpx;
+  border: 1rpx solid var(--dark-muted, #e1e5eb);
+  border-radius: 20rpx;
+  background: var(--dark-surface, #fff);
+  color: var(--dark-secondary, #515154);
+  font-size: 22rpx;
+  line-height: 1.2;
+}
+.theme-dark .q-icon image, .theme-dark .room-icon image, .theme-dark .scan-icon image { filter: brightness(1.5); }

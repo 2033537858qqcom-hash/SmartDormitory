@@ -1,4 +1,4 @@
-<view class="residence-page container">
+<view class="residence-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="page-heading"><view class="page-title">住宿申请</view><view class="page-subtitle">提交入住或假期留宿申请</view></view>
   <!-- 业务申请表单卡片 -->
   <view class="form-card card">

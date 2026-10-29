@@ -864,7 +864,7 @@ onBeforeUnmount(() => {
 .alloc-steps li { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 13px; color: var(--text-muted); }
 .alloc-steps li.active { color: var(--text-primary); font-weight: 600; }
 .step-marker { display: grid; place-items: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--bg-canvas); font-size: 12px; }
-.alloc-steps li.active .step-marker { background: var(--accent-primary); color: white; }
+.alloc-steps li.active .step-marker { background: var(--button-primary); color: white; }
 .alloc-steps li.complete .step-marker { color: var(--status-success); background: var(--status-success-bg); }
 .condition-bar {
   margin-top: 22px;

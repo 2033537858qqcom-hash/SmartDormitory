@@ -56,7 +56,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-.residence-card { background: white; border-radius: 18px; padding: 18px; margin: 16px 0; }
+.residence-card { background: var(--bg-surface); border-radius: 18px; padding: 18px; margin: 16px 0; }
 .residence-head { display: flex; align-items: center; justify-content: space-between; }.residence-head h3 { margin: 0; font-size: 16px; }
 button { border: 0; background: #e9f2ff; color: #145bad; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
 form { display: grid; gap: 10px; margin: 16px 0; } label { display: grid; gap: 5px; font-size: 13px; } input, select, textarea { width: 100%; padding: 9px; border: 1px solid #d5d5da; border-radius: 8px; font: inherit; }

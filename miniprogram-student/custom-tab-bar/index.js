@@ -2,6 +2,7 @@ Component({
   data: {
     selected: 0,
     visible: true,
+    theme: 'light',
     tabs: [
       { pagePath: '/pages/home/home', text: '首页', icon: 'home' },
       { pagePath: '/pages/repair/repair', text: '报修', icon: 'repair' },

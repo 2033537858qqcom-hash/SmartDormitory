@@ -15,7 +15,7 @@ const STAR_HINTS = {
   5: '非常满意，师傅专业且服务热情！'
 };
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     activeTab: 'list',
     formSheetClosing: false,
@@ -293,4 +293,4 @@ Page({
       this.setData({ submittingRate: false });
     }
   }
-});
+}));

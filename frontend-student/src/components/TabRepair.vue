@@ -330,7 +330,7 @@ const submitRate = async () => {
 .h-title { font-size: 27px; line-height: 1.3; font-weight: 600; letter-spacing: -.8px; }
 .h-sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
 .call-btn {
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 9px 15px;
@@ -358,7 +358,7 @@ const submitRate = async () => {
   margin: 6px 0 16px;
 }
 .empty-cta {
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 9px 18px;
@@ -430,7 +430,7 @@ const submitRate = async () => {
   color: var(--accent-primary);
 }
 .rate-btn {
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 6px 14px;
@@ -501,7 +501,7 @@ const submitRate = async () => {
 }
 .sheet-submit {
   width: 100%;
-  background: var(--accent-primary);
+  background: var(--button-primary);
   color: #ffffff;
   border: none;
   padding: 13px;

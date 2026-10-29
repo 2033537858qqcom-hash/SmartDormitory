@@ -411,7 +411,7 @@ onBeforeUnmount(() => {
 .panel-heading>span { color: var(--text-muted); font-size: 12px; }
 .todo-filters { display: inline-flex; padding: 3px; gap: 2px; background: var(--bg-muted); border-radius: 10px; margin-bottom: 7px; }
 .todo-filters button { background: transparent; border: 0; color: var(--text-muted); font-size: 12px; padding: 5px 13px; border-radius: 8px; cursor: pointer; }
-.todo-filters button[aria-pressed=true] { background: white; color: var(--text-primary); box-shadow: 0 1px 4px rgb(29 29 31 / 7%); }
+.todo-filters button[aria-pressed=true] { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 4px rgb(29 29 31 / 7%); }
 .todo-row { display: flex; align-items: center; gap: 14px; padding: 19px 0; border-bottom: 1px solid var(--border-subtle); }
 .todo-row:last-child { border-bottom: 0; padding-bottom: 2px; }
 .todo-symbol { width: 33px; height: 33px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: var(--bg-canvas); color: var(--text-muted); }

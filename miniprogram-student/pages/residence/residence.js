@@ -3,7 +3,7 @@ const util = require('../../utils/util.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     requestType: 'CHECKIN',
     fromDate: '',
@@ -124,4 +124,4 @@ Page({
       this.setData({ submitting: false });
     }
   }
-});
+}));

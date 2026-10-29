@@ -2,7 +2,7 @@ const api = require('../../utils/api.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     currentBuilding: null,
     currentRoom: null,
@@ -178,4 +178,4 @@ Page({
       this.setData({ submitting: false });
     }
   }
-});
+}));

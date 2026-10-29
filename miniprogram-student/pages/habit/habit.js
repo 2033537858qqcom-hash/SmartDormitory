@@ -12,7 +12,7 @@ const DIMENSIONS = [
   { key: 'odorSensitiveScore', dim: 'smell', title: '异味敏感' }
 ];
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     form: {
       scheduleScore: 2,
@@ -203,7 +203,7 @@ Page({
             else ctx.lineTo(x, y);
           }
           ctx.closePath();
-          ctx.strokeStyle = level === 5 ? '#d2d2d7' : '#e8e8ed';
+          ctx.strokeStyle = this.data.theme === 'dark' ? (level === 5 ? '#627487' : '#3c4a59') : (level === 5 ? '#d2d2d7' : '#e8e8ed');
           ctx.lineWidth = 1;
           ctx.stroke();
         }
@@ -221,7 +221,7 @@ Page({
           ctx.beginPath();
           ctx.moveTo(centerX, centerY);
           ctx.lineTo(x, y);
-          ctx.strokeStyle = '#E2E8F0';
+          ctx.strokeStyle = this.data.theme === 'dark' ? '#3c4a59' : '#E2E8F0';
           ctx.lineWidth = 1;
           ctx.stroke();
 
@@ -229,7 +229,7 @@ Page({
           const labelDist = radius + 18;
           const lx = centerX + labelDist * Math.cos(angle);
           const ly = centerY + labelDist * Math.sin(angle);
-          ctx.fillStyle = '#475569';
+          ctx.fillStyle = this.data.theme === 'dark' ? '#c5cfdb' : '#475569';
           ctx.fillText(labels[i], lx, ly);
         }
 
@@ -299,4 +299,4 @@ Page({
         }
       });
   }
-});
+}));

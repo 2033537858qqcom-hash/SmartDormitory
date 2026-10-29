@@ -1,7 +1,7 @@
-<view class="manager-page container">
+<view class="manager-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="manager-header">
     <view><view class="eyebrow">宿管工作台</view><view class="page-title">访客核验</view><view class="page-subtitle">{{name}}，扫描学生出示的访客通行码。</view></view>
-    <button class="logout spring-btn" bindtap="handleLogout">退出</button>
+    <view class="manager-header-actions"><button class="theme-control spring-btn" bindtap="toggleTheme" aria-label="切换深浅色模式">{{theme === 'dark' ? '☀ 浅色' : '☾ 深色'}}</button><button class="logout spring-btn" bindtap="handleLogout">退出</button></view>
   </view>
 
   <view class="scan-card card">

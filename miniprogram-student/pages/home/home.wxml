@@ -1,4 +1,4 @@
-<view class="home-page container">
+<view class="home-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view wx:if="{{loading && !dash}}" class="home-skeleton">
     <view class="sk-kicker shimmer"></view><view class="sk-title shimmer"></view><view class="sk-sub shimmer"></view>
     <view class="sk-card shimmer"></view><view class="sk-actions"><view class="shimmer"></view><view class="shimmer"></view><view class="shimmer"></view><view class="shimmer"></view></view>
@@ -6,7 +6,7 @@
   <view wx:elif="{{loadError && !dash}}" class="card load-error"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary" bindtap="loadDashboard">重新加载</button></view>
   <block wx:else>
     <view class="home-header">
-      <view class="eyebrow-row"><text>{{currentDate}}</text><text class="logout-btn spring-btn" bindtap="handleLogout">退出登录</text></view>
+      <view class="eyebrow-row"><text>{{currentDate}}</text><view class="home-header-actions"><button class="theme-control spring-btn" bindtap="toggleTheme" aria-label="切换深浅色模式">{{theme === 'dark' ? '☀ 浅色' : '☾ 深色'}}</button><text class="logout-btn spring-btn" bindtap="handleLogout">退出登录</text></view></view>
       <view class="heading-row"><text class="home-title">我的宿舍</text><text class="home-status">{{dash.room ? '已入住' : '待分寝'}}</text></view>
       <view class="home-greeting">你好，{{dash.user.realName || '同学'}}。</view>
     </view>

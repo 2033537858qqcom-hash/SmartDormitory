@@ -1,4 +1,4 @@
-<view class="utility-page container">
+<view class="utility-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="page-heading"><view class="page-title">水电缴费</view><view class="page-subtitle">余额、账单与充值，都在这里。</view></view>
   <view class="demo-note">{{paymentConfigLoaded ? (demoSupported ? '演示模拟 · 仅本地余额核销，非微信支付' : '演示水电核销未启用') : '正在检查可用支付方式…'}}</view>
   <view wx:if="{{loading && !room}}" class="empty-box card"><view class="empty-text">正在加载水电账户...</view></view>

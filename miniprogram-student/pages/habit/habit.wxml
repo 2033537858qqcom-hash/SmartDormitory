@@ -1,4 +1,4 @@
-<view class="habit-page container">
+<view class="habit-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="page-heading"><view class="page-title">生活习惯</view><view class="page-subtitle">记录你的日常偏好，遇见作息相近的室友。</view></view>
   <view wx:if="{{loading}}" class="card empty-box"><view class="empty-text">正在加载生活画像...</view></view>
   <view wx:elif="{{loadError}}" class="card empty-box"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="initData">重新加载</button></view>

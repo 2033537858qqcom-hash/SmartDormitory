@@ -48,3 +48,8 @@
     transition-duration: .01ms;
   }
 }
+
+.tab-bar-dark { background: rgba(28,36,48,.96); border-color: #34404e; box-shadow: 0 8rpx 36rpx rgba(0,0,0,.24); }
+.tab-bar-dark .tab-item { color: #a3b0bf; }
+.tab-bar-dark .tab-selected { color: #77b5ff; }
+.tab-bar-dark .tab-item:not(.tab-selected) .tab-icon { filter: invert(1); opacity: .75; }

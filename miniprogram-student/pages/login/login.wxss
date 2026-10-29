@@ -68,11 +68,11 @@
 }
 
 .panel-heading { margin-bottom: 30rpx; }
-.panel-title { font-size: 34rpx; line-height: 1.25; color: #1c2735; font-weight: 700; }
-.panel-subtitle { margin-top: 8rpx; color: #858e99; font-size: 22rpx; }
+.panel-title { font-size: 34rpx; line-height: 1.25; color: var(--dark-text, #1c2735); font-weight: 700; }
+.panel-subtitle { margin-top: 8rpx; color: var(--dark-muted-text, #858e99); font-size: 22rpx; }
 .login-field { margin-bottom: 22rpx; }
-.field-label { display: block; margin-bottom: 10rpx; color: #44505e; font-size: 23rpx; font-weight: 600; }
-.login-input { min-height: 82rpx; padding: 0 22rpx; background: #f3f5f8; border-radius: 16rpx; font-size: 27rpx; }
+.field-label { display: block; margin-bottom: 10rpx; color: var(--dark-secondary, #44505e); font-size: 23rpx; font-weight: 600; }
+.login-input { min-height: 82rpx; padding: 0 22rpx; background: var(--dark-muted, #f3f5f8); border-radius: 16rpx; font-size: 27rpx; }
 .input-placeholder { color: #a3abb5; }
 
 button.login-btn {
@@ -85,7 +85,7 @@ button.login-btn {
 
 .demo-section { margin-top: 32rpx; padding-top: 26rpx; border-top: 1rpx solid #edf0f4; }
 .demo-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16rpx; }
-.demo-title { color: #44505e; font-size: 23rpx; font-weight: 600; }
+.demo-title { color: var(--dark-secondary, #44505e); font-size: 23rpx; font-weight: 600; }
 .demo-note { color: #a0a8b2; font-size: 20rpx; }
 .demo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10rpx; }
 .demo-item {
@@ -93,10 +93,15 @@ button.login-btn {
   padding: 13rpx 12rpx;
   border: 1rpx solid #e9edf2;
   border-radius: 14rpx;
-  background: #f8f9fb;
+  background: var(--dark-muted, #f8f9fb);
 }
-.demo-item.active { border-color: #95bcf5; background: #edf5ff; }
-.demo-name { overflow: hidden; color: #3e4a59; font-size: 22rpx; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-.demo-item.active .demo-name { color: #176ee5; }
-.demo-meta { margin-top: 3rpx; overflow: hidden; color: #939eaa; font-size: 19rpx; white-space: nowrap; text-overflow: ellipsis; }
+.demo-item.active { border-color: #95bcf5; background: var(--dark-blue-bg, #edf5ff); }
+.demo-name { overflow: hidden; color: var(--dark-text, #3e4a59); font-size: 22rpx; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.demo-item.active .demo-name { color: var(--dark-blue, #176ee5); }
+.demo-meta { margin-top: 3rpx; overflow: hidden; color: var(--dark-muted-text, #939eaa); font-size: 19rpx; white-space: nowrap; text-overflow: ellipsis; }
 .login-footnote { margin-top: auto; padding: 28rpx 0 0; color: rgba(255, 255, 255, .7); text-align: center; font-size: 20rpx; letter-spacing: 1rpx; }
+
+.login-theme-control { margin-left: auto; order: 3; background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.3); }
+.theme-dark .login-panel { background: rgba(28,36,48,.97); }
+.theme-dark .demo-item { border-color: #34404e; }
+.theme-dark .login-input { border-color: transparent; }

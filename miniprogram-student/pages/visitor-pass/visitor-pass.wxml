@@ -1,4 +1,4 @@
-<view class="visitor-page container">
+<view class="visitor-page container {{theme === 'dark' ? 'theme-dark' : ''}}">
   <view class="page-heading"><view class="page-title">访客登记</view><view class="page-subtitle">登记来访信息，出示通行码供宿管核验</view></view>
   <view wx:if="{{loading && !activePass}}" class="empty-box card"><view class="empty-text">正在加载访客信息...</view></view>
   <view wx:elif="{{loadError}}" class="empty-box card"><view class="empty-title">暂时无法加载</view><view class="empty-text">请检查网络后重试</view><button class="btn-secondary retry-btn" bindtap="loadPassData">重新加载</button></view>

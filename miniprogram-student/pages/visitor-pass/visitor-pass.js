@@ -4,7 +4,7 @@ const qr = require('../../utils/qrcode-core.js');
 const authNavigation = require('../../utils/auth-navigation.js');
 const app = getApp();
 
-Page({
+Page(require('../../utils/theme').withTheme({
   data: {
     activePass: null, roomInfo: '', showForm: false, submitting: false, loading: true, loadError: false,
     reasonPresets: ['亲友探访', '协助搬运行李', '学习交流', '其他'], reasonIndex: 0,
@@ -71,4 +71,4 @@ Page({
       }
     });
   }
-});
+}));
