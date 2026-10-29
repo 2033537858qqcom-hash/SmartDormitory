@@ -191,4 +191,14 @@ class UtilityPaymentWorkflowTest {
         verify(logs, never()).insert(any(UtilityPaymentLog.class));
     }
 
+    @Test
+    void demoRechargeIsDisabledUnlessExplicitlyEnabled() {
+        SmartUtilityService productionService = new SmartUtilityService(bills, rooms, logs, alipayConfig);
+        lenient().when(rooms.selectOne(any(Wrapper.class))).thenReturn(room());
+        lenient().when(rooms.updateById(any(DormRoom.class))).thenReturn(1);
+        assertThrows(IllegalStateException.class, () -> productionService.processPayment(1L, null,
+                new BigDecimal("10"), BigDecimal.ZERO, 7L, "payment_request_prod"));
+        verify(logs, never()).insert(any(UtilityPaymentLog.class));
+    }
+
 }

@@ -288,4 +288,10 @@ class StudentIdorAuthorizationTest {
         verify(smartUtilityService, never()).createAlipayOrder(anyLong(), any(), any(), any(), anyLong());
     }
 
+    @Test
+    void resetDemoIsDisabledUnlessExplicitlyEnabled() {
+        assertNotEquals(200, allocController.resetDemoFreshmen().getCode());
+        verify(smartAllocationService, never()).resetDemoFreshmen();
+    }
+
 }
